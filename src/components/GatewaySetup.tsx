@@ -413,9 +413,9 @@ export const GatewaySetup: React.FC<GatewaySetupProps> = ({ config, onSave }) =>
             <tr style={{ borderBottom: '2px solid var(--border)' }}>
               <th style={{ padding: '0.75rem 1rem', width: '50px' }}>Active</th>
               <th style={{ padding: '0.75rem 1rem' }}>Provider</th>
-              <th style={{ padding: '0.75rem 1rem' }}>Base Endpoint URL</th>
-              <th style={{ padding: '0.75rem 1rem', width: '150px' }}>Synced Models</th>
-              <th style={{ padding: '0.75rem 1rem', width: '250px', textAlign: 'right' }}>Actions</th>
+              <th style={{ padding: '0.75rem 1rem', maxWidth: '180px' }}>Base Endpoint URL</th>
+              <th style={{ padding: '0.75rem 1rem', width: '120px' }}>Synced Models</th>
+              <th style={{ padding: '0.75rem 1rem', width: '160px', textAlign: 'right' }}>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -446,8 +446,18 @@ export const GatewaySetup: React.FC<GatewaySetupProps> = ({ config, onSave }) =>
                     {/* Name */}
                     <td style={{ padding: '1rem', fontWeight: 700 }}>{provider.name}</td>
                     {/* URL */}
-                    <td style={{ padding: '1rem', fontFamily: 'monospace', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
-                      {provider.baseUrl}
+                    <td style={{ padding: '1rem' }}>
+                      <div style={{ 
+                        fontFamily: 'monospace', 
+                        color: 'var(--text-muted)', 
+                        fontSize: '0.8rem', 
+                        maxWidth: '180px', 
+                        overflow: 'hidden', 
+                        textOverflow: 'ellipsis', 
+                        whiteSpace: 'nowrap' 
+                      }} title={provider.baseUrl}>
+                        {provider.baseUrl}
+                      </div>
                     </td>
                     {/* Model Count */}
                     <td style={{ padding: '1rem' }}>

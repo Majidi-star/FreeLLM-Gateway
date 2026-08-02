@@ -331,13 +331,31 @@ Examples:
         display: 'flex',
         gap: '0.5rem'
       }}>
-        <input 
-          type="text" 
+        <textarea 
           placeholder="Ask or command assistant..."
           value={inputPrompt}
           onChange={(e) => setInputPrompt(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              handleSendMessage(e as any);
+            }
+          }}
           disabled={loading}
-          style={{ flex: 1, fontSize: '0.85rem', padding: '0.4rem 0.6rem', border: '1px solid var(--border)', background: '#07070a', color: '#c5c9db', borderRadius: '6px', outline: 'none' }}
+          rows={Math.min(5, Math.max(1, inputPrompt.split('\n').length))}
+          style={{ 
+            flex: 1, 
+            fontSize: '0.85rem', 
+            padding: '0.4rem 0.6rem', 
+            border: '1px solid var(--border)', 
+            background: '#07070a', 
+            color: '#c5c9db', 
+            borderRadius: '6px', 
+            outline: 'none',
+            resize: 'none',
+            fontFamily: 'inherit',
+            lineHeight: '1.4'
+          }}
         />
         <button type="submit" className="primary" disabled={loading} style={{ padding: '0 0.8rem', fontSize: '0.8rem', fontWeight: 600, height: '32px', borderRadius: '6px' }}>
           Send

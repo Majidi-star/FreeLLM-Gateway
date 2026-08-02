@@ -87,7 +87,7 @@ const DEFAULT_PROVIDERS = [
     name: 'HuggingFace Inference',
     enabled: false,
     apiKey: '',
-    baseUrl: 'https://api-inference.huggingface.co/v1',
+    baseUrl: 'https://router.huggingface.co/v1',
     proxyEnabled: false,
     proxyUrl: '',
     category: 'Permanent Free',
@@ -117,7 +117,7 @@ const DEFAULT_PROVIDERS = [
     name: 'Kilo Gateway',
     enabled: false,
     apiKey: '',
-    baseUrl: 'https://api.kilo.ai/v1',
+    baseUrl: 'https://api.kilo.ai/api/gateway',
     proxyEnabled: false,
     proxyUrl: '',
     category: 'Permanent Free',
@@ -511,6 +511,13 @@ export function loadConfig() {
             weight: 1,
             enabled: true
           });
+        }
+        // Sync API endpoints changes on startup
+        if (p.id === 'huggingface' && p.baseUrl === 'https://api-inference.huggingface.co/v1') {
+          p.baseUrl = 'https://router.huggingface.co/v1';
+        }
+        if (p.id === 'kilo-gateway' && p.baseUrl === 'https://api.kilo.ai/v1') {
+          p.baseUrl = 'https://api.kilo.ai/api/gateway';
         }
       });
       return merged;

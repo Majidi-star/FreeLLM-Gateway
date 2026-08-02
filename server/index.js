@@ -288,6 +288,9 @@ async function syncModelsHelper({ providerId, apiKey, baseUrl, proxyEnabled, pro
     ];
   } else {
     let url = `${baseUrl}/models`;
+    if (providerId === 'opencode-zen') {
+      url = 'https://opencode.ai/zen/v1/models';
+    }
     let headers = {};
     
     if (providerId === 'gemini') {
