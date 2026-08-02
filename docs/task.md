@@ -71,3 +71,10 @@
 - [x] Update `GatewayConfig` interface definition in `src/utils/api.ts`
 - [x] Build a redirection rules editor in `src/components/ActivePools.tsx`
 - [x] Compile and verify model aliasing end-to-end
+
+## Task 2: Multi-Account Load Balancing
+- [x] Support `apiKeys` array in `server/db.js` seed default templates
+- [x] Implement weighted key selection and individual key rate-limiting in `server/router.js`
+- [x] Declare `apiKeys` in the frontend `Provider` interface in `src/utils/api.ts`
+- [x] Build the Multi-Key Accounts manager section in `src/components/GatewaySetup.tsx`
+- [x] Build and verify multi-account load balancing round-robin distribution
