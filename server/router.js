@@ -204,6 +204,7 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
     const cacheHit = getSemanticCachedResponse(reqPayload.messages, config.semanticCacheThreshold);
     if (cacheHit) {
       res.setHeader('x-gateway-cache', 'hit');
+      res.setHeader('x-gateway-provider', 'Semantic Cache');
       
       const isStream = reqPayload.stream === true;
       const cachedCompletion = cacheHit.completion;
@@ -434,6 +435,7 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
       res.setHeader('Content-Type', 'text/event-stream');
       res.setHeader('Cache-Control', 'no-cache');
       res.setHeader('Connection', 'keep-alive');
+      res.setHeader('x-gateway-provider', provider.name);
 
       let accumulatedText = '';
       
@@ -530,6 +532,7 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
         addSemanticCache(reqPayload.messages, openaiData);
       }
 
+      res.setHeader('x-gateway-provider', provider.name);
       return res.status(200).json(openaiData);
     }
   } catch (err) {

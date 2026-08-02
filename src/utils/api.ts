@@ -171,6 +171,7 @@ export interface PlaygroundResult {
   response: any;
   latencyMs: number;
   cacheStatus: string;
+  providerName: string;
   model: string;
   promptTokens: number;
   completionTokens: number;
@@ -201,12 +202,14 @@ export async function runPlaygroundCompletion(payload: {
 
   const data = await res.json();
   const cacheStatus = res.headers.get('x-gateway-cache') || 'miss';
+  const providerName = res.headers.get('x-gateway-provider') || 'Unknown';
   const usage = data.usage || {};
 
   return {
     response: data,
     latencyMs,
     cacheStatus,
+    providerName,
     model: data.model || payload.model,
     promptTokens: usage.prompt_tokens || 0,
     completionTokens: usage.completion_tokens || 0,

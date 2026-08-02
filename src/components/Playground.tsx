@@ -10,6 +10,7 @@ interface BenchmarkEntry {
   id: number;
   timestamp: string;
   model: string;
+  providerName: string;
   latencyMs: number;
   promptTokens: number;
   completionTokens: number;
@@ -97,6 +98,7 @@ export const Playground: React.FC<PlaygroundProps> = ({ config }) => {
         id: Date.now(),
         timestamp: new Date().toLocaleTimeString(),
         model: result.model,
+        providerName: result.providerName,
         latencyMs: result.latencyMs,
         promptTokens: result.promptTokens,
         completionTokens: result.completionTokens,
@@ -114,6 +116,7 @@ export const Playground: React.FC<PlaygroundProps> = ({ config }) => {
         id: Date.now(),
         timestamp: new Date().toLocaleTimeString(),
         model: selectedModel,
+        providerName: '-',
         latencyMs: 0,
         promptTokens: 0,
         completionTokens: 0,
@@ -362,6 +365,10 @@ export const Playground: React.FC<PlaygroundProps> = ({ config }) => {
               <strong>{currentResult.model}</strong>
             </div>
             <div>
+              <span style={{ color: 'var(--text-muted)' }}>Provider: </span>
+              <strong>{currentResult.providerName}</strong>
+            </div>
+            <div>
               <span style={{ color: 'var(--text-muted)' }}>Tokens: </span>
               <strong>{currentResult.promptTokens} → {currentResult.completionTokens}</strong>
               <span style={{ color: 'var(--text-muted)' }}> ({currentResult.totalTokens} total)</span>
@@ -421,7 +428,7 @@ export const Playground: React.FC<PlaygroundProps> = ({ config }) => {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                  {['Time', 'Model', 'Latency', 'Tokens', 'Cache', 'Status', 'Response Preview'].map(h => (
+                  {['Time', 'Model', 'Provider', 'Latency', 'Tokens', 'Cache', 'Status', 'Response Preview'].map(h => (
                     <th key={h} style={{ padding: '0.5rem 0.6rem', textAlign: 'left', color: 'var(--text-muted)', fontWeight: 600, whiteSpace: 'nowrap' }}>
                       {h}
                     </th>
@@ -433,6 +440,7 @@ export const Playground: React.FC<PlaygroundProps> = ({ config }) => {
                   <tr key={entry.id} style={{ borderBottom: '1px solid oklch(20% 0.01 255.4 / 0.3)' }}>
                     <td style={{ padding: '0.45rem 0.6rem', whiteSpace: 'nowrap', color: 'var(--text-muted)' }}>{entry.timestamp}</td>
                     <td style={{ padding: '0.45rem 0.6rem', fontWeight: 600, maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{entry.model}</td>
+                    <td style={{ padding: '0.45rem 0.6rem', color: 'var(--text-muted)' }}>{entry.providerName}</td>
                     <td style={{ padding: '0.45rem 0.6rem', fontWeight: 700, color: entry.error ? 'var(--error)' : entry.latencyMs < 2000 ? 'var(--success)' : entry.latencyMs < 5000 ? 'oklch(80% 0.15 80)' : 'var(--error)' }}>
                       {entry.error ? '-' : `${entry.latencyMs}ms`}
                     </td>
