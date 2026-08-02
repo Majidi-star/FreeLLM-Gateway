@@ -1,51 +1,50 @@
-# [Revision] Global Persistent Chat Assistant Sidebar
+# Implementation Plan - Task 1: Model Aliasing & Redirection Rules
 
-This plan moves the Chat Assistant out of a separate tab and places it into a **persistent, global right sidebar** visible across all tabs. It also equips the agent with direct access to all app documentation and implements a state synchronization callback so that dashboard tabs instantly refresh when the assistant performs an action (e.g., syncing a provider).
-
----
-
-## User Review Required
-
-> [!IMPORTANT]
-> * **Layout Structure:** The dashboard main layout will split into a flexible-width left pane (Directory, Setup, Pools, Connect) and a fixed `380px` right pane hosting the persistent chat sidebar.
-> * **State Synchronization:** The sidebar will invoke a parent callback `onConfigChange()` whenever tool execution traces indicate database updates. This triggers a data reload in the active tab.
-> * **Knowledge Base Tool:** We will add `get_app_documentation()` to the backend toolset, providing the agent with markdown specifications of the entire proxy architecture, virtual pools, rate limit rules, and client setup guides.
+This plan implements **Model Aliasing & Redirection Rules** to map arbitrary model requests (such as `gpt-4` or `claude-3-5-sonnet`) to our local virtual pools (like `strong-reasoning` or `coding-agent`) automatically.
 
 ---
 
 ## Proposed Changes
 
-### 1. Backend Agent Documentation Tool
-#### [MODIFY] [index.js](file:///c:/Projects/Free-LLM-Provider/server/index.js)
-* Add `get_app_documentation()` to `ASSISTANT_TOOLS` and implement its handler in `executeLocalTool`.
-* The tool will return a detailed guide covering:
-  - Gateway purpose and port (`3000`).
-  - Virtual routing pools (`strong-reasoning`, `coding-agent`, `fast-flash`).
-  - Configuration files (`config.json` database schema).
-  - MCP client setups (Claude Desktop, Cursor).
+### 1. Backend Config Schema & Interception
+#### [MODIFY] [db.js](file:///c:/Projects/Free-LLM-Provider/server/db.js)
+* Add `aliases: {}` to `DEFAULT_CONFIG`.
+* In `loadConfig()`, merge the aliases object from the loaded config or fall back to an empty object:
+  ```javascript
+  merged.aliases = parsed.aliases || {};
+  ```
+
+#### [MODIFY] [router.js](file:///c:/Projects/Free-LLM-Provider/server/router.js)
+* At the beginning of `routeChatCompletion(reqPayload, res, onRoutingEvent)`, intercept the requested model ID:
+  ```javascript
+  const config = loadConfig();
+  if (config.aliases && config.aliases[reqPayload.model]) {
+    const aliasedModel = config.aliases[reqPayload.model];
+    eventLog(`Aliasing model request from "${reqPayload.model}" to target pool "${aliasedModel}"`);
+    reqPayload.model = aliasedModel;
+  }
+  ```
 
 ---
 
-### 2. Sidebar UI Layout & Synchronization
-#### [MODIFY] [Sandbox.tsx](file:///c:/Projects/Free-LLM-Provider/src/components/Sandbox.tsx)
-* Accept `onConfigChange?: () => void` prop.
-* If the API response contains tool traces (`res.traces.length > 0`), invoke `onConfigChange()` to trigger a parent state refresh.
-* Redesign the UI into a single-column layout:
-  - Header: Compact row with Model selector, Proxy toggle checkbox, and Clear button.
-  - Middle: Scrollable chat bubble window.
-  - Bottom: Unified message input form.
+### 2. Frontend Integration
+#### [MODIFY] [api.ts](file:///c:/Projects/Free-LLM-Provider/src/utils/api.ts)
+* Add `aliases?: Record<string, string>;` to `GatewayConfig` interface.
 
-#### [MODIFY] [App.tsx](file:///c:/Projects/Free-LLM-Provider/src/App.tsx)
-* Remove the `5. Test Gateway` tab since the chat is now globally persistent.
-* Add a `showAssistant` boolean state.
-* Render a `💬 Assistant` header button in the top right to toggle the sidebar visibility.
-* Render the chat assistant `<Sandbox onConfigChange={fetchInitialData} />` in the right column of the main grid layout when `showAssistant` is active.
+#### [MODIFY] [ActivePools.tsx](file:///c:/Projects/Free-LLM-Provider/src/components/ActivePools.tsx)
+* Render a new **Model Redirection Rules** card at the bottom of the page.
+* Display a table of current mapping rules.
+* Provide input fields to create a new mapping rule:
+  - **Requested Model Name** (e.g. `gpt-4`)
+  - **Target Pool / Model** (dropdown list of virtual pools and direct models)
+  - Action buttons: **Add Rule** and inline **Delete** buttons.
+* Save changes by invoking `onSave(updatedConfig)`.
 
 ---
 
 ## Verification Plan
 
 ### Manual Verification
-1. **Global Visibility:** Navigate between Directory, Gateway Setup, and Active Pools. Confirm the chat sidebar remains visible and sticky.
-2. **Toggle Sidebar:** Click the header button to hide/show the assistant sidebar.
-3. **Instant Visual Sync:** With the Setup tab active, type *"sync groq"* in the sidebar chat. Confirm that once the tool completes, the model count for Groq instantly updates in the table.
+1. **Create Redirect Rule:** In the **Active Pools** tab, add a redirection rule mapping `gpt-4` to `strong-reasoning`.
+2. **Execute Test:** Query the gateway using `cURL` or the chat sidebar requesting model `gpt-4`.
+3. **Verify Routing Event:** Check the logs/routing history to verify the request was mapped to `strong-reasoning` and resolved to a free provider.

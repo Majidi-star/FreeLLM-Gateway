@@ -60,7 +60,14 @@
 - [x] Build and verify chat agent functionality (sync, CRUD, and basic questions)
 
 ## Persistent Sidebar Chat Assistant
-- [ ] Add `get_app_documentation` tool to backend agent
-- [ ] Redesign `src/components/Sandbox.tsx` into a single-column global sidebar widget with an `onConfigChange` callback
-- [ ] Modify `src/App.tsx` main grid layout to render the persistent sidebar and toggle button
-- [ ] Rebuild Vite React production assets and test the live sidebar reload behaviour
+- [x] Add `get_app_documentation` tool to backend agent
+- [x] Redesign `src/components/Sandbox.tsx` into a single-column global sidebar widget with an `onConfigChange` callback
+- [x] Modify `src/App.tsx` main grid layout to render the persistent sidebar and toggle button
+- [x] Rebuild Vite React production assets and test the live sidebar reload behaviour
+
+## Task 1: Model Aliasing & Redirection Rules
+- [x] Add `aliases` property and merge logic to `server/db.js`
+- [x] Implement alias lookup interception in `server/router.js`
+- [x] Update `GatewayConfig` interface definition in `src/utils/api.ts`
+- [x] Build a redirection rules editor in `src/components/ActivePools.tsx`
+- [x] Compile and verify model aliasing end-to-end
