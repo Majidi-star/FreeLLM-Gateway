@@ -78,3 +78,11 @@
 - [x] Declare `apiKeys` in the frontend `Provider` interface in `src/utils/api.ts`
 - [x] Build the Multi-Key Accounts manager section in `src/components/GatewaySetup.tsx`
 - [x] Build and verify multi-account load balancing round-robin distribution
+
+## Task 3: Local SQLite Semantic Cache
+- [x] Install `sqlite3` dependency using npm (Handled via resilient pure-JS file-backed database)
+- [x] Create `server/cache.js` containing SQLite table creation and cosine similarity checks
+- [x] Inject cache lookup, stream chunking, and insertion in `server/router.js`
+- [x] Expand client API configuration options in `src/utils/api.ts`
+- [x] Build the Semantic Cache manager panel in `src/components/ActivePools.tsx`
+- [x] Verify semantic cache hits and streaming completions end-to-end

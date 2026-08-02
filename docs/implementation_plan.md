@@ -1,65 +1,62 @@
-# Implementation Plan - Task 2: Multi-Account Load Balancing (Weighted Round-Robin)
+# Implementation Plan - Task 3: Local SQLite Semantic Cache
 
-This plan implements **Multi-Account Load Balancing** to distribute requests across multiple API keys of the same provider (e.g. multiple Groq keys) to multiply rate limit capacity and fail over individual keys.
+This plan implements a **Local SQLite Semantic Cache** to intercept incoming requests and return cached completions for semantically similar prompts. This reduces API usage, bypasses rate limits, and speeds up queries.
 
 ---
 
 ## Proposed Changes
 
-### 1. Database Schema
-#### [MODIFY] [db.js](file:///c:/Projects/Free-LLM-Provider/server/db.js)
-* Update the default provider object definition to include an optional `apiKeys` array:
-  ```javascript
-  apiKeys: []
+### 1. Project Dependencies
+* Install `sqlite3` using npm to store cache records locally.
+
+### 2. Cache Utility Module
+#### [NEW] [cache.js](file:///c:/Projects/Free-LLM-Provider/server/cache.js)
+* Initialize SQLite database `server/cache.db` and create the schema:
+  ```sql
+  CREATE TABLE IF NOT EXISTS semantic_cache (
+    id TEXT PRIMARY KEY,
+    prompt TEXT,
+    completion TEXT,
+    created_at INTEGER
+  );
   ```
+* Implement a local **Token-based Cosine Similarity** comparison algorithm:
+  - Tokenize text by stripping punctuation and splitting words.
+  - Count token frequencies and calculate the dot product / vector magnitude.
+  - Return a similarity score between `0.0` and `1.0`.
+* Export:
+  - `getSemanticCachedResponse(messages, threshold)`: Search database prompts, compute similarity, and return matching completion if above threshold.
+  - `addSemanticCache(messages, completionText)`: Store the raw prompt string and target completion object in the database.
 
 ---
 
-### 2. Router Selection & Per-Key Rate Limiting
+### 3. Gateway Router Interception
 #### [MODIFY] [router.js](file:///c:/Projects/Free-LLM-Provider/server/router.js)
-* Enhance target resolution in `routeChatCompletion` to handle multi-key selection.
-* If a provider has multiple custom keys:
-  - Check the rate limits for each individual key by calling `checkRateLimit` with a temporary provider configuration where the `id` is formatted as `providerId:keyId`.
-  - Filter down to the eligible (non-limited) keys.
-  - Distribute requests among eligible keys using a **Weighted Random Selection** algorithm based on the keys' configured weights.
-  - Substitute the request authentication header to use the chosen key.
-  - If a key request fails (e.g., returns 429), place *only that specific key* (using `providerId:keyId`) on cooldown instead of disabling the entire provider.
+* Before executing candidate routing in `routeChatCompletion`:
+  - Format the query messages into a clean prompt string (the last user message content).
+  - Call `getSemanticCachedResponse(messages)`.
+  - **Cache Hit (Stream):** If the client requested `stream: true`, chunk the cached text and emit standard OpenAI-compatible server-sent events (`data: ...`), ending with `data: [DONE]`. Include headers `x-gateway-cache: hit`.
+  - **Cache Hit (Non-Stream):** Construct a standard non-stream JSON response payload containing the cached text. Include headers `x-gateway-cache: hit`.
+  - **Cache Miss:** Proceed with routing. Once a provider responds successfully:
+    - Capture the generated completion content.
+    - Insert it into the cache database by calling `addSemanticCache`.
 
 ---
 
-### 3. Frontend Multi-Key Management
-#### [MODIFY] [api.ts](file:///c:/Projects/Free-LLM-Provider/src/utils/api.ts)
-* Update the `Provider` interface definition to support the `apiKeys` schema:
-  ```typescript
-  export interface ProviderKey {
-    id: string;
-    key: string;
-    weight: number;
-    enabled: boolean;
-  }
-  
-  export interface Provider {
-    ...
-    apiKeys?: ProviderKey[];
-  }
-  ```
-
-#### [MODIFY] [GatewaySetup.tsx](file:///c:/Projects/Free-LLM-Provider/src/components/GatewaySetup.tsx)
-* Redesign the provider settings form inside the configuration drawer:
-  - If a provider is expanded, show a **"Manage Keys & Accounts"** section.
-  - Provide a list of keys with:
-    - Key input box (masked by default).
-    - Weight input field (number, default `1`).
-    - Toggle switch to Enable/Disable the key.
-    - Delete button to remove the key.
-  - Add a **+ Add Account Key** button to append a new credential slot.
-  - On save, sync the updated keys list back to the configuration file.
+### 4. Cache Configurations GUI
+#### [MODIFY] [ActivePools.tsx](file:///c:/Projects/Free-LLM-Provider/src/components/ActivePools.tsx)
+* Render a new **Semantic Cache Settings** card.
+* Allow users to:
+  - Enable/Disable the semantic cache globally.
+  - Configure the similarity threshold percentage (slider from `80%` to `99%`, defaulting to `92%`).
+  - View cache stats (Total Cached Entries).
+  - Clear the semantic cache table.
 
 ---
 
 ## Verification Plan
 
 ### Manual Verification
-1. **Add Multiple Keys:** In Gateway Setup, configure two different API keys for Groq (e.g. Groq account A and Groq account B) with equal weights.
-2. **Execute Multi-Requests:** Send 10 completions in the chat sidebar.
-3. **Verify Distribution:** Check the logs to confirm that the requests were balanced across the two key IDs (e.g. alternating between key 1 and key 2).
+1. **Enable Cache:** Enable Semantic Cache in the pools tab with a `90%` threshold.
+2. **First Query:** Ask a question in the chat assistant (e.g. "What is 10 + 20?"). Check logs to see cache miss and insertion.
+3. **Second Query (Similar):** Ask a similar question (e.g. "what is 10+20?"). Check response headers and logs to verify `x-gateway-cache: hit` and instant execution.
