@@ -101,6 +101,83 @@ function formatAnthropicResponse(anthropicData) {
  * @param {object} res - Express response object.
  * @param {function} onRoutingEvent - Optional callback for real-time dashboard events.
  */
+function resolveLoadBalancedKey(provider, modelObj) {
+  const enabledKeys = provider.apiKeys ? provider.apiKeys.filter(k => k.enabled && k.key) : [];
+  
+  if (enabledKeys.length === 0) {
+    // Fall back to legacy single key
+    const legacyCheck = checkRateLimit(provider, modelObj);
+    return {
+      key: { id: 'default', key: provider.apiKey, weight: 1, enabled: true },
+      virtualProvider: provider,
+      limited: legacyCheck.limited,
+      reason: legacyCheck.reason,
+      retryAfterMs: legacyCheck.retryAfterMs
+    };
+  }
+
+  const eligibleKeys = [];
+  const limitedKeys = [];
+
+  for (const key of enabledKeys) {
+    const virtualProvider = {
+      ...provider,
+      id: `${provider.id}:${key.id}`,
+      apiKey: key.key
+    };
+    
+    const limitCheck = checkRateLimit(virtualProvider, modelObj);
+    if (!limitCheck.limited) {
+      eligibleKeys.push({ key, virtualProvider });
+    } else {
+      limitedKeys.push({ key, limitCheck });
+    }
+  }
+
+  if (eligibleKeys.length > 0) {
+    const totalWeight = eligibleKeys.reduce((sum, item) => sum + (item.key.weight || 1), 0);
+    let rand = Math.random() * totalWeight;
+    
+    for (const item of eligibleKeys) {
+      const weight = item.key.weight || 1;
+      if (rand <= weight) {
+        return {
+          key: item.key,
+          virtualProvider: item.virtualProvider,
+          limited: false
+        };
+      }
+      rand -= weight;
+    }
+    return {
+      key: eligibleKeys[0].key,
+      virtualProvider: eligibleKeys[0].virtualProvider,
+      limited: false
+    };
+  } else {
+    limitedKeys.sort((a, b) => a.limitCheck.retryAfterMs - b.limitCheck.retryAfterMs);
+    const bestCandidate = limitedKeys[0];
+    const virtualProvider = {
+      ...provider,
+      id: `${provider.id}:${bestCandidate.key.id}`,
+      apiKey: bestCandidate.key.key
+    };
+    return {
+      key: bestCandidate.key,
+      virtualProvider,
+      limited: true,
+      reason: bestCandidate.limitCheck.reason,
+      retryAfterMs: bestCandidate.limitCheck.retryAfterMs
+    };
+  }
+}
+
+/**
+ * Handle routing for a request.
+ * @param {object} reqPayload - OpenAI style request payload.
+ * @param {object} res - Express response object.
+ * @param {function} onRoutingEvent - Optional callback for real-time dashboard events.
+ */
 export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null) {
   const config = loadConfig();
   
@@ -162,21 +239,34 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
     if (!provider || !provider.enabled) {
       continue;
     }
-    if (!provider.apiKey && provider.id !== 'cloudflare') {
+    
+    const hasKeys = provider.apiKeys && provider.apiKeys.some(k => k.enabled && k.key);
+    if (!provider.apiKey && !hasKeys && provider.id !== 'cloudflare') {
       eventLog(`Skipping target provider "${provider.id}" (API Key missing).`);
       continue;
     }
 
     const modelObj = provider.models.find(m => m.id === target.modelId) || { id: target.modelId };
-    const limitCheck = checkRateLimit(provider, modelObj);
+    
+    // Resolve load-balanced key
+    const keyResolution = resolveLoadBalancedKey(provider, modelObj);
 
-    if (limitCheck.limited) {
-      eventLog(`Target ${provider.id}/${target.modelId} rate-limited: ${limitCheck.reason}.`);
-      rateLimitedTargets.push({ target, provider, modelObj, retryAfterMs: limitCheck.retryAfterMs });
+    if (keyResolution.limited) {
+      eventLog(`Target ${provider.id}/${target.modelId} rate-limited (all keys): ${keyResolution.reason}.`);
+      rateLimitedTargets.push({ 
+        target, 
+        provider: keyResolution.virtualProvider || provider, 
+        modelObj, 
+        retryAfterMs: keyResolution.retryAfterMs 
+      });
       continue;
     }
 
-    chosenTarget = { target, provider, modelObj };
+    chosenTarget = { 
+      target, 
+      provider: keyResolution.virtualProvider, 
+      modelObj 
+    };
     break;
   }
 
@@ -216,6 +306,8 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
 
   const { target, provider, modelObj } = chosenTarget;
   eventLog(`Selected backend target: ${provider.name} (model: ${target.modelId})`);
+  
+  const providerType = provider.id.split(':')[0];
 
   // 4. Dispatch the call
   const proxyAgent = reqPayload._chatProxy
@@ -230,16 +322,16 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
   };
 
   // Add API Key header based on provider format
-  if (provider.id === 'anthropic') {
+  if (providerType === 'anthropic') {
     targetUrl = `${provider.baseUrl}/messages`;
     headers['x-api-key'] = provider.apiKey;
     headers['anthropic-version'] = '2023-06-01';
-  } else if (provider.id === 'cloudflare') {
+  } else if (providerType === 'cloudflare') {
     // Replace placeholder with actual account ID
     const accountIdMatch = provider.baseUrl.match(/accounts\/([^/]+)/);
     const accountId = accountIdMatch ? accountIdMatch[1] : '';
     headers['Authorization'] = `Bearer ${provider.apiKey}`;
-  } else if (provider.id === 'gemini') {
+  } else if (providerType === 'gemini') {
     // Gemini OpenAI compatibility endpoint:
     // Can pass api key via standard Authorization header or query parameter
     targetUrl = `${provider.baseUrl}/openai/chat/completions`;
@@ -253,7 +345,7 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
 
   // Translate payload if Anthropic
   let payloadToSend = apiPayload;
-  if (provider.id === 'anthropic') {
+  if (providerType === 'anthropic') {
     payloadToSend = convertToAnthropic(apiPayload);
   }
 
@@ -293,7 +385,7 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
               if (dataText === '[DONE]') continue;
               const parsed = JSON.parse(dataText);
               
-              if (provider.id === 'anthropic') {
+              if (providerType === 'anthropic') {
                 if (parsed.type === 'content_block_delta') {
                   accumulatedText += parsed.delta?.text || '';
                 }
@@ -331,7 +423,7 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
       const response = await axios(axiosConfig);
 
       let openaiData = response.data;
-      if (provider.id === 'anthropic') {
+      if (providerType === 'anthropic') {
         openaiData = formatAnthropicResponse(response.data);
       }
 

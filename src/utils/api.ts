@@ -23,11 +23,19 @@ export interface Model {
   limits?: any;
 }
 
+export interface ProviderKey {
+  id: string;
+  key: string;
+  weight: number;
+  enabled: boolean;
+}
+
 export interface Provider {
   id: string;
   name: string;
   enabled: boolean;
   apiKey: string;
+  apiKeys?: ProviderKey[];
   baseUrl: string;
   proxyEnabled: boolean;
   proxyUrl: string;

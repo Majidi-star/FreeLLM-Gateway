@@ -488,8 +488,23 @@ export function loadConfig() {
       merged.aliases = parsed.aliases || {};
       
       DEFAULT_PROVIDERS.forEach(defaultProv => {
-        if (!merged.providers.find(p => p.id === defaultProv.id)) {
-          merged.providers.push(defaultProv);
+        const found = merged.providers.find(p => p.id === defaultProv.id);
+        if (!found) {
+          merged.providers.push({ ...defaultProv, apiKeys: [] });
+        }
+      });
+
+      merged.providers.forEach(p => {
+        if (!p.apiKeys) {
+          p.apiKeys = [];
+        }
+        if (p.apiKey && p.apiKeys.length === 0) {
+          p.apiKeys.push({
+            id: 'default',
+            key: p.apiKey,
+            weight: 1,
+            enabled: true
+          });
         }
       });
       return merged;

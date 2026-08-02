@@ -424,7 +424,7 @@ async function executeLocalTool(name, args) {
     
     const models = await syncModelsHelper({
       providerId,
-      apiKey: provider.apiKey,
+      apiKey: provider.apiKey || (provider.apiKeys?.[0]?.key || ''),
       baseUrl: provider.baseUrl,
       proxyEnabled: provider.proxyEnabled,
       proxyUrl: provider.proxyUrl
@@ -439,7 +439,7 @@ async function executeLocalTool(name, args) {
     
     const result = await testConnectionHelper({
       providerId,
-      apiKey: provider.apiKey,
+      apiKey: provider.apiKey || (provider.apiKeys?.[0]?.key || ''),
       baseUrl: provider.baseUrl,
       proxyEnabled: provider.proxyEnabled,
       proxyUrl: provider.proxyUrl,

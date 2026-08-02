@@ -33,7 +33,6 @@ export const GatewaySetup: React.FC<GatewaySetupProps> = ({ config, onSave }) =>
   
   // Track expanded configuration drawers (providerId -> boolean)
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [visibleKeys, setVisibleKeys] = useState<{ [key: string]: boolean }>({});
 
   const handleProviderToggle = (id: string, enabled: boolean) => {
     const updated = localConfig.providers.map((p) => 
@@ -51,8 +50,37 @@ export const GatewaySetup: React.FC<GatewaySetupProps> = ({ config, onSave }) =>
     setLocalConfig({ ...localConfig, providers: updated });
   };
 
-  const toggleKeyVisibility = (id: string) => {
-    setVisibleKeys({ ...visibleKeys, [id]: !visibleKeys[id] });
+  const handleAddAccountKey = (providerId: string) => {
+    const provider = localConfig.providers.find(p => p.id === providerId);
+    if (!provider) return;
+    const currentKeys = provider.apiKeys || [];
+    const newKey = {
+      id: `key-${Date.now()}`,
+      key: '',
+      weight: 1,
+      enabled: true
+    };
+    const updatedKeys = [...currentKeys, newKey];
+    handleProviderChange(providerId, 'apiKeys', updatedKeys);
+  };
+
+  const handleRemoveAccountKey = (providerId: string, keyId: string) => {
+    const provider = localConfig.providers.find(p => p.id === providerId);
+    if (!provider) return;
+    const updatedKeys = (provider.apiKeys || []).filter(k => k.id !== keyId);
+    handleProviderChange(providerId, 'apiKeys', updatedKeys);
+  };
+
+  const handleAccountKeyChange = (providerId: string, keyId: string, field: 'key' | 'weight' | 'enabled', value: any) => {
+    const provider = localConfig.providers.find(p => p.id === providerId);
+    if (!provider) return;
+    const updatedKeys = (provider.apiKeys || []).map(k => {
+      if (k.id === keyId) {
+        return { ...k, [field]: value };
+      }
+      return k;
+    });
+    handleProviderChange(providerId, 'apiKeys', updatedKeys);
   };
 
   const handleTestConnection = async (provider: Provider) => {
@@ -343,7 +371,6 @@ export const GatewaySetup: React.FC<GatewaySetupProps> = ({ config, onSave }) =>
           <tbody>
             {localConfig.providers.map((provider) => {
               const isExpanded = expandedId === provider.id;
-              const isVisible = visibleKeys[provider.id] || false;
               const isTesting = testingId === provider.id;
               const isSyncing = syncingId === provider.id;
               const hasResult = actionResult?.id === provider.id;
@@ -420,21 +447,85 @@ export const GatewaySetup: React.FC<GatewaySetupProps> = ({ config, onSave }) =>
                           animation: 'slideDown 0.25s ease-out'
                         }}>
                           {/* Config parameters form */}
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                             {provider.id !== 'cloudflare' && (
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                                <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600 }}>API key Credentials</label>
-                                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                  <input 
-                                    type={isVisible ? 'text' : 'password'} 
-                                    placeholder="API Key"
-                                    value={provider.apiKey}
-                                    onChange={(e) => handleProviderChange(provider.id, 'apiKey', e.target.value)}
-                                  />
-                                  <button type="button" onClick={() => toggleKeyVisibility(provider.id)} style={{ padding: '0.4rem' }}>
-                                    {isVisible ? 'Hide' : 'Show'}
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', borderBottom: '1px solid var(--border)', paddingBottom: '1rem' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                  <label style={{ fontSize: '0.85rem', color: 'var(--text)', fontWeight: 700 }}>
+                                    Manage Key Accounts (Load Balanced)
+                                  </label>
+                                  <button 
+                                    type="button" 
+                                    onClick={() => handleAddAccountKey(provider.id)}
+                                    style={{ padding: '0.2rem 0.6rem', fontSize: '0.75rem' }}
+                                  >
+                                    + Add Account Key
                                   </button>
                                 </div>
+
+                                {/* List of keys */}
+                                {(!provider.apiKeys || provider.apiKeys.length === 0) ? (
+                                  <div style={{ padding: '0.75rem', border: '1px dashed var(--border)', borderRadius: '6px', fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center' }}>
+                                    No custom key accounts configured. Balancing defaults to primary key:
+                                    <input 
+                                      type="password" 
+                                      placeholder="Primary API Key"
+                                      value={provider.apiKey}
+                                      onChange={(e) => handleProviderChange(provider.id, 'apiKey', e.target.value)}
+                                      style={{ marginTop: '0.5rem', width: '100%', fontSize: '0.8rem', padding: '0.4rem', background: '#0a0a0f', color: '#c5c9db', border: '1px solid var(--border)', borderRadius: '6px' }}
+                                    />
+                                  </div>
+                                ) : (
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                    {provider.apiKeys.map((k) => (
+                                      <div key={k.id} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                        <input 
+                                          type="checkbox"
+                                          checked={k.enabled}
+                                          onChange={(e) => handleAccountKeyChange(provider.id, k.id, 'enabled', e.target.checked)}
+                                          style={{ cursor: 'pointer', margin: 0 }}
+                                        />
+                                        <input 
+                                          type="password"
+                                          placeholder="API Key string"
+                                          value={k.key}
+                                          onChange={(e) => handleAccountKeyChange(provider.id, k.id, 'key', e.target.value)}
+                                          style={{ flex: 1, fontSize: '0.8rem', padding: '0.35rem 0.5rem', background: '#0a0a0f', color: '#c5c9db', border: '1px solid var(--border)', borderRadius: '6px' }}
+                                        />
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', width: '80px' }}>
+                                          <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Wt:</span>
+                                          <input 
+                                            type="number"
+                                            value={k.weight || 1}
+                                            min={1}
+                                            max={100}
+                                            onChange={(e) => handleAccountKeyChange(provider.id, k.id, 'weight', parseInt(e.target.value) || 1)}
+                                            style={{ fontSize: '0.8rem', padding: '0.3rem', width: '50px', background: '#0a0a0f', color: '#c5c9db', border: '1px solid var(--border)', borderRadius: '6px' }}
+                                          />
+                                        </div>
+                                        <button 
+                                          type="button" 
+                                          className="danger"
+                                          onClick={() => handleRemoveAccountKey(provider.id, k.id)}
+                                          style={{ padding: '0.35rem 0.6rem', fontSize: '0.75rem' }}
+                                        >
+                                          Delete
+                                        </button>
+                                      </div>
+                                    ))}
+                                    
+                                    <div style={{ marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>Primary Default API Key:</span>
+                                      <input 
+                                        type="password" 
+                                        placeholder="Primary Default key (used for syncing)"
+                                        value={provider.apiKey}
+                                        onChange={(e) => handleProviderChange(provider.id, 'apiKey', e.target.value)}
+                                        style={{ fontSize: '0.8rem', padding: '0.4rem', width: '100%', background: '#0a0a0f', color: '#c5c9db', border: '1px solid var(--border)', borderRadius: '6px' }}
+                                      />
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             )}
 
@@ -444,6 +535,7 @@ export const GatewaySetup: React.FC<GatewaySetupProps> = ({ config, onSave }) =>
                                 type="text" 
                                 value={provider.baseUrl}
                                 onChange={(e) => handleProviderChange(provider.id, 'baseUrl', e.target.value)}
+                                style={{ background: '#0a0a0f', color: '#c5c9db', border: '1px solid var(--border)', borderRadius: '6px', padding: '0.4rem' }}
                               />
                             </div>
                           </div>
