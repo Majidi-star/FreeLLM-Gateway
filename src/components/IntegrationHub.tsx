@@ -35,6 +35,35 @@ export const IntegrationHub: React.FC = () => {
       language: 'text'
     },
     {
+      id: 'mcp',
+      name: 'Model Context Protocol (MCP)',
+      icon: '🔌',
+      description: 'Register the Free LLM Gateway as an MCP server in Cursor or Claude Desktop.',
+      instructions: `The gateway includes a built-in stdio-transport MCP server at server/mcp.js. This exposes gateway status, providers listing, dynamic model sync, and virtual pool completions as MCP tools.
+
+To configure Claude Desktop:
+1. Locate your claude_desktop_config.json file:
+   - Windows: %APPDATA%\\Claude\\claude_desktop_config.json
+   - macOS: ~/Library/Application Support/Claude/claude_desktop_config.json
+2. Open the file and add the config JSON below under the "mcpServers" key.
+
+To configure Cursor:
+1. Open Cursor Settings -> Features -> MCP.
+2. Click "+ Add New MCP Server".
+3. Enter Name: Free LLM Gateway, Type: stdio.
+4. Input Command: node C:/Projects/Free-LLM-Provider/server/mcp.js
+5. Save, restart, and let the AI models call pool completions automatically!`,
+      code: `{
+  "mcpServers": {
+    "free-llm-gateway": {
+      "command": "node",
+      "args": ["C:/Projects/Free-LLM-Provider/server/mcp.js"]
+    }
+  }
+}`,
+      language: 'json'
+    },
+    {
       id: 'aider',
       name: 'Aider CLI Developer',
       icon: '🤖',
