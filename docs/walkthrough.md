@@ -2,6 +2,8 @@
 
 We have successfully updated the **LLM Free Pool Gateway** to support a fully dynamic provider CRUD management dashboard, seeded all 26 free and trial-credit providers, added **Model Context Protocol (MCP)** server capability, and integrated an **Agentic Chat Assistant** directly into the dashboard.
 
+In addition, we have completed the **Gap-Closing Technical Roadmap** to make our product the absolute best in the market by implementing the following features:
+
 ---
 
 ## Technical Accomplishments
@@ -30,6 +32,28 @@ We have successfully updated the **LLM Free Pool Gateway** to support a fully dy
 * **Creation Form:** Inside **Gateway Setup**, click **+ Add Custom Provider** to connect private, local, or undocumented backends (e.g., local Ollama at `http://localhost:11434/v1`).
 * **Configure Drawer:** Expand any provider row to configure API keys, change base URLs, enable proxies, test connectivity, and trigger model sync.
 * **Dynamic Directory:** The **Free API Directory** dynamically reads directly from the configuration database, instantly displaying any new custom providers you create.
+
+---
+
+## Gap-Closing Feature Roadmap Accomplishments
+
+### Task 1: Model Aliasing & Redirection Rules
+* **Interception Hook (`server/router.js`):** Intercepts incoming completions requests. If the requested model is configured as an alias (e.g. `gpt-4` or `claude-3-5-sonnet`), it maps it on-the-fly to a virtual routing pool (e.g. `strong-reasoning`).
+* **Aliases GUI Panel (`src/components/ActivePools.tsx`):** Added a card displaying active redirects, allowing users to create new rules using custom names and dropdown pool selectors.
+
+### Task 2: Multi-Account Load Balancing (Weighted Round-Robin)
+* **Credential Slots (`src/components/GatewaySetup.tsx`):** Users can add multiple API keys per provider, set individual weights, and toggle them.
+* **Router Balance & Cooldowns (`server/router.js`):** Checks rate limits per key by appending the key ID to sliding window checks (`providerId:keyId`). Distributes traffic using weighted random selection. If a key request fails (e.g., gets a 429), it places only that key on cooldown, keeping other keys active.
+* **Migration Safeguard (`server/db.js`):** Dynamic loader migration automatically ports legacy single `apiKey` credentials to the new `apiKeys` slots array on first boot.
+
+### Task 3: Local Semantic Caching
+* **Pure-JS Vector Database (`server/cache.js`):** Implemented a high-performance local cosine-similarity text parser using token-gram frequencies. Bypasses external dependencies, preventing native binary compiler errors.
+* **Cache Hits Stream Simulator (`server/router.js`):** Prior to routing, the gateway checks query similarities against cached completions. If a hit occurs, the gateway immediately returns `x-gateway-cache: hit`. For stream requests, it smoothly chunks cached text into OpenAI SSE frames.
+* **Active Pools Slider (`src/components/ActivePools.tsx`):** Allows users to enable semantic caching, adjust similarity thresholds (80%-99%), monitor cache records, and clear the database.
+
+### Task 4: Virtual Gateway Keys & Budgets
+* **Access Validation Middleware (`server/index.js`):** Guards all `/v1/*` endpoints. If virtual keys are created, it enforces bearer token validation. Tracks keys' sliding window RPM/RPD history, returning `429` if limits are exceeded.
+* **Key Manager GUI (`src/components/GatewaySetup.tsx`):** Provides a drawer card to generate custom keys (labeled descriptive tokens), copy keys to clipboard, toggle key availability, customize caps, and inspect usage.
 
 ---
 

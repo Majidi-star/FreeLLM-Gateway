@@ -1,62 +1,72 @@
-# Implementation Plan - Task 3: Local SQLite Semantic Cache
+# Implementation Plan - Task 4: Virtual Gateway Keys & Budgets
 
-This plan implements a **Local SQLite Semantic Cache** to intercept incoming requests and return cached completions for semantically similar prompts. This reduces API usage, bypasses rate limits, and speeds up queries.
+This plan implements **Virtual Gateway Keys & Budgets** to allow users to generate custom API keys with request rate-limits (RPM / RPD) to share access to the gateway pools safely.
 
 ---
 
 ## Proposed Changes
 
-### 1. Project Dependencies
-* Install `sqlite3` using npm to store cache records locally.
-
-### 2. Cache Utility Module
-#### [NEW] [cache.js](file:///c:/Projects/Free-LLM-Provider/server/cache.js)
-* Initialize SQLite database `server/cache.db` and create the schema:
-  ```sql
-  CREATE TABLE IF NOT EXISTS semantic_cache (
-    id TEXT PRIMARY KEY,
-    prompt TEXT,
-    completion TEXT,
-    created_at INTEGER
-  );
+### 1. Database Schema
+#### [MODIFY] [db.js](file:///c:/Projects/Free-LLM-Provider/server/db.js)
+* Add `virtualKeys: []` to `DEFAULT_CONFIG`.
+* Update `loadConfig()` to merge the `virtualKeys` array from config file or fall back to `[]`:
+  ```javascript
+  merged.virtualKeys = parsed.virtualKeys || [];
   ```
-* Implement a local **Token-based Cosine Similarity** comparison algorithm:
-  - Tokenize text by stripping punctuation and splitting words.
-  - Count token frequencies and calculate the dot product / vector magnitude.
-  - Return a similarity score between `0.0` and `1.0`.
-* Export:
-  - `getSemanticCachedResponse(messages, threshold)`: Search database prompts, compute similarity, and return matching completion if above threshold.
-  - `addSemanticCache(messages, completionText)`: Store the raw prompt string and target completion object in the database.
 
 ---
 
-### 3. Gateway Router Interception
-#### [MODIFY] [router.js](file:///c:/Projects/Free-LLM-Provider/server/router.js)
-* Before executing candidate routing in `routeChatCompletion`:
-  - Format the query messages into a clean prompt string (the last user message content).
-  - Call `getSemanticCachedResponse(messages)`.
-  - **Cache Hit (Stream):** If the client requested `stream: true`, chunk the cached text and emit standard OpenAI-compatible server-sent events (`data: ...`), ending with `data: [DONE]`. Include headers `x-gateway-cache: hit`.
-  - **Cache Hit (Non-Stream):** Construct a standard non-stream JSON response payload containing the cached text. Include headers `x-gateway-cache: hit`.
-  - **Cache Miss:** Proceed with routing. Once a provider responds successfully:
-    - Capture the generated completion content.
-    - Insert it into the cache database by calling `addSemanticCache`.
+### 2. Request Authentication Middleware
+#### [MODIFY] [index.js](file:///c:/Projects/Free-LLM-Provider/server/index.js)
+* Implement a `validateVirtualKey` validation middleware function:
+  - If `virtualKeys` is empty, let requests pass through unimpeded (no authentication required).
+  - If `virtualKeys` contains entries, parse the incoming request `Authorization` Bearer token header.
+  - Verify that the token matches an enabled virtual key.
+  - Evaluate the key's sliding window history against configured limits (RPM / RPD).
+  - If rate-limited, return `429 Too Many Requests`. If invalid, return `401 Unauthorized`.
+  - Save the pruned history timestamps to the configuration file.
+* Inject `validateVirtualKey` into `/v1/chat/completions` and `/v1/models` route pathways.
 
 ---
 
-### 4. Cache Configurations GUI
-#### [MODIFY] [ActivePools.tsx](file:///c:/Projects/Free-LLM-Provider/src/components/ActivePools.tsx)
-* Render a new **Semantic Cache Settings** card.
-* Allow users to:
-  - Enable/Disable the semantic cache globally.
-  - Configure the similarity threshold percentage (slider from `80%` to `99%`, defaulting to `92%`).
-  - View cache stats (Total Cached Entries).
-  - Clear the semantic cache table.
+### 3. Frontend Key Manager Drawer
+#### [MODIFY] [api.ts](file:///c:/Projects/Free-LLM-Provider/src/utils/api.ts)
+* Update `GatewayConfig` interface to declare `virtualKeys`:
+  ```typescript
+  export interface VirtualKey {
+    id: string;
+    name: string;
+    enabled: boolean;
+    limits: { rpm: number; rpd: number };
+    usage?: { requests: number[] };
+  }
+  
+  export interface GatewayConfig {
+    ...
+    virtualKeys?: VirtualKey[];
+  }
+  ```
+
+#### [MODIFY] [GatewaySetup.tsx](file:///c:/Projects/Free-LLM-Provider/src/components/GatewaySetup.tsx)
+* Append a **Virtual Gateway Keys Manager** settings card.
+* Display a list of active virtual keys showing:
+  - Key identifier name.
+  - Raw key string value (with a button to copy to clipboard).
+  - RPM and RPD rate limits.
+  - Active toggle to enable/disable the key.
+  - Delete button to revoke the key.
+* Add a **+ Generate Gateway Key** form allowing users to assign:
+  - A descriptive key name (e.g. Aider key).
+  - RPM limit (default `10`).
+  - RPD limit (default `500`).
+* Sync state changes using `onSave(updatedConfig)`.
 
 ---
 
 ## Verification Plan
 
 ### Manual Verification
-1. **Enable Cache:** Enable Semantic Cache in the pools tab with a `90%` threshold.
-2. **First Query:** Ask a question in the chat assistant (e.g. "What is 10 + 20?"). Check logs to see cache miss and insertion.
-3. **Second Query (Similar):** Ask a similar question (e.g. "what is 10+20?"). Check response headers and logs to verify `x-gateway-cache: hit` and instant execution.
+1. **Create Virtual Key:** In Gateway Setup, add a key named "Test Aider Key" with `rpm: 2`.
+2. **Execute Auth Request:** Send a request to `localhost:3000/v1/chat/completions` using the generated bearer key. Verify completion is returned.
+3. **Execute Unauth Request:** Send a request without the header and verify it is rejected with `401 Unauthorized`.
+4. **Exceed rate limits:** Query the endpoint three times inside one minute; verify the third request fails with `429`.

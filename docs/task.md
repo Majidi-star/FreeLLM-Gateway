@@ -86,3 +86,10 @@
 - [x] Expand client API configuration options in `src/utils/api.ts`
 - [x] Build the Semantic Cache manager panel in `src/components/ActivePools.tsx`
 - [x] Verify semantic cache hits and streaming completions end-to-end
+
+## Task 4: Virtual Gateway Keys & Budgets
+- [x] Support `virtualKeys` array in `server/db.js` seed default templates
+- [x] Implement sliding-window key authentication middleware in `server/index.js`
+- [x] Declare `virtualKeys` in the frontend config interface in `src/utils/api.ts`
+- [x] Build the Virtual Gateway Keys manager panel in `src/components/GatewaySetup.tsx`
+- [x] Compile and verify virtual key routing and budgets end-to-end
