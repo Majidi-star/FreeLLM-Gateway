@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { GatewayConfig, VirtualModel } from '../utils/api';
 import { getCacheStats, clearCacheDatabase } from '../utils/api';
 
@@ -21,6 +21,21 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
   // Model Aliases State
   const [newAliasRequestName, setNewAliasRequestName] = useState('');
   const [newAliasTargetModel, setNewAliasTargetModel] = useState('');
+
+  // Sync state when config from parent updates
+  useEffect(() => {
+    setLocalConfig({ ...config });
+  }, [config]);
+
+  // Debounced auto-save configuration whenever localConfig updates
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (JSON.stringify(localConfig) !== JSON.stringify(config)) {
+        onSave(localConfig);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [localConfig, config, onSave]);
 
   // Semantic Cache State
   const [cacheSize, setCacheSize] = useState<number>(0);
@@ -187,10 +202,7 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
     setNewTargets({ ...newTargets, [vmId]: updated });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSave(localConfig);
-  };
+
 
   return (
     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
@@ -543,12 +555,7 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
         </div>
       </div>
 
-      {/* Save Button */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid var(--border)', paddingTop: '1.5rem', marginBottom: '2rem' }}>
-        <button type="submit" className="primary" onClick={handleSubmit} style={{ padding: '0.8rem 2rem', fontSize: '1rem' }}>
-          Save Pools Configuration
-        </button>
-      </div>
+
 
     </div>
   );
