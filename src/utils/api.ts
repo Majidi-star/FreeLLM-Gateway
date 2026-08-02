@@ -67,6 +67,14 @@ export interface Stats {
   approximateCostSaved: number;
 }
 
+export interface VirtualKey {
+  id: string;
+  name: string;
+  enabled: boolean;
+  limits: { rpm: number; rpd: number };
+  usage?: { requests: number[] };
+}
+
 export interface GatewayConfig {
   globalProxy: string;
   globalProxyEnabled: boolean;
@@ -76,6 +84,7 @@ export interface GatewayConfig {
   aliases?: Record<string, string>;
   semanticCacheEnabled?: boolean;
   semanticCacheThreshold?: number;
+  virtualKeys?: VirtualKey[];
   stats: Stats;
 }
 

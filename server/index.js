@@ -28,9 +28,70 @@ function broadcastRoutingEvent(event) {
   });
 }
 
-// ----------------------------------------------------
-// 1. OpenAI-Compatible API Routes
-// ----------------------------------------------------
+const validateVirtualKey = (req, res, next) => {
+  const config = loadConfig();
+  const keys = config.virtualKeys || [];
+  
+  if (keys.length === 0) {
+    return next();
+  }
+
+  const authHeader = req.headers.authorization || '';
+  const token = authHeader.replace(/^Bearer\s+/i, '').trim();
+
+  if (!token) {
+    return res.status(401).json({ error: { message: 'Authentication required. Active virtual gateway keys are configured.' } });
+  }
+
+  const keyObj = keys.find(k => k.id === token);
+  if (!keyObj) {
+    return res.status(401).json({ error: { message: 'Invalid Virtual Gateway Key.' } });
+  }
+
+  if (!keyObj.enabled) {
+    return res.status(403).json({ error: { message: 'This Virtual Gateway Key has been disabled.' } });
+  }
+
+  const now = Date.now();
+  if (!keyObj.usage) {
+    keyObj.usage = { requests: [] };
+  }
+  
+  const oneDay = 24 * 60 * 60 * 1000;
+  const oneMin = 60 * 1000;
+  
+  const history = keyObj.usage.requests || [];
+  const validHistory = history.filter(t => now - t < oneDay);
+  
+  // Check RPM
+  const rpmLimit = keyObj.limits?.rpm || 0;
+  if (rpmLimit > 0) {
+    const rpmCount = validHistory.filter(t => now - t < oneMin).length;
+    if (rpmCount >= rpmLimit) {
+      return res.status(429).json({ error: { message: `Virtual Key rate limit exceeded (RPM limit: ${rpmLimit}).` } });
+    }
+  }
+
+  // Check RPD
+  const rpdLimit = keyObj.limits?.rpd || 0;
+  if (rpdLimit > 0) {
+    const rpdCount = validHistory.length;
+    if (rpdCount >= rpdLimit) {
+      return res.status(429).json({ error: { message: `Virtual Key daily quota exceeded (RPD limit: ${rpdLimit}).` } });
+    }
+  }
+
+  // Update history & save config
+  validHistory.push(now);
+  keyObj.usage.requests = validHistory;
+  
+  config.virtualKeys = config.virtualKeys.map(k => k.id === token ? keyObj : k);
+  saveConfig(config);
+  
+  next();
+};
+
+app.use('/v1/*', validateVirtualKey);
 
 // GET /v1/models - List all available models (virtual pools and individual provider models)
 app.get('/v1/models', (req, res) => {

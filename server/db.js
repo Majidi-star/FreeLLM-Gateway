@@ -470,6 +470,7 @@ const DEFAULT_CONFIG = {
   aliases: {},
   semanticCacheEnabled: false,
   semanticCacheThreshold: 0.92,
+  virtualKeys: [],
   stats: {
     totalRequests: 0,
     successfulRequests: 0,
@@ -490,6 +491,7 @@ export function loadConfig() {
       merged.aliases = parsed.aliases || {};
       merged.semanticCacheEnabled = parsed.semanticCacheEnabled !== undefined ? parsed.semanticCacheEnabled : false;
       merged.semanticCacheThreshold = parsed.semanticCacheThreshold !== undefined ? parsed.semanticCacheThreshold : 0.92;
+      merged.virtualKeys = parsed.virtualKeys || [];
       
       DEFAULT_PROVIDERS.forEach(defaultProv => {
         const found = merged.providers.find(p => p.id === defaultProv.id);

@@ -26,6 +26,12 @@ export const GatewaySetup: React.FC<GatewaySetupProps> = ({ config, onSave }) =>
     limitsDescription: ''
   });
 
+  // Virtual Keys creation state
+  const [newKeyName, setNewKeyName] = useState('');
+  const [newKeyRpm, setNewKeyRpm] = useState(10);
+  const [newKeyRpd, setNewKeyRpd] = useState(500);
+  const [showAddKey, setShowAddKey] = useState(false);
+
   // Action status trackers
   const [testingId, setTestingId] = useState<string | null>(null);
   const [syncingId, setSyncingId] = useState<string | null>(null);
@@ -81,6 +87,50 @@ export const GatewaySetup: React.FC<GatewaySetupProps> = ({ config, onSave }) =>
       return k;
     });
     handleProviderChange(providerId, 'apiKeys', updatedKeys);
+  };
+
+  const handleGenerateVirtualKey = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newKeyName.trim()) return;
+
+    const randomHex = Array.from({ length: 16 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
+    const newKeyId = `sk-gw-${randomHex}`;
+
+    const newKey = {
+      id: newKeyId,
+      name: newKeyName.trim(),
+      enabled: true,
+      limits: { rpm: newKeyRpm, rpd: newKeyRpd },
+      usage: { requests: [] }
+    };
+
+    const updatedKeys = [...(localConfig.virtualKeys || []), newKey];
+    const newConf = { ...localConfig, virtualKeys: updatedKeys };
+    setLocalConfig(newConf);
+    onSave(newConf);
+
+    setNewKeyName('');
+    setNewKeyRpm(10);
+    setNewKeyRpd(500);
+    setShowAddKey(false);
+    alert(`Generated key successfully:\n${newKeyId}`);
+  };
+
+  const handleToggleVirtualKey = (keyId: string, enabled: boolean) => {
+    const updatedKeys = (localConfig.virtualKeys || []).map(k => 
+      k.id === keyId ? { ...k, enabled } : k
+    );
+    const newConf = { ...localConfig, virtualKeys: updatedKeys };
+    setLocalConfig(newConf);
+    onSave(newConf);
+  };
+
+  const handleDeleteVirtualKey = (keyId: string) => {
+    if (!confirm('Are you sure you want to revoke this Gateway API key? Users with this token will lose access immediately.')) return;
+    const updatedKeys = (localConfig.virtualKeys || []).filter(k => k.id !== keyId);
+    const newConf = { ...localConfig, virtualKeys: updatedKeys };
+    setLocalConfig(newConf);
+    onSave(newConf);
   };
 
   const handleTestConnection = async (provider: Provider) => {
@@ -619,6 +669,140 @@ export const GatewaySetup: React.FC<GatewaySetupProps> = ({ config, onSave }) =>
             })}
           </tbody>
         </table>
+      </div>
+
+      {/* Virtual Gateway Keys Manager Card */}
+      <div className="glass-panel" style={{ padding: '1.5rem', marginTop: '1rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem', marginBottom: '1.25rem' }}>
+          <div>
+            <h3 style={{ margin: 0, fontSize: '1.25rem' }}>Virtual Gateway API Keys</h3>
+            <p style={{ color: 'var(--text-muted)', margin: '0.25rem 0 0', fontSize: '0.85rem' }}>
+              Create usage-capped keys to securely share your free gateway access with external tools.
+            </p>
+          </div>
+          <button type="button" className="primary" onClick={() => setShowAddKey(!showAddKey)}>
+            {showAddKey ? 'Cancel' : '+ Generate Gateway Key'}
+          </button>
+        </div>
+
+        {/* Generate Key Drawer */}
+        {showAddKey && (
+          <form onSubmit={handleGenerateVirtualKey} className="glass-panel" style={{ padding: '1.25rem', marginBottom: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem', background: 'oklch(15% 0.015 255.4 / 0.4)' }}>
+            <h4 style={{ margin: 0, fontSize: '1rem', color: 'var(--accent)' }}>Create Shared Gateway Credential</h4>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Key Name Description</label>
+                <input 
+                  type="text" 
+                  placeholder="e.g. Cursor dev key" 
+                  value={newKeyName} 
+                  onChange={(e) => setNewKeyName(e.target.value)} 
+                  required
+                  style={{ background: '#0a0a0f', color: '#c5c9db', border: '1px solid var(--border)', borderRadius: '6px', padding: '0.4rem' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>RPM Limit (0 for unlimited)</label>
+                <input 
+                  type="number" 
+                  min={0}
+                  value={newKeyRpm} 
+                  onChange={(e) => setNewKeyRpm(parseInt(e.target.value) || 0)} 
+                  style={{ background: '#0a0a0f', color: '#c5c9db', border: '1px solid var(--border)', borderRadius: '6px', padding: '0.4rem' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>RPD Limit (0 for unlimited)</label>
+                <input 
+                  type="number" 
+                  min={0}
+                  value={newKeyRpd} 
+                  onChange={(e) => setNewKeyRpd(parseInt(e.target.value) || 0)} 
+                  style={{ background: '#0a0a0f', color: '#c5c9db', border: '1px solid var(--border)', borderRadius: '6px', padding: '0.4rem' }}
+                />
+              </div>
+            </div>
+            <button type="submit" className="primary" style={{ alignSelf: 'flex-end', padding: '0.4rem 1.25rem' }}>
+              Generate Key
+            </button>
+          </form>
+        )}
+
+        {/* Keys Table list */}
+        {(!localConfig.virtualKeys || localConfig.virtualKeys.length === 0) ? (
+          <div style={{ padding: '2rem', border: '1px dashed var(--border)', borderRadius: '8px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+            No virtual keys generated. Gateway API requires no authentication.
+          </div>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', textAlign: 'left' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--border)', textAlign: 'left' }}>
+                  <th style={{ padding: '0.5rem 0.75rem', width: '50px' }}>Active</th>
+                  <th style={{ padding: '0.5rem 0.75rem' }}>Label / Description</th>
+                  <th style={{ padding: '0.5rem 0.75rem' }}>Gateway API Key (Bearer Token)</th>
+                  <th style={{ padding: '0.5rem 0.75rem', width: '120px' }}>RPM limit</th>
+                  <th style={{ padding: '0.5rem 0.75rem', width: '120px' }}>RPD limit</th>
+                  <th style={{ padding: '0.5rem 0.75rem', width: '100px', textAlign: 'right' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {localConfig.virtualKeys.map((key) => {
+                  const reqsToday = key.usage?.requests?.length || 0;
+                  return (
+                    <tr key={key.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                      <td style={{ padding: '0.75rem', textAlign: 'center' }}>
+                        <input 
+                          type="checkbox" 
+                          checked={key.enabled} 
+                          onChange={(e) => handleToggleVirtualKey(key.id, e.target.checked)}
+                          style={{ cursor: 'pointer', margin: 0 }}
+                        />
+                      </td>
+                      <td style={{ padding: '0.75rem', fontWeight: 600 }}>{key.name}</td>
+                      <td style={{ padding: '0.75rem' }}>
+                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                          <code style={{ background: '#0a0a0f', padding: '0.2rem 0.4rem', borderRadius: '4px', border: '1px solid var(--border)', color: 'var(--accent)' }}>
+                            {key.id}
+                          </code>
+                          <button 
+                            type="button" 
+                            style={{ padding: '0.2rem 0.4rem', fontSize: '0.75rem' }}
+                            onClick={() => {
+                              navigator.clipboard.writeText(key.id);
+                              alert('API Token copied to clipboard!');
+                            }}
+                          >
+                            Copy
+                          </button>
+                        </div>
+                      </td>
+                      <td style={{ padding: '0.75rem' }}>{key.limits.rpm || 'Unlimited'}</td>
+                      <td style={{ padding: '0.75rem' }}>
+                        {key.limits.rpd || 'Unlimited'} 
+                        <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginLeft: '0.5rem' }}>
+                          ({reqsToday} used today)
+                        </span>
+                      </td>
+                      <td style={{ padding: '0.75rem', textAlign: 'right' }}>
+                        <button 
+                          type="button" 
+                          className="danger" 
+                          onClick={() => handleDeleteVirtualKey(key.id)}
+                          style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
+                        >
+                          Revoke
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       <style>{`
