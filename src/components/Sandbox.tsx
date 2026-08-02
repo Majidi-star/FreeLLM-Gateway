@@ -26,8 +26,8 @@ export const Sandbox: React.FC<SandboxProps> = ({ onConfigChange }) => {
   const [messages, setMessages] = useState<Message[]>([
     { 
       role: 'assistant', 
-      content: `Hello! I am your global gateway assistant.
-I can answer general questions, or perform dashboard operations!
+      content: `Hello! I am your Gateway Agent.
+I can answer general questions, manage pools/aliases/keys, or perform dashboard operations!
 
 Examples:
 - "What is the status of the gateway?"
@@ -152,14 +152,14 @@ Examples:
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span style={{ fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.3rem', color: 'var(--text)' }}>
-            💬 Assistant Chat
+            🤖 Gateway Agent
           </span>
           <button 
             type="button" 
             onClick={handleClearChat}
             style={{ padding: '0.15rem 0.4rem', fontSize: '0.65rem', borderRadius: '4px', border: '1px solid var(--border)', background: 'transparent', cursor: 'pointer', color: 'var(--text-muted)' }}
           >
-            Clear Chat
+            Clear Agent Chat
           </button>
         </div>
         

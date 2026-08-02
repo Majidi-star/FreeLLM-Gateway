@@ -133,6 +133,22 @@ rl.on('line', async (line) => {
               },
               required: ['action']
             }
+          },
+          {
+            name: 'manage_virtual_models',
+            description: 'Create, delete, or manage routing targets inside a virtual model pool.',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                action: { type: 'string', enum: ['create', 'delete', 'add_target', 'remove_target'], description: 'Action to perform' },
+                poolId: { type: 'string', description: 'The unique pool ID (e.g. coding-agent)' },
+                poolName: { type: 'string', description: 'The display name of the pool (required for create)' },
+                providerId: { type: 'string', description: 'The provider ID for the target model (required_for add_target)' },
+                modelId: { type: 'string', description: 'The model ID for the target model (required for add_target/remove_target)' },
+                targetIndex: { type: 'number', description: 'The index of the target to remove (required for remove_target)' }
+              },
+              required: ['action', 'poolId']
+            }
           }
         ]
       });
@@ -336,6 +352,71 @@ Gateway Service: Online (Base: http://localhost:3000/v1)`;
         saveConfig(config);
         return { content: [{ type: 'text', text: `Success: Revoked Gateway Key "${keyId}" successfully.` }] };
       }
+      return { content: [{ type: 'text', text: `Error: Invalid action "${action}".` }] };
+    }
+
+    if (name === 'manage_virtual_models') {
+      const { action, poolId, poolName, providerId, modelId, targetIndex } = args;
+      if (!config.virtualModels) config.virtualModels = [];
+
+      const cleanPoolId = poolId.toLowerCase().trim().replace(/\s+/g, '-');
+
+      if (action === 'create') {
+        if (!poolName) return { content: [{ type: 'text', text: `Error: poolName is required for action "create".` }] };
+        if (config.virtualModels.some(vm => vm.id === cleanPoolId)) {
+          return { content: [{ type: 'text', text: `Error: Virtual pool "${cleanPoolId}" already exists.` }] };
+        }
+        const newPool = {
+          id: cleanPoolId,
+          name: poolName.trim(),
+          targets: []
+        };
+        config.virtualModels.push(newPool);
+        saveConfig(config);
+        return { content: [{ type: 'text', text: `Success: Created virtual model pool "${poolName.trim()}" (ID: ${cleanPoolId}).` }] };
+      }
+
+      if (action === 'delete') {
+        if (!config.virtualModels.some(vm => vm.id === cleanPoolId)) {
+          return { content: [{ type: 'text', text: `Error: Virtual pool "${cleanPoolId}" not found.` }] };
+        }
+        config.virtualModels = config.virtualModels.filter(vm => vm.id !== cleanPoolId);
+        saveConfig(config);
+        return { content: [{ type: 'text', text: `Success: Deleted virtual model pool "${cleanPoolId}".` }] };
+      }
+
+      const pool = config.virtualModels.find(vm => vm.id === cleanPoolId);
+      if (!pool) return { content: [{ type: 'text', text: `Error: Virtual pool "${cleanPoolId}" not found.` }] };
+
+      if (action === 'add_target') {
+        if (!providerId || !modelId) return { content: [{ type: 'text', text: `Error: providerId and modelId are required for action "add_target".` }] };
+        if (pool.targets.some(t => t.providerId === providerId && t.modelId === modelId)) {
+          return { content: [{ type: 'text', text: `Error: Target "${providerId}/${modelId}" is already in pool "${cleanPoolId}".` }] };
+        }
+        pool.targets.push({ providerId, modelId });
+        config.virtualModels = config.virtualModels.map(vm => vm.id === cleanPoolId ? pool : vm);
+        saveConfig(config);
+        return { content: [{ type: 'text', text: `Success: Added target "${providerId}/${modelId}" to virtual pool "${cleanPoolId}".` }] };
+      }
+
+      if (action === 'remove_target') {
+        if (targetIndex === undefined && (!providerId || !modelId)) {
+          return { content: [{ type: 'text', text: `Error: targetIndex or providerId+modelId is required for action "remove_target".` }] };
+        }
+        let originalLength = pool.targets.length;
+        if (targetIndex !== undefined) {
+          pool.targets = pool.targets.filter((_, idx) => idx !== targetIndex);
+        } else {
+          pool.targets = pool.targets.filter(t => !(t.providerId === providerId && t.modelId === modelId));
+        }
+        if (pool.targets.length === originalLength) {
+          return { content: [{ type: 'text', text: `Error: Target was not found in virtual pool "${cleanPoolId}".` }] };
+        }
+        config.virtualModels = config.virtualModels.map(vm => vm.id === cleanPoolId ? pool : vm);
+        saveConfig(config);
+        return { content: [{ type: 'text', text: `Success: Removed target from virtual pool "${cleanPoolId}".` }] };
+      }
+
       return { content: [{ type: 'text', text: `Error: Invalid action "${action}".` }] };
     }
 

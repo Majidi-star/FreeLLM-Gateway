@@ -539,6 +539,25 @@ const ASSISTANT_TOOLS = [
         required: ['action']
       }
     }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'manage_virtual_models',
+      description: 'Create, delete, or manage routing targets inside a virtual model pool.',
+      parameters: {
+        type: 'object',
+        properties: {
+          action: { type: 'string', enum: ['create', 'delete', 'add_target', 'remove_target'], description: 'Action to perform' },
+          poolId: { type: 'string', description: 'The unique pool ID (e.g. coding-agent)' },
+          poolName: { type: 'string', description: 'The display name of the pool (required for create)' },
+          providerId: { type: 'string', description: 'The provider ID for the target model (required for add_target)' },
+          modelId: { type: 'string', description: 'The model ID for the target model (required for add_target/remove_target)' },
+          targetIndex: { type: 'number', description: 'The index of the target to remove (required for remove_target)' }
+        },
+        required: ['action', 'poolId']
+      }
+    }
   }
 ];
 
@@ -767,8 +786,71 @@ async function executeLocalTool(name, args) {
       
       config.virtualKeys = config.virtualKeys.filter(k => k.id !== keyId);
       saveConfig(config);
-      return `Success: Revoked Gateway Key "${keyId}" successfully.`;
     }
+  }
+
+  if (name === 'manage_virtual_models') {
+    const { action, poolId, poolName, providerId, modelId, targetIndex } = args;
+    if (!config.virtualModels) config.virtualModels = [];
+
+    const cleanPoolId = poolId.toLowerCase().trim().replace(/\s+/g, '-');
+
+    if (action === 'create') {
+      if (!poolName) return `Error: poolName is required for action "create".`;
+      if (config.virtualModels.some(vm => vm.id === cleanPoolId)) {
+        return `Error: Virtual pool "${cleanPoolId}" already exists.`;
+      }
+      const newPool = {
+        id: cleanPoolId,
+        name: poolName.trim(),
+        targets: []
+      };
+      config.virtualModels.push(newPool);
+      saveConfig(config);
+      return `Success: Created virtual model pool "${poolName.trim()}" (ID: ${cleanPoolId}).`;
+    }
+
+    if (action === 'delete') {
+      if (!config.virtualModels.some(vm => vm.id === cleanPoolId)) {
+        return `Error: Virtual pool "${cleanPoolId}" not found.`;
+      }
+      config.virtualModels = config.virtualModels.filter(vm => vm.id !== cleanPoolId);
+      saveConfig(config);
+      return `Success: Deleted virtual model pool "${cleanPoolId}".`;
+    }
+
+    const pool = config.virtualModels.find(vm => vm.id === cleanPoolId);
+    if (!pool) return `Error: Virtual pool "${cleanPoolId}" not found.`;
+
+    if (action === 'add_target') {
+      if (!providerId || !modelId) return `Error: providerId and modelId are required for action "add_target".`;
+      if (pool.targets.some(t => t.providerId === providerId && t.modelId === modelId)) {
+        return `Error: Target "${providerId}/${modelId}" is already in pool "${cleanPoolId}".`;
+      }
+      pool.targets.push({ providerId, modelId });
+      config.virtualModels = config.virtualModels.map(vm => vm.id === cleanPoolId ? pool : vm);
+      saveConfig(config);
+      return `Success: Added target "${providerId}/${modelId}" to virtual pool "${cleanPoolId}".`;
+    }
+
+    if (action === 'remove_target') {
+      if (targetIndex === undefined && (!providerId || !modelId)) {
+        return `Error: targetIndex or providerId+modelId is required for action "remove_target".`;
+      }
+      let originalLength = pool.targets.length;
+      if (targetIndex !== undefined) {
+        pool.targets = pool.targets.filter((_, idx) => idx !== targetIndex);
+      } else {
+        pool.targets = pool.targets.filter(t => !(t.providerId === providerId && t.modelId === modelId));
+      }
+      if (pool.targets.length === originalLength) {
+        return `Error: Target was not found in virtual pool "${cleanPoolId}".`;
+      }
+      config.virtualModels = config.virtualModels.map(vm => vm.id === cleanPoolId ? pool : vm);
+      saveConfig(config);
+      return `Success: Removed target from virtual pool "${cleanPoolId}".`;
+    }
+
     return `Error: Invalid action "${action}".`;
   }
 
@@ -783,11 +865,57 @@ app.post('/api/chat-assistant', async (req, res) => {
   try {
     let currentMessages = [...messages];
     
+    // Extract and sanitize config state to share with the agent (without sensitive API keys)
+    const config = loadConfig();
+    const sanitizedProviders = (config.providers || []).map(p => {
+      const sanitizedKeys = (p.apiKeys || []).map(k => ({
+        id: k.id,
+        weight: k.weight,
+        enabled: k.enabled,
+        keyLength: k.key ? k.key.length : 0,
+        keyPrefix: k.key ? k.key.substring(0, 6) + '...' : ''
+      }));
+      return {
+        id: p.id,
+        name: p.name,
+        enabled: p.enabled,
+        category: p.category,
+        baseUrl: p.baseUrl,
+        proxyEnabled: p.proxyEnabled,
+        proxyUrl: p.proxyUrl,
+        modelsCount: p.models?.length || 0,
+        models: p.models || [],
+        apiKeys: sanitizedKeys
+      };
+    });
+
+    const sanitizedConfigState = {
+      globalProxy: config.globalProxy,
+      globalProxyEnabled: config.globalProxyEnabled,
+      rateLimitQueueEnabled: config.rateLimitQueueEnabled,
+      semanticCacheEnabled: config.semanticCacheEnabled,
+      semanticCacheThreshold: config.semanticCacheThreshold,
+      aliases: config.aliases || {},
+      virtualKeys: (config.virtualKeys || []).map(k => ({
+        id: k.id,
+        name: k.name,
+        enabled: k.enabled,
+        limits: k.limits,
+        requestsToday: k.usage?.requests?.length || 0
+      })),
+      virtualModels: config.virtualModels || [],
+      providers: sanitizedProviders,
+      stats: config.stats
+    };
+
     // Add system prompt setting the instructions
     const systemPromptIdx = currentMessages.findIndex(m => m.role === 'system');
-    const systemContent = `You are the Free LLM Gateway Agentic Assistant. You help users manage their local gateway config, view stats, sync models, test connections, and add/remove providers.
-You can execute actions on the dashboard dynamically using your tools. If the user asks you to perform an action (like syncing a provider, showing stats, adding or deleting a provider), use the corresponding tool immediately.
-Always confirm the execution result of the tool to the user.`;
+    const systemContent = `You are the Free LLM Gateway Agentic Assistant. You help users manage their local gateway config, view stats, sync models, test connections, add/remove providers, manage aliases, edit cache settings, and manage virtual model pools.
+You can execute actions on the dashboard dynamically using your tools. If you need to perform multiple actions to fulfill a request (for example, adding multiple API keys, creating multiple pools, or configuring several parameters), you should execute multiple tool calls IN PARALLEL within the same response. This minimizes round-trips and prevents running out of execution iterations.
+Always confirm the execution results of all tool calls to the user.
+
+CURRENT APPLICATION CONFIGURATION STATE (API Keys are stripped for security):
+${JSON.stringify(sanitizedConfigState, null, 2)}`;
     
     if (systemPromptIdx >= 0) {
       currentMessages[systemPromptIdx].content = systemContent + '\n' + currentMessages[systemPromptIdx].content;
@@ -796,7 +924,7 @@ Always confirm the execution result of the tool to the user.`;
     }
 
     let iterations = 0;
-    const maxIterations = 5;
+    const maxIterations = 20;
     let assistantMessage = null;
     let traceLogs = [];
 

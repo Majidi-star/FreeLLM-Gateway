@@ -185,7 +185,7 @@ function App() {
               gap: '0.4rem'
             }}
           >
-            <span>💬</span> {showAssistant ? 'Hide Chat' : 'Show Chat'}
+            <span>🤖</span> {showAssistant ? 'Hide Agent' : 'Show Agent'}
           </button>
         </div>
       </header>
