@@ -7,6 +7,7 @@ import { loadConfig, saveConfig, getLogs, clearLogs, addLog } from './db.js';
 import { getRateLimitMetrics } from './rateLimiter.js';
 import { getProxyAgent } from './proxy.js';
 import { routeChatCompletion } from './router.js';
+import { initCache, clearCache, getCacheSize } from './cache.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -130,6 +131,17 @@ app.post('/api/config', (req, res) => {
   } catch (err) {
     res.status(400).json({ error: 'Invalid config structure.', details: err.message });
   }
+});
+
+// GET /api/cache-stats - Get semantic cache size
+app.get('/api/cache-stats', (req, res) => {
+  res.json({ size: getCacheSize() });
+});
+
+// POST /api/cache-clear - Clear semantic cache database
+app.post('/api/cache-clear', (req, res) => {
+  clearCache();
+  res.json({ success: true, size: 0 });
 });
 
 // GET /api/stats - Get metrics and current rate-limit usage
@@ -627,7 +639,8 @@ app.get('*', (req, res) => {
   }
 });
 
-// Initialize server
+// Initialize cache and server
+initCache();
 app.listen(PORT, () => {
   addLog('INFO', `LLM Free Pool Gateway listening on port ${PORT}`);
   addLog('INFO', `OpenAI API endpoint: http://localhost:${PORT}/v1`);

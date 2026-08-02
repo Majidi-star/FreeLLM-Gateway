@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import type { GatewayConfig, VirtualModel } from '../utils/api';
+import { getCacheStats, clearCacheDatabase } from '../utils/api';
 
 interface ActivePoolsProps {
   config: GatewayConfig;
@@ -20,6 +21,28 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
   // Model Aliases State
   const [newAliasRequestName, setNewAliasRequestName] = useState('');
   const [newAliasTargetModel, setNewAliasTargetModel] = useState('');
+
+  // Semantic Cache State
+  const [cacheSize, setCacheSize] = useState<number>(0);
+
+  React.useEffect(() => {
+    getCacheStats()
+      .then(res => setCacheSize(res.size))
+      .catch(() => {});
+  }, []);
+
+  const handleClearCache = async () => {
+    if (!confirm('Are you sure you want to clear the semantic cache database?')) return;
+    try {
+      const res = await clearCacheDatabase();
+      if (res.success) {
+        setCacheSize(0);
+        alert('Semantic cache database cleared successfully.');
+      }
+    } catch (err: any) {
+      alert('Failed to clear cache: ' + err.message);
+    }
+  };
 
   const handleAddAlias = () => {
     if (!newAliasRequestName.trim() || !newAliasTargetModel) return;
@@ -455,6 +478,68 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
           >
             + Add Redirect Rule
           </button>
+        </div>
+      </div>
+
+      {/* Semantic Cache Settings Card */}
+      <div className="glass-panel" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+        <div style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem' }}>
+          <h4 style={{ margin: 0, fontSize: '1.15rem' }}>Local Semantic Caching</h4>
+          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+            Intercept requests matching semantically similar questions and return cached responses instantly.
+          </span>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <input 
+              type="checkbox" 
+              id="semanticCacheEnabled" 
+              checked={localConfig.semanticCacheEnabled === true}
+              onChange={(e) => setLocalConfig({ ...localConfig, semanticCacheEnabled: e.target.checked })}
+              style={{ cursor: 'pointer' }}
+            />
+            <label htmlFor="semanticCacheEnabled" style={{ fontWeight: 600, cursor: 'pointer' }}>
+              Enable Semantic Prompt Caching
+            </label>
+          </div>
+
+          {localConfig.semanticCacheEnabled && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', background: 'oklch(15% 0.015 255.4 / 0.4)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                <span style={{ color: 'var(--text-muted)' }}>Similarity Match Threshold:</span>
+                <strong style={{ color: 'var(--accent)' }}>
+                  {Math.round((localConfig.semanticCacheThreshold || 0.92) * 100)}%
+                </strong>
+              </div>
+              <input 
+                type="range" 
+                min="0.80" 
+                max="0.99" 
+                step="0.01" 
+                value={localConfig.semanticCacheThreshold || 0.92}
+                onChange={(e) => setLocalConfig({ ...localConfig, semanticCacheThreshold: parseFloat(e.target.value) })}
+                style={{ width: '100%', cursor: 'pointer', margin: 0 }}
+              />
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                Higher thresholds require a closer query text match. Values around 90-95% are recommended.
+              </span>
+            </div>
+          )}
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border)', paddingTop: '1rem', marginTop: '0.5rem' }}>
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+              Cache Database Size: <strong style={{ color: '#c5c9db' }}>{cacheSize} entries</strong>
+            </span>
+            <button 
+              type="button" 
+              disabled={cacheSize === 0}
+              onClick={handleClearCache}
+              style={{ padding: '0.45rem 1rem', fontSize: '0.8rem' }}
+            >
+              Clear Cache Database
+            </button>
+          </div>
         </div>
       </div>
 

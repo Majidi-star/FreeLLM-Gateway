@@ -2,6 +2,7 @@ import axios from 'axios';
 import { loadConfig, saveConfig, addLog } from './db.js';
 import { resolveProxyAgent } from './proxy.js';
 import { checkRateLimit, recordUsage, setProviderCooldown } from './rateLimiter.js';
+import { getSemanticCachedResponse, addSemanticCache } from './cache.js';
 
 // Simple model cost database (approximate price per 1M tokens in USD)
 const MODEL_PRICING = {
@@ -197,6 +198,71 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
 
   const requestedModel = reqPayload.model;
   eventLog(`Routing request for model "${requestedModel}"`);
+
+  // 0.1 Check Semantic Cache
+  if (config.semanticCacheEnabled) {
+    const cacheHit = getSemanticCachedResponse(reqPayload.messages, config.semanticCacheThreshold);
+    if (cacheHit) {
+      res.setHeader('x-gateway-cache', 'hit');
+      
+      const isStream = reqPayload.stream === true;
+      const cachedCompletion = cacheHit.completion;
+      const cachedText = cachedCompletion.choices?.[0]?.message?.content || '';
+      
+      if (isStream) {
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+        
+        eventLog(`Semantic Cache HIT - simulating stream response...`);
+        
+        const words = cachedText.split(' ');
+        let i = 0;
+        
+        const sendChunk = () => {
+          if (i >= words.length) {
+            res.write(`data: [DONE]\n\n`);
+            res.end();
+            return;
+          }
+          
+          const chunkWord = words[i] + (i === words.length - 1 ? '' : ' ');
+          const chunkPayload = {
+            id: `chatcmpl-${Date.now()}`,
+            object: 'chat.completion.chunk',
+            created: Math.floor(Date.now() / 1000),
+            model: requestedModel,
+            choices: [{
+              index: 0,
+              delta: { content: chunkWord },
+              finish_reason: i === words.length - 1 ? 'stop' : null
+            }]
+          };
+          
+          res.write(`data: ${JSON.stringify(chunkPayload)}\n\n`);
+          i++;
+          setTimeout(sendChunk, Math.min(25, 200 / words.length));
+        };
+        
+        sendChunk();
+        
+        // Stats
+        const promptTokens = estimateTokens(JSON.stringify(reqPayload.messages));
+        const completionTokens = estimateTokens(cachedText);
+        updateStats(true, requestedModel, promptTokens, completionTokens);
+        return;
+      } else {
+        eventLog(`Semantic Cache HIT - returning cached payload.`);
+        
+        // Stats
+        const promptTokens = estimateTokens(JSON.stringify(reqPayload.messages));
+        const completionTokens = estimateTokens(cachedText);
+        updateStats(true, requestedModel, promptTokens, completionTokens);
+        
+        return res.status(200).json(cachedCompletion);
+      }
+    }
+  }
 
   // 1. Resolve targets
   let targets = [];
@@ -410,6 +476,28 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
         updateStats(true, requestedModel, promptTokens, completionTokens);
         
         eventLog(`Stream finished. Estimated tokens: ${totalTokens} (${promptTokens} prompt, ${completionTokens} completion)`);
+
+        // Add to cache
+        if (config.semanticCacheEnabled) {
+          const completionData = {
+            id: `chatcmpl-${Date.now()}`,
+            object: 'chat.completion',
+            created: Math.floor(Date.now() / 1000),
+            model: requestedModel,
+            choices: [{
+              index: 0,
+              message: { role: 'assistant', content: accumulatedText },
+              finish_reason: 'stop'
+            }],
+            usage: {
+              prompt_tokens: promptTokens,
+              completion_tokens: completionTokens,
+              total_tokens: totalTokens
+            }
+          };
+          addSemanticCache(reqPayload.messages, completionData);
+        }
+
         res.end();
       });
 
@@ -436,6 +524,12 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
       updateStats(true, requestedModel, promptTokens, completionTokens);
 
       eventLog(`Request succeeded. Tokens: ${totalTokens}`);
+
+      // Add to cache
+      if (config.semanticCacheEnabled) {
+        addSemanticCache(reqPayload.messages, openaiData);
+      }
+
       return res.status(200).json(openaiData);
     }
   } catch (err) {

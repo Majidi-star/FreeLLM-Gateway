@@ -74,6 +74,8 @@ export interface GatewayConfig {
   providers: Provider[];
   virtualModels: VirtualModel[];
   aliases?: Record<string, string>;
+  semanticCacheEnabled?: boolean;
+  semanticCacheThreshold?: number;
   stats: Stats;
 }
 
@@ -146,4 +148,12 @@ export async function askChatAssistant(
     method: 'POST',
     body: JSON.stringify(payload),
   });
+}
+
+export async function getCacheStats(): Promise<{ size: number }> {
+  return fetchJson(`${API_BASE}/api/cache-stats`);
+}
+
+export async function clearCacheDatabase(): Promise<{ success: boolean; size: number }> {
+  return fetchJson(`${API_BASE}/api/cache-clear`, { method: 'POST' });
 }
