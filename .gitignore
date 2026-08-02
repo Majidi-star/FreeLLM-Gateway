@@ -25,5 +25,10 @@ dist-ssr
 
 # Local credentials config database
 config.json
+config.json.*
 server/cache.json
 *.local
+.env
+.env.*
+*.backup
+*.tmp
