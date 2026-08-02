@@ -10,9 +10,10 @@ import { Directory } from './components/Directory';
 import { GatewaySetup } from './components/GatewaySetup';
 import { ActivePools } from './components/ActivePools';
 import { Sandbox } from './components/Sandbox';
+import { IntegrationHub } from './components/IntegrationHub';
 
 function App() {
-  const [activeTab, setActiveTab] = useState<'directory' | 'setup' | 'pools' | 'sandbox'>('directory');
+  const [activeTab, setActiveTab] = useState<'directory' | 'setup' | 'pools' | 'integrations' | 'sandbox'>('directory');
   const [config, setConfig] = useState<GatewayConfig | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -195,7 +196,8 @@ function App() {
               { id: 'directory', label: '1. Free API Directory' },
               { id: 'setup', label: '2. Gateway Setup' },
               { id: 'pools', label: '3. Active Pools' },
-              { id: 'sandbox', label: '4. Test Gateway' }
+              { id: 'integrations', label: '4. Connect Tools' },
+              { id: 'sandbox', label: '5. Test Gateway' }
             ].map((tab) => {
               const isActive = activeTab === tab.id;
               return (
@@ -239,6 +241,10 @@ function App() {
               />
             )}
             
+            {activeTab === 'integrations' && (
+              <IntegrationHub />
+            )}
+
             {activeTab === 'sandbox' && (
               <Sandbox />
             )}
