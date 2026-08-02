@@ -386,6 +386,14 @@ const ASSISTANT_TOOLS = [
         required: ['providerId']
       }
     }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'get_app_documentation',
+      description: 'Get comprehensive documentation about the LLM Free Pool Gateway, virtual routing pools, setup instructions, failovers, SOCKS5 proxies, and client integrations.',
+      parameters: { type: 'object', properties: {} }
+    }
   }
 ];
 
@@ -476,6 +484,28 @@ async function executeLocalTool(name, args) {
     config.providers = config.providers.filter(p => p.id !== providerId);
     saveConfig(config);
     return `Success: Deleted provider "${providerId}" from configuration database.`;
+  }
+
+  if (name === 'get_app_documentation') {
+    return `--- LLM FREE POOL GATEWAY COMPREHENSIVE DOCUMENTATION ---
+1. Overview:
+   - This app acts as a local proxy server (running on port 3000) that allows pooling free/trial API keys from 26+ providers (e.g. Gemini, Groq, Nvidia NIM, SambaNova, Cloudflare Workers AI).
+   - Point your local AI developer clients (Aider, Cursor, Python/Node apps) to base URL: http://localhost:3000/v1 using any mock API key.
+
+2. Virtual Routing Pools (Virtual Models):
+   - strong-reasoning: Routes reasoning prompts to DeepSeek-R1 (SambaNova/Groq) or Gemini 2.5 Pro.
+   - coding-agent: Routes code generation requests to fast models like Groq Llama 3.3 70B, Qwen Coder, or Gemini Flash.
+   - fast-flash: Routes general prompt requests to light, fast models (Gemini Flash-Lite, etc.).
+   If a provider hits a rate limit (RPM/RPD) or fails, the gateway transparently falls back to the next candidate in the priority queue.
+
+3. Model Context Protocol (MCP) Server:
+   - Command: node C:/Projects/Free-LLM-Provider/server/mcp.js
+   - Transport: Stdio JSON-RPC 2.0.
+   - Exposes tools like get_gateway_status, list_providers, list_routing_pools, sync_provider_models, and ask_pool_completion.
+
+4. Proxy Settings:
+   - Users can configure SOCKS5/HTTP proxies globally or per-provider to bypass geographic restrictions on APIs.
+   - The chat assistant has its own custom proxy settings override.`;
   }
 
   return `Unknown tool name: ${name}`;

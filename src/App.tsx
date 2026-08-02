@@ -13,7 +13,8 @@ import { Sandbox } from './components/Sandbox';
 import { IntegrationHub } from './components/IntegrationHub';
 
 function App() {
-  const [activeTab, setActiveTab] = useState<'directory' | 'setup' | 'pools' | 'integrations' | 'sandbox'>('directory');
+  const [activeTab, setActiveTab] = useState<'directory' | 'setup' | 'pools' | 'integrations'>('directory');
+  const [showAssistant, setShowAssistant] = useState(true);
   const [config, setConfig] = useState<GatewayConfig | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -165,6 +166,27 @@ function App() {
             }} />
             Gateway: {serverOnline ? 'Online' : 'Offline'}
           </div>
+
+          <button
+            type="button"
+            onClick={() => setShowAssistant(!showAssistant)}
+            style={{
+              padding: '0.4rem 0.8rem',
+              borderRadius: '20px',
+              border: '1px solid var(--border)',
+              background: showAssistant ? 'var(--accent-glow)' : 'transparent',
+              borderColor: showAssistant ? 'var(--accent)' : 'var(--border)',
+              color: showAssistant ? 'var(--text)' : 'var(--text-muted)',
+              fontSize: '0.8rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.4rem'
+            }}
+          >
+            <span>💬</span> {showAssistant ? 'Hide Chat' : 'Show Chat'}
+          </button>
         </div>
       </header>
 
@@ -182,74 +204,91 @@ function App() {
         </div>
       )}
 
-      {/* Navigation Tabs */}
+      {/* Main Layout Content Area & Sticky Sidebar */}
       {config && (
-        <>
-          <nav style={{
-            display: 'flex',
-            gap: '0.75rem',
-            borderBottom: '1px solid var(--border)',
-            paddingBottom: '0.5rem',
-            overflowX: 'auto'
-          }}>
-            {[
-              { id: 'directory', label: '1. Free API Directory' },
-              { id: 'setup', label: '2. Gateway Setup' },
-              { id: 'pools', label: '3. Active Pools' },
-              { id: 'integrations', label: '4. Connect Tools' },
-              { id: 'sandbox', label: '5. Test Gateway' }
-            ].map((tab) => {
-              const isActive = activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setActiveTab(tab.id as any)}
-                  style={{
-                    background: isActive ? 'var(--accent-glow)' : 'transparent',
-                    borderColor: isActive ? 'var(--accent)' : 'transparent',
-                    color: isActive ? 'var(--text)' : 'var(--text-muted)',
-                    borderRadius: '8px',
-                    padding: '0.6rem 1.2rem',
-                    fontWeight: 600,
-                    whiteSpace: 'nowrap'
-                  }}
-                >
-                  {tab.label}
-                </button>
-              );
-            })}
-          </nav>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: showAssistant ? '1fr 380px' : '1fr',
+          gap: '1.5rem',
+          alignItems: 'start',
+          flex: 1
+        }}>
+          {/* Left Column: Navigation Tabs and Current View Content */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', overflow: 'hidden' }}>
+            <nav style={{
+              display: 'flex',
+              gap: '0.75rem',
+              borderBottom: '1px solid var(--border)',
+              paddingBottom: '0.5rem',
+              overflowX: 'auto'
+            }}>
+              {[
+                { id: 'directory', label: '1. Free API Directory' },
+                { id: 'setup', label: '2. Gateway Setup' },
+                { id: 'pools', label: '3. Active Pools' },
+                { id: 'integrations', label: '4. Connect Tools' }
+              ].map((tab) => {
+                const isActive = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setActiveTab(tab.id as any)}
+                    style={{
+                      background: isActive ? 'var(--accent-glow)' : 'transparent',
+                      borderColor: isActive ? 'var(--accent)' : 'transparent',
+                      color: isActive ? 'var(--text)' : 'var(--text-muted)',
+                      borderRadius: '8px',
+                      padding: '0.6rem 1.2rem',
+                      fontWeight: 600,
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </nav>
 
-          {/* Tab Render Router */}
-          <main style={{ minHeight: '400px' }}>
-            {activeTab === 'directory' && config && (
-              <Directory providers={config.providers} />
-            )}
-            
-            {activeTab === 'setup' && (
-              <GatewaySetup 
-                config={config} 
-                onSave={handleSaveConfig} 
-              />
-            )}
-            
-            {activeTab === 'pools' && (
-              <ActivePools 
-                config={config} 
-                onSave={handleSaveConfig} 
-              />
-            )}
-            
-            {activeTab === 'integrations' && (
-              <IntegrationHub />
-            )}
+            <main style={{ minHeight: '400px' }}>
+              {activeTab === 'directory' && config && (
+                <Directory providers={config.providers} />
+              )}
+              
+              {activeTab === 'setup' && (
+                <GatewaySetup 
+                  config={config} 
+                  onSave={handleSaveConfig} 
+                />
+              )}
+              
+              {activeTab === 'pools' && (
+                <ActivePools 
+                  config={config} 
+                  onSave={handleSaveConfig} 
+                />
+              )}
+              
+              {activeTab === 'integrations' && (
+                <IntegrationHub />
+              )}
+            </main>
+          </div>
 
-            {activeTab === 'sandbox' && (
-              <Sandbox />
-            )}
-          </main>
-        </>
+          {/* Right Column: Global Sticky Chat Assistant */}
+          {showAssistant && (
+            <aside className="glass-panel animate-fade-in" style={{
+              height: 'calc(100vh - 220px)',
+              minHeight: '500px',
+              position: 'sticky',
+              top: '20px',
+              overflow: 'hidden',
+              padding: 0
+            }}>
+              <Sandbox onConfigChange={fetchInitialData} />
+            </aside>
+          )}
+        </div>
       )}
 
       {/* Footer */}
