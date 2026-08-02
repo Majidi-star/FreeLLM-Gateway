@@ -166,3 +166,50 @@ export async function getCacheStats(): Promise<{ size: number }> {
 export async function clearCacheDatabase(): Promise<{ success: boolean; size: number }> {
   return fetchJson(`${API_BASE}/api/cache-clear`, { method: 'POST' });
 }
+
+export interface PlaygroundResult {
+  response: any;
+  latencyMs: number;
+  cacheStatus: string;
+  model: string;
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+}
+
+export async function runPlaygroundCompletion(payload: {
+  model: string;
+  messages: { role: string; content: string }[];
+  temperature?: number;
+  max_tokens?: number;
+  top_p?: number;
+}): Promise<PlaygroundResult> {
+  const startTime = performance.now();
+  
+  const res = await fetch(`${API_BASE}/v1/chat/completions`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...payload, stream: false }),
+  });
+
+  const latencyMs = Math.round(performance.now() - startTime);
+  
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.error?.message || `API error: ${res.status}`);
+  }
+
+  const data = await res.json();
+  const cacheStatus = res.headers.get('x-gateway-cache') || 'miss';
+  const usage = data.usage || {};
+
+  return {
+    response: data,
+    latencyMs,
+    cacheStatus,
+    model: data.model || payload.model,
+    promptTokens: usage.prompt_tokens || 0,
+    completionTokens: usage.completion_tokens || 0,
+    totalTokens: usage.total_tokens || 0,
+  };
+}

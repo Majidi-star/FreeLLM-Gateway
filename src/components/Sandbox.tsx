@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  getGatewayModels, 
-  askChatAssistant
-} from '../utils/api';
+import { askChatAssistant } from '../utils/api';
+import type { GatewayConfig } from '../utils/api';
 
 interface Message {
   role: 'user' | 'assistant' | 'system' | 'tool';
@@ -11,12 +9,12 @@ interface Message {
 }
 
 interface SandboxProps {
+  config: GatewayConfig;
   onConfigChange?: () => void;
 }
 
-export const Sandbox: React.FC<SandboxProps> = ({ onConfigChange }) => {
-  const [models, setModels] = useState<{ id: string; name: string }[]>([]);
-  const [selectedModel, setSelectedModel] = useState('strong-reasoning');
+export const Sandbox: React.FC<SandboxProps> = ({ config, onConfigChange }) => {
+  const [selectedModel, setSelectedModel] = useState('');
   
   // Custom Chat Proxy State
   const [proxyEnabled, setProxyEnabled] = useState(false);
@@ -43,28 +41,45 @@ Examples:
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Fetch available models on mount
-  useEffect(() => {
-    const fetchModels = async () => {
-      try {
-        const res = await getGatewayModels();
-        const cleanList = res.data.map(m => ({
+  // Build grouped model options from config
+  const poolModels = (config.virtualModels || []).map(vm => ({
+    id: vm.id,
+    label: vm.name || vm.id,
+    group: 'pools'
+  }));
+
+  const providerModels: { id: string; label: string; group: string; providerId: string }[] = [];
+  (config.providers || []).forEach(p => {
+    if (p.enabled && p.models && p.models.length > 0) {
+      p.models.forEach(m => {
+        providerModels.push({
           id: m.id,
-          name: m.id
-        }));
-        setModels(cleanList);
-        
-        if (cleanList.some(m => m.id === 'strong-reasoning')) {
-          setSelectedModel('strong-reasoning');
-        } else if (cleanList.length > 0) {
-          setSelectedModel(cleanList[0].id);
-        }
-      } catch (err) {
-        console.error('Error loading gateway models:', err);
+          label: m.id,
+          group: p.name,
+          providerId: p.id
+        });
+      });
+    }
+  });
+
+  // Group provider models by provider name
+  const providerGroups: Record<string, { id: string; label: string }[]> = {};
+  providerModels.forEach(m => {
+    if (!providerGroups[m.group]) providerGroups[m.group] = [];
+    providerGroups[m.group].push({ id: m.id, label: m.label });
+  });
+
+  // Auto-select first available model if current selection is empty or invalid
+  useEffect(() => {
+    const allIds = [...poolModels.map(m => m.id), ...providerModels.map(m => m.id)];
+    if (!selectedModel || !allIds.includes(selectedModel)) {
+      if (poolModels.length > 0) {
+        setSelectedModel(poolModels[0].id);
+      } else if (providerModels.length > 0) {
+        setSelectedModel(providerModels[0].id);
       }
-    };
-    fetchModels();
-  }, []);
+    }
+  }, [config]);
 
   // Auto scroll to bottom of chat
   useEffect(() => {
@@ -75,7 +90,7 @@ Examples:
     setMessages([
       {
         role: 'assistant',
-        content: 'History cleared. Ask me anything or command me to sync, list, or CRUD providers!'
+        content: 'History cleared. Ask me anything or command me to sync, list, or manage providers!'
       }
     ]);
   };
@@ -114,7 +129,6 @@ Examples:
           }
         ]);
 
-        // If any tools were run, trigger state reload on active dashboard tab!
         if (res.traces && res.traces.length > 0) {
           onConfigChange?.();
         }
@@ -164,14 +178,25 @@ Examples:
         </div>
         
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', alignItems: 'center' }}>
-          {/* Model Selector */}
+          {/* Model Selector with optgroups */}
           <select 
             value={selectedModel}
             onChange={(e) => setSelectedModel(e.target.value)}
             style={{ fontSize: '0.75rem', padding: '0.2rem', background: '#0a0a0f', color: '#c5c9db', border: '1px solid var(--border)', borderRadius: '4px', width: '100%' }}
           >
-            {models.map(m => (
-              <option key={m.id} value={m.id}>{m.id}</option>
+            {poolModels.length > 0 && (
+              <optgroup label="🔀 Routing Pools">
+                {poolModels.map(m => (
+                  <option key={`pool-${m.id}`} value={m.id}>{m.label}</option>
+                ))}
+              </optgroup>
+            )}
+            {Object.keys(providerGroups).map(groupName => (
+              <optgroup key={groupName} label={`📡 ${groupName}`}>
+                {providerGroups[groupName].map(m => (
+                  <option key={`${groupName}-${m.id}`} value={m.id}>{m.label}</option>
+                ))}
+              </optgroup>
             ))}
           </select>
           
@@ -295,27 +320,9 @@ Examples:
             fontSize: '0.8rem',
             color: 'var(--text-muted)'
           }}>
-            <div style={{
-              width: '4px',
-              height: '4px',
-              borderRadius: '50%',
-              background: 'var(--accent)',
-              animation: 'bounce 0.6s infinite alternate'
-            }} />
-            <div style={{
-              width: '4px',
-              height: '4px',
-              borderRadius: '50%',
-              background: 'var(--accent)',
-              animation: 'bounce 0.6s infinite alternate 0.2s'
-            }} />
-            <div style={{
-              width: '4px',
-              height: '4px',
-              borderRadius: '50%',
-              background: 'var(--accent)',
-              animation: 'bounce 0.6s infinite alternate 0.4s'
-            }} />
+            <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'var(--accent)', animation: 'bounce 0.6s infinite alternate' }} />
+            <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'var(--accent)', animation: 'bounce 0.6s infinite alternate 0.2s' }} />
+            <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'var(--accent)', animation: 'bounce 0.6s infinite alternate 0.4s' }} />
             <span>Thinking...</span>
           </div>
         )}
@@ -332,7 +339,7 @@ Examples:
         gap: '0.5rem'
       }}>
         <textarea 
-          placeholder="Ask or command assistant..."
+          placeholder="Ask the agent anything..."
           value={inputPrompt}
           onChange={(e) => setInputPrompt(e.target.value)}
           onKeyDown={(e) => {

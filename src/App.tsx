@@ -11,9 +11,10 @@ import { GatewaySetup } from './components/GatewaySetup';
 import { ActivePools } from './components/ActivePools';
 import { Sandbox } from './components/Sandbox';
 import { IntegrationHub } from './components/IntegrationHub';
+import { Playground } from './components/Playground';
 
 function App() {
-  const [activeTab, setActiveTab] = useState<'directory' | 'setup' | 'pools' | 'integrations'>('directory');
+  const [activeTab, setActiveTab] = useState<'directory' | 'setup' | 'pools' | 'playground' | 'integrations'>('directory');
   const [showAssistant, setShowAssistant] = useState(true);
   const [config, setConfig] = useState<GatewayConfig | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
@@ -226,7 +227,8 @@ function App() {
                 { id: 'directory', label: '1. Free API Directory' },
                 { id: 'setup', label: '2. Gateway Setup' },
                 { id: 'pools', label: '3. Active Pools' },
-                { id: 'integrations', label: '4. Connect Tools' }
+                { id: 'playground', label: '4. Playground' },
+                { id: 'integrations', label: '5. Connect Tools' }
               ].map((tab) => {
                 const isActive = activeTab === tab.id;
                 return (
@@ -268,6 +270,10 @@ function App() {
                   onSave={handleSaveConfig} 
                 />
               )}
+
+              {activeTab === 'playground' && (
+                <Playground config={config} />
+              )}
               
               {activeTab === 'integrations' && (
                 <IntegrationHub />
@@ -285,7 +291,7 @@ function App() {
               overflow: 'hidden',
               padding: 0
             }}>
-              <Sandbox onConfigChange={fetchInitialData} />
+              <Sandbox config={config} onConfigChange={fetchInitialData} />
             </aside>
           )}
         </div>
