@@ -65,6 +65,7 @@ export interface GatewayConfig {
   rateLimitQueueEnabled?: boolean;
   providers: Provider[];
   virtualModels: VirtualModel[];
+  aliases?: Record<string, string>;
   stats: Stats;
 }
 

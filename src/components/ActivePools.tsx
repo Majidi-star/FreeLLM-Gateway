@@ -17,6 +17,46 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
   // New Target Selector State (virtualModelId -> { selectedProviderId, selectedModelId })
   const [newTargets, setNewTargets] = useState<{ [key: string]: { providerId: string; modelId: string } }>({});
 
+  // Model Aliases State
+  const [newAliasRequestName, setNewAliasRequestName] = useState('');
+  const [newAliasTargetModel, setNewAliasTargetModel] = useState('');
+
+  const handleAddAlias = () => {
+    if (!newAliasRequestName.trim() || !newAliasTargetModel) return;
+    const currentAliases = localConfig.aliases || {};
+    const updatedAliases = {
+      ...currentAliases,
+      [newAliasRequestName.trim()]: newAliasTargetModel
+    };
+    setLocalConfig({
+      ...localConfig,
+      aliases: updatedAliases
+    });
+    setNewAliasRequestName('');
+  };
+
+  const handleRemoveAlias = (requestName: string) => {
+    const currentAliases = { ...(localConfig.aliases || {}) };
+    delete currentAliases[requestName];
+    setLocalConfig({
+      ...localConfig,
+      aliases: currentAliases
+    });
+  };
+
+  // Collect target models (virtual pools and enabled direct models)
+  const availableTargetModels: string[] = [];
+  localConfig.virtualModels.forEach(vm => availableTargetModels.push(vm.id));
+  localConfig.providers.forEach(p => {
+    if (p.enabled) {
+      p.models.forEach(m => {
+        if (!availableTargetModels.includes(m.id)) {
+          availableTargetModels.push(m.id);
+        }
+      });
+    }
+  });
+
   const handleMoveTarget = (vmId: string, index: number, direction: 'up' | 'down') => {
     const virtualModel = localConfig.virtualModels.find(vm => vm.id === vmId);
     if (!virtualModel) return;
@@ -320,6 +360,102 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
             </div>
           );
         })}
+      </div>
+
+      {/* Model Redirection Rules Card */}
+      <div className="glass-panel" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+        <div style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem' }}>
+          <h4 style={{ margin: 0, fontSize: '1.15rem' }}>Model Redirection & Aliases</h4>
+          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+            Map legacy client model requests (e.g., <code>gpt-4</code>) on-the-fly to your local routing pools.
+          </span>
+        </div>
+
+        {/* Existing Aliases Table */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          {!localConfig.aliases || Object.keys(localConfig.aliases).length === 0 ? (
+            <div style={{ padding: '1.5rem', border: '1px dashed var(--border)', borderRadius: '8px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+              No redirection rules defined.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {Object.entries(localConfig.aliases).map(([reqName, targetName]) => (
+                <div key={reqName} style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '0.75rem 1rem',
+                  background: 'oklch(20% 0.018 255.4 / 0.3)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '8px',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+                    <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Requested:</span>
+                    <strong style={{ fontFamily: 'monospace', fontSize: '0.95rem' }}>{reqName}</strong>
+                    <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>➔ Redirects to:</span>
+                    <strong style={{ color: 'var(--accent)', fontFamily: 'monospace', fontSize: '0.95rem' }}>{targetName}</strong>
+                  </div>
+
+                  <button 
+                    type="button" 
+                    className="danger" 
+                    onClick={() => handleRemoveAlias(reqName)}
+                    style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}
+                  >
+                    Delete Rule
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Add New Alias Rule Row */}
+        <div style={{ 
+          display: 'flex', 
+          flexWrap: 'wrap', 
+          gap: '0.75rem', 
+          alignItems: 'flex-end', 
+          background: 'oklch(15% 0.015 255.4 / 0.4)', 
+          padding: '1rem', 
+          borderRadius: '8px', 
+          border: '1px solid var(--border)' 
+        }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', flex: 1, minWidth: '150px' }}>
+            <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Incoming Request Model Name</label>
+            <input 
+              type="text" 
+              placeholder="e.g. gpt-4, claude-3-5-sonnet"
+              value={newAliasRequestName}
+              onChange={(e) => setNewAliasRequestName(e.target.value)}
+              style={{ padding: '0.4rem', fontSize: '0.85rem', background: '#0a0a0f', color: '#c5c9db', border: '1px solid var(--border)', borderRadius: '6px', outline: 'none' }}
+            />
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', flex: 1, minWidth: '150px' }}>
+            <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Target Routing Pool / Model</label>
+            <select
+              value={newAliasTargetModel}
+              onChange={(e) => setNewAliasTargetModel(e.target.value)}
+              style={{ padding: '0.4rem', fontSize: '0.85rem', background: '#0a0a0f', color: '#c5c9db', border: '1px solid var(--border)', borderRadius: '6px', outline: 'none' }}
+            >
+              <option value="">Select Target...</option>
+              {availableTargetModels.map(name => (
+                <option key={name} value={name}>{name}</option>
+              ))}
+            </select>
+          </div>
+
+          <button 
+            type="button" 
+            className="primary" 
+            disabled={!newAliasRequestName.trim() || !newAliasTargetModel}
+            onClick={handleAddAlias}
+            style={{ height: '38px', padding: '0 1.25rem' }}
+          >
+            + Add Redirect Rule
+          </button>
+        </div>
       </div>
 
       {/* Save Button */}

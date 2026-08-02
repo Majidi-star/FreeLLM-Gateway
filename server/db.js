@@ -467,6 +467,7 @@ const DEFAULT_CONFIG = {
   globalProxyEnabled: false,
   providers: DEFAULT_PROVIDERS,
   virtualModels: DEFAULT_VIRTUAL_MODELS,
+  aliases: {},
   stats: {
     totalRequests: 0,
     successfulRequests: 0,
@@ -484,6 +485,7 @@ export function loadConfig() {
       const data = fs.readFileSync(CONFIG_PATH, 'utf8');
       const parsed = JSON.parse(data);
       const merged = { ...DEFAULT_CONFIG, ...parsed };
+      merged.aliases = parsed.aliases || {};
       
       DEFAULT_PROVIDERS.forEach(defaultProv => {
         if (!merged.providers.find(p => p.id === defaultProv.id)) {

@@ -103,7 +103,6 @@ function formatAnthropicResponse(anthropicData) {
  */
 export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null) {
   const config = loadConfig();
-  const requestedModel = reqPayload.model;
   
   const eventLog = (message, details = '') => {
     addLog('ROUTING', message, details);
@@ -112,6 +111,14 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
     }
   };
 
+  // 0. Intercept aliases
+  if (config.aliases && config.aliases[reqPayload.model]) {
+    const originalModel = reqPayload.model;
+    reqPayload.model = config.aliases[originalModel];
+    eventLog(`Aliased model request: "${originalModel}" -> "${reqPayload.model}"`);
+  }
+
+  const requestedModel = reqPayload.model;
   eventLog(`Routing request for model "${requestedModel}"`);
 
   // 1. Resolve targets
