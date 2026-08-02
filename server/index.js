@@ -470,6 +470,75 @@ const ASSISTANT_TOOLS = [
       description: 'Get comprehensive documentation about the LLM Free Pool Gateway, virtual routing pools, setup instructions, failovers, SOCKS5 proxies, and client integrations.',
       parameters: { type: 'object', properties: {} }
     }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'manage_provider_keys',
+      description: 'Add or remove individual API keys for a provider (used for load balancing).',
+      parameters: {
+        type: 'object',
+        properties: {
+          providerId: { type: 'string', description: 'The unique ID of the provider (e.g., groq)' },
+          action: { type: 'string', enum: ['add', 'remove'], description: 'Whether to add or remove a key' },
+          key: { type: 'string', description: 'The raw API key string (required for add)' },
+          keyId: { type: 'string', description: 'The unique ID of the key to remove (required for remove)' },
+          weight: { type: 'number', description: 'The weight of the key for weighted load balancing' },
+          enabled: { type: 'boolean', description: 'Whether the key is enabled' }
+        },
+        required: ['providerId', 'action']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'manage_model_aliases',
+      description: 'Add or remove a model alias redirection mapping.',
+      parameters: {
+        type: 'object',
+        properties: {
+          action: { type: 'string', enum: ['add', 'remove'], description: 'Whether to add or remove an alias' },
+          alias: { type: 'string', description: 'The model name requested by the client (e.g. gpt-4)' },
+          targetPool: { type: 'string', description: 'The target virtual pool ID (required for add)' }
+        },
+        required: ['action', 'alias']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'configure_semantic_cache',
+      description: 'Enable/disable semantic cache, change similarity threshold, or clear cache database.',
+      parameters: {
+        type: 'object',
+        properties: {
+          enabled: { type: 'boolean', description: 'Enable or disable semantic caching' },
+          threshold: { type: 'number', description: 'Similarity threshold from 0.0 to 1.0 (e.g., 0.92)' },
+          clearCache: { type: 'boolean', description: 'Set to true to clear all cache entries' }
+        }
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'manage_virtual_keys',
+      description: 'Generate, toggle, or revoke a virtual gateway API key.',
+      parameters: {
+        type: 'object',
+        properties: {
+          action: { type: 'string', enum: ['generate', 'toggle', 'revoke'], description: 'Action to take' },
+          name: { type: 'string', description: 'Descriptive label/name for the key (required for generate)' },
+          rpm: { type: 'number', description: 'Requests per minute limit (0 for unlimited, default 10)' },
+          rpd: { type: 'number', description: 'Requests per day limit (0 for unlimited, default 500)' },
+          keyId: { type: 'string', description: 'The gateway key string to toggle or revoke (required for toggle/revoke)' },
+          enabled: { type: 'boolean', description: 'Whether the key is enabled (required for toggle)' }
+        },
+        required: ['action']
+      }
+    }
   }
 ];
 
@@ -582,6 +651,125 @@ async function executeLocalTool(name, args) {
 4. Proxy Settings:
    - Users can configure SOCKS5/HTTP proxies globally or per-provider to bypass geographic restrictions on APIs.
    - The chat assistant has its own custom proxy settings override.`;
+  }
+
+  if (name === 'manage_provider_keys') {
+    const { providerId, action, key, keyId, weight, enabled } = args;
+    const provider = config.providers.find(p => p.id === providerId);
+    if (!provider) return `Error: Provider "${providerId}" not found.`;
+    
+    if (action === 'add') {
+      if (!key) return `Error: API key is required for action "add".`;
+      const newKey = {
+        id: `key-${Date.now()}`,
+        key: key.trim(),
+        weight: weight !== undefined ? weight : 1,
+        enabled: enabled !== undefined ? enabled : true
+      };
+      if (!provider.apiKeys) provider.apiKeys = [];
+      provider.apiKeys.push(newKey);
+      config.providers = config.providers.map(p => p.id === providerId ? provider : p);
+      saveConfig(config);
+      return `Success: Added API Key "${newKey.id}" (weight: ${newKey.weight}) to ${provider.name}.`;
+    }
+    
+    if (action === 'remove') {
+      if (!keyId) return `Error: keyId is required for action "remove".`;
+      if (!provider.apiKeys || !provider.apiKeys.some(k => k.id === keyId)) {
+        return `Error: Key ID "${keyId}" not found in provider "${providerId}".`;
+      }
+      provider.apiKeys = provider.apiKeys.filter(k => k.id !== keyId);
+      config.providers = config.providers.map(p => p.id === providerId ? provider : p);
+      saveConfig(config);
+      return `Success: Removed API Key "${keyId}" from ${provider.name}.`;
+    }
+    return `Error: Invalid action "${action}".`;
+  }
+
+  if (name === 'manage_model_aliases') {
+    const { action, alias, targetPool } = args;
+    if (!config.aliases) config.aliases = {};
+
+    if (action === 'add') {
+      if (!targetPool) return `Error: targetPool is required for action "add".`;
+      config.aliases[alias] = targetPool;
+      saveConfig(config);
+      return `Success: Created alias redirection mapping "${alias}" -> "${targetPool}".`;
+    }
+
+    if (action === 'remove') {
+      if (!config.aliases[alias]) return `Error: Alias "${alias}" not found.`;
+      delete config.aliases[alias];
+      saveConfig(config);
+      return `Success: Revoked alias redirection mapping for "${alias}".`;
+    }
+    return `Error: Invalid action "${action}".`;
+  }
+
+  if (name === 'configure_semantic_cache') {
+    const { enabled, threshold, clearCache: clear } = args;
+    let statusText = '';
+
+    if (enabled !== undefined) {
+      config.semanticCacheEnabled = enabled;
+      statusText += `Semantic cache toggled to ${enabled ? 'ENABLED' : 'DISABLED'}. `;
+    }
+    if (threshold !== undefined) {
+      config.semanticCacheThreshold = threshold;
+      statusText += `Similarity threshold updated to ${threshold}. `;
+    }
+    if (enabled !== undefined || threshold !== undefined) {
+      saveConfig(config);
+    }
+    if (clear === true) {
+      clearCache();
+      statusText += `Semantic Cache database cleared successfully.`;
+    }
+
+    return statusText ? `Success: ${statusText.trim()}` : `No configuration changes provided.`;
+  }
+
+  if (name === 'manage_virtual_keys') {
+    const { action, name: keyName, rpm, rpd, keyId, enabled } = args;
+    if (!config.virtualKeys) config.virtualKeys = [];
+
+    if (action === 'generate') {
+      if (!keyName) return `Error: Name description is required for action "generate".`;
+      const randomHex = Array.from({ length: 16 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
+      const newKeyId = `sk-gw-${randomHex}`;
+      const newKey = {
+        id: newKeyId,
+        name: keyName.trim(),
+        enabled: true,
+        limits: { rpm: rpm !== undefined ? rpm : 10, rpd: rpd !== undefined ? rpd : 500 },
+        usage: { requests: [] }
+      };
+      config.virtualKeys.push(newKey);
+      saveConfig(config);
+      return `Success: Generated Gateway Key "${newKeyId}" for "${keyName.trim()}" (limits: ${newKey.limits.rpm} RPM, ${newKey.limits.rpd} RPD).`;
+    }
+
+    if (action === 'toggle') {
+      if (!keyId) return `Error: keyId is required for action "toggle".`;
+      if (enabled === undefined) return `Error: enabled state is required for action "toggle".`;
+      const keyObj = config.virtualKeys.find(k => k.id === keyId);
+      if (!keyObj) return `Error: Gateway Key "${keyId}" not found.`;
+      
+      keyObj.enabled = enabled;
+      config.virtualKeys = config.virtualKeys.map(k => k.id === keyId ? keyObj : k);
+      saveConfig(config);
+      return `Success: Gateway Key "${keyId}" is now ${enabled ? 'ENABLED' : 'DISABLED'}.`;
+    }
+
+    if (action === 'revoke') {
+      if (!keyId) return `Error: keyId is required for action "revoke".`;
+      if (!config.virtualKeys.some(k => k.id === keyId)) return `Error: Gateway Key "${keyId}" not found.`;
+      
+      config.virtualKeys = config.virtualKeys.filter(k => k.id !== keyId);
+      saveConfig(config);
+      return `Success: Revoked Gateway Key "${keyId}" successfully.`;
+    }
+    return `Error: Invalid action "${action}".`;
   }
 
   return `Unknown tool name: ${name}`;
