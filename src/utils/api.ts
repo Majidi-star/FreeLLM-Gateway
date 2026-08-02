@@ -129,3 +129,12 @@ export async function syncProviderModels(
     body: JSON.stringify(payload),
   });
 }
+
+export async function askChatAssistant(
+  payload: { messages: any[]; model: string; proxyEnabled: boolean; proxyUrl: string }
+): Promise<{ success: boolean; message: any; traces: any[] }> {
+  return fetchJson(`${API_BASE}/api/chat-assistant`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}

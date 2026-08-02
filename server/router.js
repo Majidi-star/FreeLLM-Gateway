@@ -211,7 +211,9 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
   eventLog(`Selected backend target: ${provider.name} (model: ${target.modelId})`);
 
   // 4. Dispatch the call
-  const proxyAgent = resolveProxyAgent(provider, config);
+  const proxyAgent = reqPayload._chatProxy
+    ? (reqPayload._chatProxy.proxyEnabled ? resolveProxyAgent({ proxyEnabled: true, proxyUrl: reqPayload._chatProxy.proxyUrl }, config) : null)
+    : resolveProxyAgent(provider, config);
   const isStream = reqPayload.stream === true;
   
   // Construct provider request options

@@ -154,139 +154,433 @@ app.post('/api/logs/clear', (req, res) => {
   res.json({ success: true });
 });
 
-// POST /api/test-provider - Verify connection status for a provider
-app.post('/api/test-provider', async (req, res) => {
-  const { providerId, apiKey, baseUrl, proxyEnabled, proxyUrl, testModelId } = req.body;
-  addLog('INFO', `Testing connection for provider: ${providerId} using model: ${testModelId}`);
+// Helper to test provider connection
+async function testConnectionHelper({ providerId, apiKey, baseUrl, proxyEnabled, proxyUrl, testModelId }) {
+  addLog('INFO', `Testing connection helper for provider: ${providerId} using model: ${testModelId}`);
+  const proxyAgent = proxyEnabled ? getProxyAgent(proxyUrl) : null;
+  let url = `${baseUrl}/chat/completions`;
+  let headers = {
+    'Content-Type': 'application/json'
+  };
 
-  try {
-    const proxyAgent = proxyEnabled ? getProxyAgent(proxyUrl) : null;
-    let url = `${baseUrl}/chat/completions`;
-    let headers = {
-      'Content-Type': 'application/json'
-    };
+  if (providerId === 'anthropic') {
+    url = `${baseUrl}/messages`;
+    headers['x-api-key'] = apiKey;
+    headers['anthropic-version'] = '2023-06-01';
+  } else if (providerId === 'gemini') {
+    url = `${baseUrl}/openai/chat/completions`;
+    headers['Authorization'] = `Bearer ${apiKey}`;
+  } else {
+    headers['Authorization'] = `Bearer ${apiKey}`;
+  }
 
-    if (providerId === 'anthropic') {
-      url = `${baseUrl}/messages`;
-      headers['x-api-key'] = apiKey;
-      headers['anthropic-version'] = '2023-06-01';
-    } else if (providerId === 'gemini') {
-      url = `${baseUrl}/openai/chat/completions`;
-      headers['Authorization'] = `Bearer ${apiKey}`;
+  const payload = providerId === 'anthropic' 
+    ? { model: testModelId, messages: [{ role: 'user', content: 'Ping' }], max_tokens: 5 }
+    : { model: testModelId, messages: [{ role: 'user', content: 'Ping' }], max_tokens: 5, stream: false };
+
+  const response = await axios({
+    method: 'POST',
+    url,
+    data: payload,
+    headers,
+    timeout: 15000,
+    ...proxyAgent
+  });
+
+  if (response.status === 200) {
+    addLog('INFO', `Connection helper test passed for provider: ${providerId}`);
+    return { success: true, message: 'Connection test succeeded!' };
+  } else {
+    throw new Error(`Unexpected status code: ${response.status}`);
+  }
+}
+
+// Helper to dynamically sync models from provider API
+async function syncModelsHelper({ providerId, apiKey, baseUrl, proxyEnabled, proxyUrl }) {
+  addLog('INFO', `Syncing models helper for provider: ${providerId}`);
+  const proxyAgent = proxyEnabled ? getProxyAgent(proxyUrl) : null;
+  let fetchedModels = [];
+
+  if (providerId === 'anthropic') {
+    fetchedModels = [
+      { id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet' },
+      { id: 'claude-3-5-haiku-20241022', name: 'Claude 3.5 Haiku' },
+      { id: 'claude-3-opus-20240229', name: 'Claude 3 Opus' }
+    ];
+  } else if (providerId === 'cloudflare') {
+    fetchedModels = [
+      { id: '@cf/meta/llama-3.3-70b-instruct-fp8-fast', name: 'Llama 3.3 70B (FP8)' },
+      { id: '@cf/deepseek-ai/deepseek-r1-distill-qwen-32b', name: 'DeepSeek R1 Qwen 32B' },
+      { id: '@cf/qwen/qwq-32b', name: 'Qwen QwQ 32B (Reasoning)' }
+    ];
+  } else {
+    let url = `${baseUrl}/models`;
+    let headers = {};
+    
+    if (providerId === 'gemini') {
+      url = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
     } else {
       headers['Authorization'] = `Bearer ${apiKey}`;
     }
 
-    const payload = providerId === 'anthropic' 
-      ? { model: testModelId, messages: [{ role: 'user', content: 'Ping' }], max_tokens: 5 }
-      : { model: testModelId, messages: [{ role: 'user', content: 'Ping' }], max_tokens: 5, stream: false };
-
     const response = await axios({
-      method: 'POST',
+      method: 'GET',
       url,
-      data: payload,
       headers,
       timeout: 15000,
       ...proxyAgent
     });
 
-    if (response.status === 200) {
-      addLog('INFO', `Connection test passed for provider: ${providerId}`);
-      res.json({ success: true, message: 'Connection test succeeded!' });
+    if (providerId === 'gemini') {
+      const models = response.data.models || [];
+      fetchedModels = models
+        .filter(m => m.supportedGenerationMethods?.includes('generateContent'))
+        .map(m => {
+          const cleanId = m.name.replace('models/', '');
+          return { id: cleanId, name: m.displayName || cleanId };
+        });
+    } else if (providerId === 'cohere') {
+      const models = response.data.models || [];
+      fetchedModels = models.map(m => ({ id: m.name, name: m.name }));
+    } else if (providerId === 'openrouter') {
+      const models = response.data.data || [];
+      fetchedModels = models
+        .filter(m => {
+          const completion = parseFloat(m.pricing?.completion || '0');
+          const prompt = parseFloat(m.pricing?.prompt || '0');
+          return completion === 0 && prompt === 0 && m.id.endsWith(':free');
+        })
+        .map(m => ({ id: m.id, name: m.name || m.id }));
     } else {
-      throw new Error(`Unexpected status code: ${response.status}`);
+      const models = response.data.data || [];
+      fetchedModels = models.map(m => ({ id: m.id, name: m.id }));
     }
+  }
+
+  if (fetchedModels.length === 0) {
+    throw new Error('No models returned from provider API.');
+  }
+
+  // Save to config.json database
+  const config = loadConfig();
+  const provider = config.providers.find(p => p.id === providerId);
+  if (provider) {
+    provider.models = fetchedModels;
+    saveConfig(config);
+    addLog('INFO', `Successfully synced ${fetchedModels.length} models for provider: ${providerId}`);
+    return fetchedModels;
+  } else {
+    throw new Error(`Provider "${providerId}" not found in config.`);
+  }
+}
+
+// POST /api/test-provider - Verify connection status for a provider
+app.post('/api/test-provider', async (req, res) => {
+  try {
+    const result = await testConnectionHelper(req.body);
+    res.json(result);
   } catch (err) {
     const errorMsg = err.response?.data?.error?.message || err.response?.data?.message || err.message;
-    addLog('ERROR', `Connection test failed for provider: ${providerId}`, errorMsg);
     res.status(500).json({ success: false, error: errorMsg });
   }
 });
 
 // POST /api/providers/:providerId/sync-models - Dynamically fetch models from provider API
 app.post('/api/providers/:providerId/sync-models', async (req, res) => {
-  const { providerId } = req.params;
-  const { apiKey, baseUrl, proxyEnabled, proxyUrl } = req.body;
-  addLog('INFO', `Syncing models for provider: ${providerId}`);
-
   try {
-    const proxyAgent = proxyEnabled ? getProxyAgent(proxyUrl) : null;
-    let fetchedModels = [];
-
-    if (providerId === 'anthropic') {
-      fetchedModels = [
-        { id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet' },
-        { id: 'claude-3-5-haiku-20241022', name: 'Claude 3.5 Haiku' },
-        { id: 'claude-3-opus-20240229', name: 'Claude 3 Opus' }
-      ];
-    } else if (providerId === 'cloudflare') {
-      fetchedModels = [
-        { id: '@cf/meta/llama-3.3-70b-instruct-fp8-fast', name: 'Llama 3.3 70B (FP8)' },
-        { id: '@cf/deepseek-ai/deepseek-r1-distill-qwen-32b', name: 'DeepSeek R1 Qwen 32B' },
-        { id: '@cf/qwen/qwq-32b', name: 'Qwen QwQ 32B (Reasoning)' }
-      ];
-    } else {
-      let url = `${baseUrl}/models`;
-      let headers = {};
-      
-      if (providerId === 'gemini') {
-        url = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
-      } else {
-        headers['Authorization'] = `Bearer ${apiKey}`;
-      }
-
-      const response = await axios({
-        method: 'GET',
-        url,
-        headers,
-        timeout: 15000,
-        ...proxyAgent
-      });
-
-      if (providerId === 'gemini') {
-        const models = response.data.models || [];
-        fetchedModels = models
-          .filter(m => m.supportedGenerationMethods?.includes('generateContent'))
-          .map(m => {
-            const cleanId = m.name.replace('models/', '');
-            return { id: cleanId, name: m.displayName || cleanId };
-          });
-      } else if (providerId === 'cohere') {
-        const models = response.data.models || [];
-        fetchedModels = models.map(m => ({ id: m.name, name: m.name }));
-      } else if (providerId === 'openrouter') {
-        const models = response.data.data || [];
-        fetchedModels = models
-          .filter(m => {
-            const completion = parseFloat(m.pricing?.completion || '0');
-            const prompt = parseFloat(m.pricing?.prompt || '0');
-            return completion === 0 && prompt === 0 && m.id.endsWith(':free');
-          })
-          .map(m => ({ id: m.id, name: m.name || m.id }));
-      } else {
-        const models = response.data.data || [];
-        fetchedModels = models.map(m => ({ id: m.id, name: m.id }));
-      }
-    }
-
-    if (fetchedModels.length === 0) {
-      throw new Error('No models returned from provider API.');
-    }
-
-    const config = loadConfig();
-    const provider = config.providers.find(p => p.id === providerId);
-    if (provider) {
-      provider.models = fetchedModels;
-      saveConfig(config);
-      addLog('INFO', `Successfully synced ${fetchedModels.length} models for provider: ${providerId}`);
-      res.json({ success: true, models: fetchedModels });
-    } else {
-      res.status(404).json({ success: false, error: 'Provider not found in config.' });
-    }
+    const fetchedModels = await syncModelsHelper({ providerId: req.params.providerId, ...req.body });
+    res.json({ success: true, models: fetchedModels });
   } catch (err) {
     const errorMsg = err.response?.data?.error?.message || err.response?.data?.message || err.message;
-    addLog('ERROR', `Failed to sync models for provider: ${providerId}`, errorMsg);
     res.status(500).json({ success: false, error: errorMsg });
+  }
+});
+
+// ----------------------------------------------------
+// Agentic Tools and completions handler
+// ----------------------------------------------------
+
+const ASSISTANT_TOOLS = [
+  {
+    type: 'function',
+    function: {
+      name: 'get_gateway_status',
+      description: 'Get general statistics of the gateway (requests count, tokens pooled, and approximate cost saved in USD).',
+      parameters: { type: 'object', properties: {} }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'list_providers',
+      description: 'Get a list of all configured API providers, their status, categories, and synced model count.',
+      parameters: { type: 'object', properties: {} }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'list_routing_pools',
+      description: 'Get all active virtual model pools and their priority failover backend lists.',
+      parameters: { type: 'object', properties: {} }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'sync_provider_models',
+      description: 'Sync the list of available models dynamically for a provider. Contact its API to pull models.',
+      parameters: {
+        type: 'object',
+        properties: {
+          providerId: { type: 'string', description: 'The unique ID of the provider (e.g. groq, gemini)' }
+        },
+        required: ['providerId']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'test_provider_connection',
+      description: 'Verify API credentials and connectivity for a provider.',
+      parameters: {
+        type: 'object',
+        properties: {
+          providerId: { type: 'string', description: 'The unique ID of the provider' }
+        },
+        required: ['providerId']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'add_custom_provider',
+      description: 'Dynamically add a new custom provider to the gateway. It will appear in both Setup and Directory tables.',
+      parameters: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', description: 'Unique lowercase ID (e.g. local-ollama)' },
+          name: { type: 'string', description: 'Display name (e.g. Local Ollama)' },
+          baseUrl: { type: 'string', description: 'Endpoint address URL' },
+          apiKey: { type: 'string', description: 'Optional API Key' },
+          category: { type: 'string', description: 'Dropdown category (e.g. Custom Local, Permanent Free, Trial Credits)' },
+          creditsDescription: { type: 'string', description: 'Description of free credits/plan' },
+          limitsDescription: { type: 'string', description: 'Description of rate limits' }
+        },
+        required: ['id', 'name', 'baseUrl']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'delete_provider',
+      description: 'Delete an existing provider from the configuration database.',
+      parameters: {
+        type: 'object',
+        properties: {
+          providerId: { type: 'string', description: 'The unique ID of the provider' }
+        },
+        required: ['providerId']
+      }
+    }
+  }
+];
+
+// Local tool executor
+async function executeLocalTool(name, args) {
+  const config = loadConfig();
+  
+  if (name === 'get_gateway_status') {
+    const stats = config.stats;
+    return `Gateway Status:\nTotal Requests: ${stats.totalRequests}\nSuccessful Requests: ${stats.successfulRequests}\nFailed Requests: ${stats.failedRequests}\nApproximate Cost Saved: $${stats.approximateCostSaved.toFixed(2)}\nTokens Saved: ${stats.tokensSaved}`;
+  }
+  
+  if (name === 'list_providers') {
+    return config.providers.map(p => `- [${p.enabled ? 'ENABLED' : 'DISABLED'}] ${p.name} (ID: ${p.id}, Category: ${p.category}): ${p.models?.length || 0} models synced. Base URL: ${p.baseUrl}`).join('\n');
+  }
+  
+  if (name === 'list_routing_pools') {
+    return config.virtualModels.map(vm => {
+      const targets = vm.targets.map(t => `${t.providerId}/${t.modelId}`).join(', ');
+      return `- ${vm.name} (${vm.id}): priority queue: [ ${targets || 'Empty' } ]`;
+    }).join('\n');
+  }
+  
+  if (name === 'sync_provider_models') {
+    const { providerId } = args;
+    const provider = config.providers.find(p => p.id === providerId);
+    if (!provider) return `Error: Provider "${providerId}" not found.`;
+    
+    const models = await syncModelsHelper({
+      providerId,
+      apiKey: provider.apiKey,
+      baseUrl: provider.baseUrl,
+      proxyEnabled: provider.proxyEnabled,
+      proxyUrl: provider.proxyUrl
+    });
+    return `Success: Synced ${models.length} models for provider "${providerId}"!`;
+  }
+
+  if (name === 'test_provider_connection') {
+    const { providerId } = args;
+    const provider = config.providers.find(p => p.id === providerId);
+    if (!provider) return `Error: Provider "${providerId}" not found.`;
+    
+    const result = await testConnectionHelper({
+      providerId,
+      apiKey: provider.apiKey,
+      baseUrl: provider.baseUrl,
+      proxyEnabled: provider.proxyEnabled,
+      proxyUrl: provider.proxyUrl,
+      testModelId: provider.models[0]?.id || 'test'
+    });
+    return result.success ? `Success: ${result.message}` : `Failed: ${result.message}`;
+  }
+
+  if (name === 'add_custom_provider') {
+    const { id, name: provName, baseUrl, apiKey, category, creditsDescription, limitsDescription } = args;
+    const cleanId = id.toLowerCase().trim().replace(/\s+/g, '-');
+    if (config.providers.some(p => p.id === cleanId)) {
+      return `Error: A provider with ID "${cleanId}" already exists.`;
+    }
+
+    const created = {
+      id: cleanId,
+      name: provName,
+      enabled: true,
+      apiKey: apiKey || '',
+      baseUrl: baseUrl.trim(),
+      proxyEnabled: false,
+      proxyUrl: '',
+      category: category || 'Custom Local',
+      website: '',
+      signupUrl: '',
+      creditsDescription: creditsDescription || 'Custom added provider details.',
+      limitsDescription: limitsDescription || 'User defined custom rates.',
+      models: []
+    };
+
+    config.providers.push(created);
+    saveConfig(config);
+    return `Success: Created custom provider "${provName}" (ID: ${cleanId}) successfully!`;
+  }
+
+  if (name === 'delete_provider') {
+    const { providerId } = args;
+    if (!config.providers.some(p => p.id === providerId)) {
+      return `Error: Provider "${providerId}" not found.`;
+    }
+    config.providers = config.providers.filter(p => p.id !== providerId);
+    saveConfig(config);
+    return `Success: Deleted provider "${providerId}" from configuration database.`;
+  }
+
+  return `Unknown tool name: ${name}`;
+}
+
+// POST /api/chat-assistant - Agentic chat interface with function-calling loop
+app.post('/api/chat-assistant', async (req, res) => {
+  const { messages, model, proxyEnabled, proxyUrl } = req.body;
+  addLog('INFO', `Chat assistant processing message. Model: ${model}`);
+
+  try {
+    let currentMessages = [...messages];
+    
+    // Add system prompt setting the instructions
+    const systemPromptIdx = currentMessages.findIndex(m => m.role === 'system');
+    const systemContent = `You are the Free LLM Gateway Agentic Assistant. You help users manage their local gateway config, view stats, sync models, test connections, and add/remove providers.
+You can execute actions on the dashboard dynamically using your tools. If the user asks you to perform an action (like syncing a provider, showing stats, adding or deleting a provider), use the corresponding tool immediately.
+Always confirm the execution result of the tool to the user.`;
+    
+    if (systemPromptIdx >= 0) {
+      currentMessages[systemPromptIdx].content = systemContent + '\n' + currentMessages[systemPromptIdx].content;
+    } else {
+      currentMessages.unshift({ role: 'system', content: systemContent });
+    }
+
+    let iterations = 0;
+    const maxIterations = 5;
+    let assistantMessage = null;
+    let traceLogs = [];
+
+    while (iterations < maxIterations) {
+      iterations++;
+      
+      const mockRes = {
+        statusCode: 200,
+        headers: {},
+        data: null,
+        status(code) {
+          this.statusCode = code;
+          return this;
+        },
+        json(data) {
+          this.data = data;
+          return this;
+        },
+        setHeader(name, val) {
+          this.headers[name] = val;
+        },
+        write() {},
+        end() {}
+      };
+
+      const payload = {
+        model,
+        messages: currentMessages,
+        tools: ASSISTANT_TOOLS,
+        temperature: 0.3,
+        stream: false
+      };
+
+      // Custom chat proxy settings applied to the request
+      if (proxyEnabled && proxyUrl) {
+        payload._chatProxy = { proxyEnabled, proxyUrl };
+      }
+
+      await routeChatCompletion(payload, mockRes);
+
+      if (mockRes.statusCode !== 200) {
+        throw new Error(mockRes.data?.error?.message || 'Completion failed in gateway.');
+      }
+
+      const choice = mockRes.data.choices[0];
+      assistantMessage = choice.message;
+
+      if (assistantMessage.tool_calls && assistantMessage.tool_calls.length > 0) {
+        currentMessages.push(assistantMessage);
+
+        for (const toolCall of assistantMessage.tool_calls) {
+          const { name, arguments: argsString } = toolCall.function;
+          addLog('INFO', `Agent calling local tool: ${name}`);
+          
+          let args = {};
+          try {
+            args = JSON.parse(argsString);
+          } catch (e) {}
+
+          traceLogs.push({ toolName: name, args });
+          const toolOutput = await executeLocalTool(name, args);
+          
+          currentMessages.push({
+            role: 'tool',
+            tool_call_id: toolCall.id,
+            name: name,
+            content: toolOutput
+          });
+        }
+        continue;
+      }
+      break;
+    }
+
+    res.json({ success: true, message: assistantMessage, traces: traceLogs });
+  } catch (err) {
+    addLog('ERROR', `Chat assistant execution failed`, err.message);
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
