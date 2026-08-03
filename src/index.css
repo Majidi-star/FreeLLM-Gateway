@@ -23,6 +23,16 @@
   --error: oklch(62% 0.21 24.3);
   --error-glow: oklch(62% 0.21 24.3 / 0.15);
 
+  /* Obsidian Slate Chat Theme */
+  --slate-deepest: #05070f;
+  --slate-base: #0b0f19;
+  --slate-card: #131b2e;
+  --slate-border: rgba(255, 255, 255, 0.06);
+  --slate-accent: #7c8dff;
+  --slate-accent-glow: rgba(124, 141, 255, 0.15);
+  --slate-text: #e4e8f5;
+  --slate-muted: #6b7280;
+
   background-color: var(--bg);
   color: var(--text);
 
@@ -207,4 +217,35 @@ input[type="checkbox"] {
     backdrop-filter: none;
     box-shadow: none;
   }
+}
+
+/* ─── Drag-resize cursor ───────────────────────── */
+.resize-handle {
+  cursor: col-resize;
+  user-select: none;
+}
+
+/* ─── Chat-specific UI ─────────────────────────── */
+.chat-step-item {
+  animation: stepIn 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes stepIn {
+  from { opacity: 0; transform: translateX(-6px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.chat-drawer {
+  animation: drawerSlideIn 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes drawerSlideIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Pulse dot for live agent thinking indicator */
+@keyframes agentPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.7); }
 }

@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const CONFIG_PATH = path.join(__dirname, '..', 'config.json');
+const SESSIONS_PATH = path.join(__dirname, '..', 'chat-sessions.json');
 
 const DEFAULT_PROVIDERS = [
   {
@@ -481,6 +482,87 @@ const DEFAULT_CONFIG = {
 };
 
 let memoryLogs = [];
+
+// ─────────────────────────────────────────────────
+// Chat Session Store (persisted to chat-sessions.json)
+// ─────────────────────────────────────────────────
+
+let chatSessions = [];
+let chatMessages = [];
+
+function loadChatData() {
+  try {
+    if (fs.existsSync(SESSIONS_PATH)) {
+      const data = JSON.parse(fs.readFileSync(SESSIONS_PATH, 'utf8'));
+      chatSessions = data.sessions || [];
+      chatMessages = data.messages || [];
+    }
+  } catch (err) {
+    console.error('Error loading chat sessions, starting fresh:', err);
+    chatSessions = [];
+    chatMessages = [];
+  }
+}
+
+function saveChatData() {
+  try {
+    fs.writeFileSync(SESSIONS_PATH, JSON.stringify({ sessions: chatSessions, messages: chatMessages }, null, 2), 'utf8');
+  } catch (err) {
+    console.error('Error saving chat sessions:', err);
+  }
+}
+
+// Initialize on module load
+loadChatData();
+
+export function getAllChatSessions() {
+  return [...chatSessions].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+}
+
+export function createChatSession() {
+  const id = `sess_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const session = { id, title: 'New Chat', createdAt: new Date().toISOString() };
+  chatSessions.push(session);
+  saveChatData();
+  return session;
+}
+
+export function updateChatSessionTitle(sessionId, title) {
+  const session = chatSessions.find(s => s.id === sessionId);
+  if (session) {
+    session.title = title.slice(0, 50);
+    saveChatData();
+    return session;
+  }
+  return null;
+}
+
+export function deleteChatSession(sessionId) {
+  chatSessions = chatSessions.filter(s => s.id !== sessionId);
+  chatMessages = chatMessages.filter(m => m.sessionId !== sessionId);
+  saveChatData();
+}
+
+export function getMessagesBySession(sessionId) {
+  return chatMessages.filter(m => m.sessionId === sessionId).sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+}
+
+export function addChatMessage(sessionId, role, content, steps = []) {
+  const id = `msg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const msg = { id, sessionId, role, content, steps, createdAt: new Date().toISOString() };
+  chatMessages.push(msg);
+  saveChatData();
+  return msg;
+}
+
+export function truncateChatMessagesFromIndex(sessionId, fromIndex) {
+  const sessionMsgs = chatMessages
+    .filter(m => m.sessionId === sessionId)
+    .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+  const idsToDelete = new Set(sessionMsgs.slice(fromIndex).map(m => m.id));
+  chatMessages = chatMessages.filter(m => !idsToDelete.has(m.id));
+  saveChatData();
+}
 
 export function loadConfig() {
   try {

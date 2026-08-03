@@ -26,6 +26,7 @@ dist-ssr
 # Local credentials config database
 config.json
 config.json.*
+chat-sessions.json
 server/cache.json
 *.local
 .env

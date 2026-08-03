@@ -3,7 +3,7 @@ import cors from 'cors';
 import path from 'path';
 import axios from 'axios';
 import { fileURLToPath } from 'url';
-import { loadConfig, saveConfig, getLogs, clearLogs, addLog } from './db.js';
+import { loadConfig, saveConfig, getLogs, clearLogs, addLog, getAllChatSessions, createChatSession, updateChatSessionTitle, deleteChatSession, getMessagesBySession, addChatMessage, truncateChatMessagesFromIndex } from './db.js';
 import { getRateLimitMetrics } from './rateLimiter.js';
 import { getProxyAgent } from './proxy.js';
 import { routeChatCompletion } from './router.js';
@@ -370,6 +370,56 @@ app.post('/api/providers/:providerId/sync-models', async (req, res) => {
     const errorMsg = err.response?.data?.error?.message || err.response?.data?.message || err.message;
     res.status(500).json({ success: false, error: errorMsg });
   }
+});
+
+// ----------------------------------------------------
+// Chat Session API Routes
+// ----------------------------------------------------
+
+// GET /api/chat-sessions - List all sessions
+app.get('/api/chat-sessions', (req, res) => {
+  res.json(getAllChatSessions());
+});
+
+// POST /api/chat-sessions - Create a new session
+app.post('/api/chat-sessions', (req, res) => {
+  const session = createChatSession();
+  res.json(session);
+});
+
+// PATCH /api/chat-sessions/:id - Update session title
+app.patch('/api/chat-sessions/:id', (req, res) => {
+  const { title } = req.body;
+  const updated = updateChatSessionTitle(req.params.id, title || 'New Chat');
+  if (updated) {
+    res.json(updated);
+  } else {
+    res.status(404).json({ error: 'Session not found.' });
+  }
+});
+
+// DELETE /api/chat-sessions/:id - Delete a session and its messages
+app.delete('/api/chat-sessions/:id', (req, res) => {
+  deleteChatSession(req.params.id);
+  res.json({ success: true });
+});
+
+// GET /api/chat-sessions/:id/messages - Get messages for a session
+app.get('/api/chat-sessions/:id/messages', (req, res) => {
+  res.json(getMessagesBySession(req.params.id));
+});
+
+// POST /api/chat-sessions/:id/messages - Save a message to a session
+app.post('/api/chat-sessions/:id/messages', (req, res) => {
+  const { role, content, steps } = req.body;
+  const msg = addChatMessage(req.params.id, role, content || '', steps || []);
+  res.json(msg);
+});
+
+// DELETE /api/chat-sessions/:id/messages-from/:index - Truncate messages from index
+app.delete('/api/chat-sessions/:id/messages-from/:index', (req, res) => {
+  truncateChatMessagesFromIndex(req.params.id, parseInt(req.params.index, 10));
+  res.json({ success: true });
 });
 
 // ----------------------------------------------------
@@ -857,15 +907,26 @@ async function executeLocalTool(name, args) {
   return `Unknown tool name: ${name}`;
 }
 
-// POST /api/chat-assistant - Agentic chat interface with function-calling loop
+// POST /api/chat-assistant - Agentic chat interface with streaming step progress
 app.post('/api/chat-assistant', async (req, res) => {
   const { messages, model, proxyEnabled, proxyUrl } = req.body;
-  addLog('INFO', `Chat assistant processing message. Model: ${model}`);
+  addLog('INFO', `Chat assistant streaming request. Model: ${model}`);
+
+  // Set up streaming response
+  res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Transfer-Encoding', 'chunked');
+  res.flushHeaders();
+
+  const sendStep = (text) => {
+    res.write(`STEP:${text}\n`);
+  };
+
+  const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
   try {
     let currentMessages = [...messages];
     
-    // Extract and sanitize config state to share with the agent (without sensitive API keys)
     const config = loadConfig();
     const sanitizedProviders = (config.providers || []).map(p => {
       const sanitizedKeys = (p.apiKeys || []).map(k => ({
@@ -908,7 +969,6 @@ app.post('/api/chat-assistant', async (req, res) => {
       stats: config.stats
     };
 
-    // Add system prompt setting the instructions
     const systemPromptIdx = currentMessages.findIndex(m => m.role === 'system');
     const systemContent = `You are the Free LLM Gateway Agentic Assistant. You help users manage their local gateway config, view stats, sync models, test connections, add/remove providers, manage aliases, edit cache settings, and manage virtual model pools.
 You can execute actions on the dashboard dynamically using your tools. If you need to perform multiple actions to fulfill a request (for example, adding multiple API keys, creating multiple pools, or configuring several parameters), you should execute multiple tool calls IN PARALLEL within the same response. This minimizes round-trips and prevents running out of execution iterations.
@@ -928,6 +988,9 @@ ${JSON.stringify(sanitizedConfigState, null, 2)}`;
     let assistantMessage = null;
     let traceLogs = [];
 
+    sendStep('Thinking...');
+    await delay(400);
+
     while (iterations < maxIterations) {
       iterations++;
       
@@ -935,17 +998,9 @@ ${JSON.stringify(sanitizedConfigState, null, 2)}`;
         statusCode: 200,
         headers: {},
         data: null,
-        status(code) {
-          this.statusCode = code;
-          return this;
-        },
-        json(data) {
-          this.data = data;
-          return this;
-        },
-        setHeader(name, val) {
-          this.headers[name] = val;
-        },
+        status(code) { this.statusCode = code; return this; },
+        json(data) { this.data = data; return this; },
+        setHeader(name, val) { this.headers[name] = val; },
         write() {},
         end() {}
       };
@@ -958,7 +1013,6 @@ ${JSON.stringify(sanitizedConfigState, null, 2)}`;
         stream: false
       };
 
-      // Custom chat proxy settings applied to the request
       if (proxyEnabled && proxyUrl) {
         payload._chatProxy = { proxyEnabled, proxyUrl };
       }
@@ -980,13 +1034,20 @@ ${JSON.stringify(sanitizedConfigState, null, 2)}`;
           addLog('INFO', `Agent calling local tool: ${name}`);
           
           let args = {};
-          try {
-            args = JSON.parse(argsString);
-          } catch (e) {}
+          try { args = JSON.parse(argsString); } catch (e) {}
+
+          const argsPreview = Object.keys(args).length > 0
+            ? ` (${JSON.stringify(args).slice(0, 60)}${JSON.stringify(args).length > 60 ? '...' : ''})`
+            : '';
+          sendStep(`Calling tool: ${name}${argsPreview}`);
+          await delay(600);
 
           traceLogs.push({ toolName: name, args });
           const toolOutput = await executeLocalTool(name, args);
           
+          sendStep(`Tool result: ${String(toolOutput).slice(0, 80)}${String(toolOutput).length > 80 ? '...' : ''}`);
+          await delay(300);
+
           currentMessages.push({
             role: 'tool',
             tool_call_id: toolCall.id,
@@ -994,15 +1055,20 @@ ${JSON.stringify(sanitizedConfigState, null, 2)}`;
             content: toolOutput
           });
         }
+        sendStep('Processing results...');
+        await delay(400);
         continue;
       }
       break;
     }
 
-    res.json({ success: true, message: assistantMessage, traces: traceLogs });
+    // Send final result as a JSON line
+    res.write(`RESULT:${JSON.stringify({ success: true, message: assistantMessage, traces: traceLogs })}\n`);
+    res.end();
   } catch (err) {
     addLog('ERROR', `Chat assistant execution failed`, err.message);
-    res.status(500).json({ success: false, error: err.message });
+    res.write(`ERROR:${JSON.stringify({ success: false, error: err.message })}\n`);
+    res.end();
   }
 });
 

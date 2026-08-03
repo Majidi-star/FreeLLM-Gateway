@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   getConfig, 
   saveConfig, 
@@ -9,9 +9,13 @@ import type { GatewayConfig, Stats } from './utils/api';
 import { Directory } from './components/Directory';
 import { GatewaySetup } from './components/GatewaySetup';
 import { ActivePools } from './components/ActivePools';
-import { Sandbox } from './components/Sandbox';
+import { AgentChat } from './components/AgentChat';
 import { IntegrationHub } from './components/IntegrationHub';
 import { Playground } from './components/Playground';
+
+const MIN_SIDEBAR = 280;
+const MAX_SIDEBAR = 600;
+const DEFAULT_SIDEBAR = 380;
 
 function App() {
   const [activeTab, setActiveTab] = useState<'directory' | 'setup' | 'pools' | 'playground' | 'integrations'>('directory');
@@ -21,6 +25,12 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [serverOnline, setServerOnline] = useState(false);
+
+  // Drag-resizable sidebar state
+  const [sidebarWidth, setSidebarWidth] = useState(DEFAULT_SIDEBAR);
+  const [isResizing, setIsResizing] = useState(false);
+  const resizeStartX = useRef(0);
+  const resizeStartWidth = useRef(DEFAULT_SIDEBAR);
 
   // Fetch initial config and check server connectivity
   const fetchInitialData = async () => {
@@ -60,6 +70,45 @@ function App() {
     }, 4000);
     return () => clearInterval(timer);
   }, [serverOnline]);
+
+  // ── Drag-resize handlers ──
+  const handleResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+    resizeStartX.current = e.clientX;
+    resizeStartWidth.current = sidebarWidth;
+  }, [sidebarWidth]);
+
+  useEffect(() => {
+    if (!isResizing) return;
+
+    const onMove = (e: MouseEvent) => {
+      // Dragging left edge of sidebar → moving mouse left = bigger sidebar
+      const delta = resizeStartX.current - e.clientX;
+      const newWidth = Math.min(MAX_SIDEBAR, Math.max(MIN_SIDEBAR, resizeStartWidth.current + delta));
+      setSidebarWidth(newWidth);
+    };
+
+    const onUp = () => setIsResizing(false);
+
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+  }, [isResizing]);
+
+  // Apply no-select + col-resize cursor to body while dragging
+  useEffect(() => {
+    if (isResizing) {
+      document.body.style.userSelect = 'none';
+      document.body.style.cursor = 'col-resize';
+    } else {
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
+    }
+  }, [isResizing]);
 
   const handleSaveConfig = async (newConfig: GatewayConfig) => {
     try {
@@ -103,7 +152,7 @@ function App() {
 
   return (
     <div style={{
-      maxWidth: '1200px',
+      maxWidth: '1400px',
       margin: '0 auto',
       padding: '2rem 1.5rem',
       display: 'flex',
@@ -209,13 +258,15 @@ function App() {
       {config && (
         <div style={{
           display: 'grid',
-          gridTemplateColumns: showAssistant ? '1fr 380px' : '1fr',
+          gridTemplateColumns: showAssistant ? `1fr ${sidebarWidth}px` : '1fr',
           gap: '1.5rem',
           alignItems: 'start',
-          flex: 1
+          flex: 1,
+          // Disable transition during active drag to eliminate cursor stutter
+          transition: isResizing ? 'none' : 'grid-template-columns 0.2s ease',
         }}>
           {/* Left Column: Navigation Tabs and Current View Content */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', overflow: 'hidden' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', overflow: 'hidden', minWidth: 0 }}>
             <nav style={{
               display: 'flex',
               gap: '0.75rem',
@@ -281,17 +332,27 @@ function App() {
             </main>
           </div>
 
-          {/* Right Column: Global Sticky Chat Assistant */}
+          {/* Right Column: Drag-Resizable Sticky Agent Chat */}
           {showAssistant && (
-            <aside className="glass-panel animate-fade-in" style={{
-              height: 'calc(100vh - 220px)',
-              minHeight: '500px',
-              position: 'sticky',
-              top: '20px',
-              overflow: 'hidden',
-              padding: 0
-            }}>
-              <Sandbox config={config} onConfigChange={fetchInitialData} />
+            <aside
+              className="glass-panel animate-fade-in"
+              style={{
+                height: 'calc(100vh - 220px)',
+                minHeight: '500px',
+                position: 'sticky',
+                top: '20px',
+                overflow: 'hidden',
+                padding: 0,
+                // No transition during drag
+                transition: isResizing ? 'none' : undefined,
+              }}
+            >
+              <AgentChat
+                config={config}
+                onConfigChange={fetchInitialData}
+                sidebarWidth={sidebarWidth}
+                onResizeStart={handleResizeStart}
+              />
             </aside>
           )}
         </div>

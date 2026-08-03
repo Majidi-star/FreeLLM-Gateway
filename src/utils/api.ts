@@ -159,6 +159,106 @@ export async function askChatAssistant(
   });
 }
 
+/**
+ * Streaming version of chat assistant.
+ * Calls onStep(text) for each STEP: line, then resolves with the final RESULT.
+ */
+export async function streamChatAssistant(
+  payload: { messages: any[]; model: string; proxyEnabled: boolean; proxyUrl: string },
+  onStep: (step: string) => void
+): Promise<{ success: boolean; message: any; traces: any[]; error?: string }> {
+  const res = await fetch(`${API_BASE}/api/chat-assistant`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.body) throw new Error('No response body for streaming.');
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop() ?? '';
+    for (const line of lines) {
+      if (line.startsWith('STEP:')) {
+        onStep(line.slice(5));
+      } else if (line.startsWith('RESULT:')) {
+        return JSON.parse(line.slice(7));
+      } else if (line.startsWith('ERROR:')) {
+        return JSON.parse(line.slice(6));
+      }
+    }
+  }
+  // Handle any remaining buffer content
+  if (buffer.startsWith('RESULT:')) return JSON.parse(buffer.slice(7));
+  if (buffer.startsWith('ERROR:')) return JSON.parse(buffer.slice(6));
+  throw new Error('Stream ended without a result.');
+}
+
+// ─── Chat Session API ──────────────────────────────
+
+export interface ChatSession {
+  id: string;
+  title: string;
+  createdAt: string;
+}
+
+export interface ChatMessage {
+  id: string;
+  sessionId: string;
+  role: string;
+  content: string;
+  steps: string[];
+  createdAt: string;
+}
+
+export async function getSessions(): Promise<ChatSession[]> {
+  return fetchJson(`${API_BASE}/api/chat-sessions`);
+}
+
+export async function createSession(): Promise<ChatSession> {
+  return fetchJson(`${API_BASE}/api/chat-sessions`, { method: 'POST' });
+}
+
+export async function updateSessionTitle(id: string, title: string): Promise<ChatSession> {
+  return fetchJson(`${API_BASE}/api/chat-sessions/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ title }),
+  });
+}
+
+export async function deleteSession(id: string): Promise<{ success: boolean }> {
+  return fetchJson(`${API_BASE}/api/chat-sessions/${id}`, { method: 'DELETE' });
+}
+
+export async function getSessionMessages(sessionId: string): Promise<ChatMessage[]> {
+  return fetchJson(`${API_BASE}/api/chat-sessions/${sessionId}/messages`);
+}
+
+export async function saveMessage(
+  sessionId: string,
+  role: string,
+  content: string,
+  steps: string[] = []
+): Promise<ChatMessage> {
+  return fetchJson(`${API_BASE}/api/chat-sessions/${sessionId}/messages`, {
+    method: 'POST',
+    body: JSON.stringify({ role, content, steps }),
+  });
+}
+
+export async function truncateMessages(sessionId: string, fromIndex: number): Promise<{ success: boolean }> {
+  return fetchJson(`${API_BASE}/api/chat-sessions/${sessionId}/messages-from/${fromIndex}`, {
+    method: 'DELETE',
+  });
+}
+
 export async function getCacheStats(): Promise<{ size: number }> {
   return fetchJson(`${API_BASE}/api/cache-stats`);
 }
