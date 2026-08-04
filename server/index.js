@@ -1,6 +1,8 @@
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
+import fs from 'fs';
+import crypto from 'crypto';
 import axios from 'axios';
 import { fileURLToPath } from 'url';
 import { loadConfig, saveConfig, getLogs, clearLogs, addLog, getAllChatSessions, createChatSession, updateChatSessionTitle, deleteChatSession, getMessagesBySession, addChatMessage, truncateChatMessagesFromIndex } from './db.js';
@@ -12,11 +14,20 @@ import { initCache, clearCache, getCacheSize } from './cache.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const PORT = process.env.PORT || 3000;
+const systemSecret = 'sk-gw-internal-' + crypto.randomBytes(16).toString('hex');
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
+
+// Normalize double or multiple slashes in incoming request URLs (e.g. /v1//chat/completions -> /v1/chat/completions)
+app.use((req, res, next) => {
+  if (req.url.includes('//')) {
+    req.url = req.url.replace(/\/{2,}/g, '/');
+  }
+  next();
+});
 
 // List of connected SSE clients
 let sseClients = [];
@@ -29,15 +40,21 @@ function broadcastRoutingEvent(event) {
 }
 
 const validateVirtualKey = (req, res, next) => {
+  const authHeader = req.headers.authorization || '';
+  const token = authHeader.replace(/^Bearer\s+/i, '').trim();
+  const internalHeader = req.headers['x-gateway-internal'] || '';
+
+  // Bypass if it is the internal system secret
+  if (systemSecret && (token === systemSecret || internalHeader === systemSecret)) {
+    return next();
+  }
+
   const config = loadConfig();
   const keys = config.virtualKeys || [];
   
   if (keys.length === 0) {
     return next();
   }
-
-  const authHeader = req.headers.authorization || '';
-  const token = authHeader.replace(/^Bearer\s+/i, '').trim();
 
   if (!token) {
     return res.status(401).json({ error: { message: 'Authentication required. Active virtual gateway keys are configured.' } });
@@ -169,9 +186,16 @@ app.get('/api/events', (req, res) => {
   });
 });
 
-// GET /api/config - Get current configurations
+// GET /api/config - Get current configurations with dynamic runtime metadata
 app.get('/api/config', (req, res) => {
-  res.json(loadConfig());
+  const config = loadConfig();
+  res.json({
+    ...config,
+    metadata: {
+      port: PORT,
+      mcpPath: path.resolve(path.join(__dirname, 'mcp.js')).replace(/\\/g, '/')
+    }
+  });
 });
 
 // POST /api/config - Update configurations
@@ -179,6 +203,9 @@ app.post('/api/config', (req, res) => {
   try {
     const newConfig = req.body;
     const oldConfig = loadConfig();
+    
+    // Clean up dynamic metadata to avoid polluting config.json
+    delete newConfig.metadata;
     
     // Preserve stats during updates
     newConfig.stats = oldConfig.stats;
@@ -1083,6 +1110,39 @@ app.get('*', (req, res) => {
   } else {
     res.status(404).json({ error: 'Endpoint not found.' });
   }
+});
+
+// Write runtime config for local CLI / MCP authentication & port discoverability
+const runtimePath = path.join(__dirname, 'runtime.tmp');
+const runtimeData = {
+  port: PORT,
+  systemSecret
+};
+try {
+  fs.writeFileSync(runtimePath, JSON.stringify(runtimeData, null, 2), 'utf8');
+} catch (err) {
+  console.error('Failed to write runtime config:', err);
+}
+
+// Clean up runtime file on exit
+const cleanRuntimeFile = () => {
+  try {
+    if (fs.existsSync(runtimePath)) {
+      fs.unlinkSync(runtimePath);
+    }
+  } catch (err) {
+    // Ignore
+  }
+};
+
+process.on('exit', cleanRuntimeFile);
+process.on('SIGINT', () => {
+  cleanRuntimeFile();
+  process.exit(0);
+});
+process.on('SIGTERM', () => {
+  cleanRuntimeFile();
+  process.exit(0);
 });
 
 // Initialize cache and server

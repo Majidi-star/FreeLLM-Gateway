@@ -327,7 +327,7 @@ function App() {
               )}
               
               {activeTab === 'integrations' && (
-                <IntegrationHub />
+                <IntegrationHub config={config} />
               )}
             </main>
           </div>
@@ -371,7 +371,7 @@ function App() {
         alignItems: 'center'
       }}>
         <span>LLM Free Pool Gateway &copy; 2026</span>
-        <span>Point your API endpoints to: <code>http://localhost:3000/v1</code></span>
+        <span>Point your API endpoints to: <code>{`${window.location.protocol}//${window.location.hostname}:${config?.metadata?.port || 3000}/v1`}</code></span>
       </footer>
     </div>
   );

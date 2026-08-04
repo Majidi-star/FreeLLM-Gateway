@@ -86,6 +86,10 @@ export interface GatewayConfig {
   semanticCacheThreshold?: number;
   virtualKeys?: VirtualKey[];
   stats: Stats;
+  metadata?: {
+    port: number;
+    mcpPath: string;
+  };
 }
 
 export interface LogItem {

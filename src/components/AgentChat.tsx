@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   streamChatAssistant,
   getSessions,
@@ -166,7 +166,7 @@ function lsSet(key: string, value: any) {
 // AgentChat Component
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const AgentChat: React.FC<AgentChatProps> = ({ config, onConfigChange, sidebarWidth, onResizeStart }) => {
+export const AgentChat: React.FC<AgentChatProps> = ({ config, onConfigChange, sidebarWidth: _, onResizeStart }) => {
   const [selectedModel, setSelectedModel] = useState('');
   const [proxyEnabled, setProxyEnabled] = useState(false);
   const [proxyUrl, setProxyUrl] = useState('');
@@ -265,7 +265,7 @@ export const AgentChat: React.FC<AgentChatProps> = ({ config, onConfigChange, si
     }
   };
 
-  const switchToSession = async (sessionId: string, sessionList?: ChatSession[]) => {
+  const switchToSession = async (sessionId: string, _sessionList?: ChatSession[]) => {
     setActiveSessionId(sessionId);
     lsSet(LS_ACTIVE_KEY, sessionId);
     // Try server, fall back to LS

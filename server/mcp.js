@@ -6,8 +6,28 @@ console.info = function() {};
 
 import readline from 'readline';
 import axios from 'axios';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { loadConfig, saveConfig } from './db.js';
 import { clearCache } from './cache.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+let runtimePort = 3000;
+let systemSecret = '';
+
+try {
+  const runtimePath = path.join(__dirname, 'runtime.tmp');
+  if (fs.existsSync(runtimePath)) {
+    const runtime = JSON.parse(fs.readFileSync(runtimePath, 'utf8'));
+    runtimePort = runtime.port || 3000;
+    systemSecret = runtime.systemSecret || '';
+  }
+} catch (err) {
+  // Fallback to default
+}
 
 // Setup stdin reader line-by-line
 const rl = readline.createInterface({
@@ -178,7 +198,7 @@ Successful Requests: ${stats.successfulRequests}
 Failed Requests: ${stats.failedRequests}
 Approximate Cost Saved: $${stats.approximateCostSaved.toFixed(2)}
 Tokens Pooled: ${stats.tokensSaved.toLocaleString()}
-Gateway Service: Online (Base: http://localhost:3000/v1)`;
+Gateway Service: Online (Base: http://localhost:${runtimePort}/v1)`;
       return { content: [{ type: 'text', text: responseText }] };
     }
 
@@ -204,13 +224,17 @@ Gateway Service: Online (Base: http://localhost:3000/v1)`;
         return { content: [{ type: 'text', text: `Error: Provider "${providerId}" not found.` }] };
       }
 
-      const syncUrl = `http://localhost:3000/api/providers/${providerId}/sync-models`;
+      const syncUrl = `http://localhost:${runtimePort}/api/providers/${providerId}/sync-models`;
+      const headers = { 'Content-Type': 'application/json' };
+      if (systemSecret) {
+        headers['Authorization'] = `Bearer ${systemSecret}`;
+      }
       const res = await axios.post(syncUrl, {
         apiKey: provider.apiKey,
         baseUrl: provider.baseUrl,
         proxyEnabled: provider.proxyEnabled,
         proxyUrl: provider.proxyUrl
-      }, { timeout: 15000 });
+      }, { headers, timeout: 15000 });
 
       return { content: [{ type: 'text', text: `Success: Synced ${res.data.models.length} models for ${provider.name}!` }] };
     }
@@ -218,19 +242,24 @@ Gateway Service: Online (Base: http://localhost:3000/v1)`;
     if (name === 'ask_pool_completion') {
       const { poolId, prompt, systemPrompt, temperature } = args;
 
-      const completionsUrl = `http://localhost:3000/v1/chat/completions`;
+      const completionsUrl = `http://localhost:${runtimePort}/v1/chat/completions`;
       const messages = [];
       if (systemPrompt) {
         messages.push({ role: 'system', content: systemPrompt });
       }
       messages.push({ role: 'user', content: prompt });
 
+      const headers = { 'Content-Type': 'application/json' };
+      if (systemSecret) {
+        headers['Authorization'] = `Bearer ${systemSecret}`;
+      }
+
       const res = await axios.post(completionsUrl, {
         model: poolId,
         messages,
         temperature: temperature !== undefined ? temperature : 0.3,
         stream: false
-      }, { timeout: 45000 });
+      }, { headers, timeout: 45000 });
 
       const text = res.data.choices[0].message.content;
       return { content: [{ type: 'text', text }] };

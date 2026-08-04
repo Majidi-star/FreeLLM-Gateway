@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import type { GatewayConfig } from '../utils/api';
 
 interface IntegrationGuide {
   id: string;
@@ -10,9 +11,25 @@ interface IntegrationGuide {
   language: string;
 }
 
-export const IntegrationHub: React.FC = () => {
+interface IntegrationHubProps {
+  config?: GatewayConfig;
+}
+
+export const IntegrationHub: React.FC<IntegrationHubProps> = ({ config }) => {
   const [activeGuide, setActiveGuide] = useState<string>('cursor');
   const [copied, setCopied] = useState(false);
+
+  const serverPort = config?.metadata?.port || 3000;
+  const currentHost = window.location.hostname || 'localhost';
+  const gatewayUrl = `${window.location.protocol}//${currentHost}:${serverPort}/v1`;
+  const mcpPath = config?.metadata?.mcpPath || 'C:/Projects/Free-LLM-Provider/server/mcp.js';
+
+  const virtualKeys = config?.virtualKeys || [];
+  const hasVirtualKeys = virtualKeys.length > 0;
+  const exampleKey = hasVirtualKeys ? (virtualKeys[0]?.id || 'any-key') : 'any-key';
+  const keyWarning = hasVirtualKeys 
+    ? `\n\n⚠️ IMPORTANT: Active Virtual Gateway Keys are configured in your dashboard. You MUST enter one of your active keys (e.g., "${exampleKey}") in the OpenAI API Key field for authentication.`
+    : `\n\nℹ️ Note: No virtual keys are configured, so you can enter any mock string (e.g., "any-key") in the API Key field.`;
 
   const guides: IntegrationGuide[] = [
     {
@@ -20,17 +37,17 @@ export const IntegrationHub: React.FC = () => {
       name: 'Cursor AI Editor',
       icon: '💻',
       description: 'Configure Cursor to use the gateway pools for inline coding and chat.',
-      instructions: `1. Open Cursor Settings (gear icon in the top right).
+      instructions: `1. Open Cursor Settings (gear icon in the top right of the editor).
 2. Navigate to the "Models" section.
-3. Scroll down to "OpenAI API Key" or "Override OpenAI Base URL".
-4. Toggle "Override OpenAI Base URL" ON and input:
-   http://localhost:3000/v1
-5. Enter any random string (e.g. "any-key") in the OpenAI API Key field.
-6. Under "Model Settings", disable default models and add our gateway pools:
+3. Find the "OpenAI" section, toggle it ON, and click "Configure" (or "Override OpenAI Base URL" depending on Cursor version).
+4. Enter the gateway URL in the "Override OpenAI Base URL" field:
+   ${gatewayUrl}
+5. Enter your gateway API key (e.g. "${exampleKey}") in the "OpenAI API Key" field.${keyWarning}
+6. Under the model list, click "+ Add Model" to register our virtual gateway pools:
    - strong-reasoning
    - coding-agent
    - fast-flash
-7. Save, reload Cursor, and start coding!`,
+7. Toggle off default OpenAI models (like gpt-4o) if you only want traffic to flow to your free pools, reload Cursor, and start coding!`,
       code: '',
       language: 'text'
     },
@@ -51,13 +68,13 @@ To configure Cursor:
 1. Open Cursor Settings -> Features -> MCP.
 2. Click "+ Add New MCP Server".
 3. Enter Name: Free LLM Gateway, Type: stdio.
-4. Input Command: node C:/Projects/Free-LLM-Provider/server/mcp.js
+4. Input Command: node ${mcpPath}
 5. Save, restart, and let the AI models call pool completions automatically!`,
       code: `{
   "mcpServers": {
     "free-llm-gateway": {
       "command": "node",
-      "args": ["C:/Projects/Free-LLM-Provider/server/mcp.js"]
+      "args": ["${mcpPath}"]
     }
   }
 }`,
@@ -73,13 +90,13 @@ To configure Cursor:
 2. Set the environment variables, or pass them as command line arguments.
 3. Run the following command. Aider will think our gateway is OpenAI, and we handle the routing behind the scenes!`,
       code: `# Set environment variables (Linux/macOS)
-export OPENAI_API_BASE="http://localhost:3000/v1"
-export OPENAI_API_KEY="any-mock-key"
+export OPENAI_API_BASE="${gatewayUrl}"
+export OPENAI_API_KEY="${exampleKey}"
 aider --model coding-agent
 
 # PowerShell (Windows)
-$env:OPENAI_API_BASE="http://localhost:3000/v1"
-$env:OPENAI_API_KEY="any-mock-key"
+$env:OPENAI_API_BASE="${gatewayUrl}"
+$env:OPENAI_API_KEY="${exampleKey}"
 aider --model coding-agent`,
       language: 'bash'
     },
@@ -94,8 +111,8 @@ Then run the code snippet below. It redirects the client base_url to our local g
 
 # Direct client to the local Free Pool Gateway
 client = OpenAI(
-    base_url="http://localhost:3000/v1",
-    api_key="any-api-key" # API key is managed by the gateway
+    base_url="${gatewayUrl}",
+    api_key="${exampleKey}"
 )
 
 print("Sending chat request to gateway...")
@@ -108,7 +125,7 @@ response = client.chat.completions.create(
     stream=False
 )
 
-print("\nResponse:")
+print("\\nResponse:")
 print(response.choices[0].message.content)
 `,
       language: 'python'
@@ -119,13 +136,13 @@ print(response.choices[0].message.content)
       icon: '🟢',
       description: 'Integrate the local gateway pool in your JavaScript/TypeScript backend services.',
       instructions: `Install the openai npm library (npm install openai).
-Import and initialize the client pointing to our port 3000.`,
+Import and initialize the client pointing to our port ${serverPort}.`,
       code: `import OpenAI from 'openai';
 
 // Binds client to local gateway
 const openai = new OpenAI({
-  baseURL: 'http://localhost:3000/v1',
-  apiKey: 'any-key-value'
+  baseURL: '${gatewayUrl}',
+  apiKey: '${exampleKey}'
 });
 
 async function main() {
@@ -151,8 +168,9 @@ main();
       icon: '🌐',
       description: 'Make lightweight REST requests to the gateway from any command line environment.',
       instructions: `Send a standard application/json POST request to the local chat completions endpoint:`,
-      code: `curl http://localhost:3000/v1/chat/completions \\
+      code: `curl ${gatewayUrl}/chat/completions \\
   -H "Content-Type: application/json" \\
+  -H "Authorization: Bearer ${exampleKey}" \\
   -d '{
     "model": "fast-flash",
     "messages": [
