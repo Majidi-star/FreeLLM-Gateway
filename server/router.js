@@ -267,32 +267,51 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
 
   // 1. Resolve targets
   let targets = [];
-  const virtualModel = config.virtualModels.find(vm => vm.id === requestedModel);
+  let virtualModel = null;
   
-  if (virtualModel) {
-    targets = [...virtualModel.targets];
-    eventLog(`Resolved virtual model "${requestedModel}" to ${targets.length} priority targets.`);
+  // Direct providerId/modelId routing check
+  let targetedProviderId = null;
+  let targetedModelId = requestedModel;
+  
+  for (const p of config.providers) {
+    if (requestedModel.startsWith(p.id + '/')) {
+      targetedProviderId = p.id;
+      targetedModelId = requestedModel.substring(p.id.length + 1);
+      break;
+    }
+  }
+
+  if (targetedProviderId) {
+    targets = [{ providerId: targetedProviderId, modelId: targetedModelId }];
+    eventLog(`Direct provider-specific routing: targeting provider "${targetedProviderId}" and model "${targetedModelId}".`);
   } else {
-    // If not a virtual model, look if any provider offers this exact model ID
-    config.providers.forEach(p => {
-      const match = p.models.find(m => m.id === requestedModel);
-      if (match) {
-        targets.push({ providerId: p.id, modelId: requestedModel });
-      }
-    });
+    virtualModel = config.virtualModels.find(vm => vm.id === requestedModel);
     
-    if (targets.length > 0) {
-      eventLog(`Model "${requestedModel}" found directly in providers. Fallback available.`);
+    if (virtualModel) {
+      targets = [...virtualModel.targets];
+      eventLog(`Resolved virtual model "${requestedModel}" to ${targets.length} priority targets.`);
     } else {
-      // Fallback: use the first enabled provider's first model
-      const activeProvider = config.providers.find(p => p.enabled && p.apiKey);
-      if (activeProvider && activeProvider.models.length > 0) {
-        targets = [{ providerId: activeProvider.id, modelId: activeProvider.models[0].id }];
-        eventLog(`Model "${requestedModel}" not found. Falling back to active provider: ${activeProvider.id}`);
+      // If not a virtual model, look if any provider offers this exact model ID
+      config.providers.forEach(p => {
+        const match = p.models.find(m => m.id === requestedModel);
+        if (match) {
+          targets.push({ providerId: p.id, modelId: requestedModel });
+        }
+      });
+      
+      if (targets.length > 0) {
+        eventLog(`Model "${requestedModel}" found directly in providers. Fallback available.`);
       } else {
-        return res.status(400).json({
-          error: { message: `No active models or providers found matching "${requestedModel}".` }
-        });
+        // Fallback: use the first enabled provider's first model
+        const activeProvider = config.providers.find(p => p.enabled && p.apiKey);
+        if (activeProvider && activeProvider.models.length > 0) {
+          targets = [{ providerId: activeProvider.id, modelId: activeProvider.models[0].id }];
+          eventLog(`Model "${requestedModel}" not found. Falling back to active provider: ${activeProvider.id}`);
+        } else {
+          return res.status(400).json({
+            error: { message: `No active models or providers found matching "${requestedModel}".` }
+          });
+        }
       }
     }
   }
@@ -301,7 +320,19 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
   let chosenTarget = null;
   let rateLimitedTargets = [];
 
-  for (const target of targets) {
+  // Implement Load-Balancing / Random target selection if specified in pool
+  let evaluatedTargets = [...targets];
+  if (virtualModel && virtualModel.strategy === 'random' && (!reqPayload._failedBackends || reqPayload._failedBackends.size === 0)) {
+    // Shuffle the targets to load balance randomly
+    evaluatedTargets.sort(() => Math.random() - 0.5);
+  }
+
+  for (const target of evaluatedTargets) {
+    if (reqPayload._failedBackends && reqPayload._failedBackends.has(`${target.providerId}:${target.modelId}`)) {
+      eventLog(`Skipping already failed backend: ${target.providerId}/${target.modelId}`);
+      continue;
+    }
+
     const provider = config.providers.find(p => p.id === target.providerId);
     if (!provider || !provider.enabled) {
       continue;
@@ -416,12 +447,14 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
     payloadToSend = convertToAnthropic(apiPayload);
   }
 
+  const timeoutMs = (virtualModel && virtualModel.config && virtualModel.config.timeoutMs) || 60000;
+
   const axiosConfig = {
     method: 'POST',
     url: targetUrl,
     data: payloadToSend,
     headers,
-    timeout: 60000, // 60s timeout
+    timeout: timeoutMs,
     ...proxyAgent
   };
 
@@ -539,17 +572,41 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
     const errorMsg = err.response?.data?.error?.message || err.response?.data?.message || err.message;
     eventLog(`ERROR calling ${provider.name}:`, errorMsg);
     
+    // Check if we should place on cooldown and failover based on strategy config
+    const status = err.response?.status;
+    const isRateLimit = status === 429;
+    const isQuota = status === 403;
+    const is5xx = status >= 500 && status < 600;
+    const isOtherError = !isRateLimit && !isQuota && !is5xx;
+    
+    let shouldFallback = true;
+    if (virtualModel && virtualModel.config) {
+      const vConfig = virtualModel.config;
+      if (isRateLimit && vConfig.fallbackOn429 === false) shouldFallback = false;
+      if (isQuota && vConfig.fallbackOn403 === false) shouldFallback = false;
+      if (is5xx && vConfig.fallbackOn5xx === false) shouldFallback = false;
+      if (isOtherError && vConfig.fallbackOn5xx === false) shouldFallback = false;
+    }
+
+    if (!shouldFallback) {
+      eventLog(`FAILOVER: Fallback bypassed/disabled for this error type (${status || 'network'}). Request failed.`);
+      updateStats(false);
+      return res.status(status || 500).json({
+        error: {
+          message: `Request failed on targeted backend: ${errorMsg}. Failover bypassed by pool configuration.`,
+          provider: provider.name
+        }
+      });
+    }
+
     // Set provider on cooldown
-    setProviderCooldown(provider.id, 60000); // 1 minute cooldown on failure
+    const cooldownMs = (virtualModel && virtualModel.config && virtualModel.config.cooldownMs) || 60000;
+    setProviderCooldown(provider.id, cooldownMs);
     updateStats(false);
 
     // Trigger failover retry!
     eventLog(`FAILOVER: Retrying next target candidate...`);
     
-    // Remove the failed candidate and recurse
-    const remainingTargets = reqPayload.messages; // mock reference, let's filter payload
-    // To retry, we modify targets inside virtual model or we can just filter out the failed target
-    // and run again. Since our targets array is resolved on-the-fly, we can track failed targets in a set!
     if (!reqPayload._failedBackends) {
       reqPayload._failedBackends = new Set();
     }
@@ -558,9 +615,6 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
     // Filter targets to remove failed ones
     const activeTargets = targets.filter(t => !reqPayload._failedBackends.has(`${t.providerId}:${t.modelId}`));
     if (activeTargets.length > 0) {
-      // Create a temporary configuration list where we force virtual model targets
-      // to exclude the failed ones.
-      // Recurse route completions:
       return routeChatCompletion(reqPayload, res, onRoutingEvent);
     } else {
       eventLog(`FAILOVER: No targets remaining. Request failed.`);

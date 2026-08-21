@@ -33,3 +33,6 @@ server/cache.json
 .env.*
 *.backup
 *.tmp
+graphify-out/
+.graphifyignore
+benchmarks/

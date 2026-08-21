@@ -18,6 +18,9 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
   // New Target Selector State (virtualModelId -> { selectedProviderId, selectedModelId })
   const [newTargets, setNewTargets] = useState<{ [key: string]: { providerId: string; modelId: string } }>({});
 
+  // Collapsible configuration panels state
+  const [expandedConfigVmId, setExpandedConfigVmId] = useState<string | null>(null);
+
   // Model Aliases State
   const [newAliasRequestName, setNewAliasRequestName] = useState('');
   const [newAliasTargetModel, setNewAliasTargetModel] = useState('');
@@ -202,6 +205,33 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
     setNewTargets({ ...newTargets, [vmId]: updated });
   };
 
+  const handleStrategyChange = (vmId: string, strategy: string) => {
+    const updatedVms = localConfig.virtualModels.map(vm => 
+      vm.id === vmId ? { ...vm, strategy } : vm
+    );
+    setLocalConfig({ ...localConfig, virtualModels: updatedVms });
+  };
+
+  const handleStrategyConfigChange = (vmId: string, key: string, value: any) => {
+    const updatedVms = localConfig.virtualModels.map(vm => {
+      if (vm.id === vmId) {
+        const configObj = { 
+          maxRetries: 1,
+          timeoutMs: 30000,
+          cooldownMs: 60000,
+          fallbackOn5xx: true,
+          fallbackOn429: true,
+          fallbackOn403: true,
+          ...(vm.config || {}) 
+        };
+        (configObj as any)[key] = value;
+        return { ...vm, config: configObj };
+      }
+      return vm;
+    });
+    setLocalConfig({ ...localConfig, virtualModels: updatedVms });
+  };
+
 
 
   return (
@@ -345,6 +375,99 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
                         </div>
                       );
                     })}
+                  </div>
+                )}
+              </div>
+
+              {/* Fallback Strategy Config Panel */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', background: 'oklch(17% 0.017 255.4 / 0.4)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                    <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>Routing Strategy:</label>
+                    <select 
+                      value={vm.strategy || 'priority'}
+                      onChange={(e) => handleStrategyChange(vm.id, e.target.value)}
+                      style={{ padding: '0.2rem 0.5rem', fontSize: '0.85rem' }}
+                    >
+                      <option value="priority">Priority Failover</option>
+                      <option value="random">Load Balanced (Random)</option>
+                    </select>
+                  </div>
+                  <button 
+                    type="button" 
+                    onClick={() => setExpandedConfigVmId(expandedConfigVmId === vm.id ? null : vm.id)}
+                    style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}
+                  >
+                    {expandedConfigVmId === vm.id ? 'Hide Settings' : '⚙️ Custom Failover Settings'}
+                  </button>
+                </div>
+
+                {expandedConfigVmId === vm.id && (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginTop: '0.5rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border)' }}>
+                    {/* Numeric parameters */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                        <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Max Retry Attempts</label>
+                        <input 
+                          type="number" 
+                          min={0}
+                          max={5}
+                          value={vm.config?.maxRetries ?? 1}
+                          onChange={(e) => handleStrategyConfigChange(vm.id, 'maxRetries', parseInt(e.target.value) || 0)}
+                        />
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                        <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Request Timeout (seconds)</label>
+                        <input 
+                          type="number" 
+                          min={1}
+                          max={120}
+                          value={((vm.config?.timeoutMs ?? 30000) / 1000)}
+                          onChange={(e) => handleStrategyConfigChange(vm.id, 'timeoutMs', (parseInt(e.target.value) || 30) * 1000)}
+                        />
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                        <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Failure Cooldown (seconds)</label>
+                        <input 
+                          type="number" 
+                          min={5}
+                          max={600}
+                          value={((vm.config?.cooldownMs ?? 60000) / 1000)}
+                          onChange={(e) => handleStrategyConfigChange(vm.id, 'cooldownMs', (parseInt(e.target.value) || 60) * 1000)}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Checkboxes */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', justifyContent: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <input 
+                          type="checkbox" 
+                          id={`fallbackOn429-${vm.id}`}
+                          checked={vm.config?.fallbackOn429 !== false}
+                          onChange={(e) => handleStrategyConfigChange(vm.id, 'fallbackOn429', e.target.checked)}
+                        />
+                        <label htmlFor={`fallbackOn429-${vm.id}`} style={{ fontSize: '0.8rem', cursor: 'pointer' }}>Fallback on Rate Limits (429)</label>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <input 
+                          type="checkbox" 
+                          id={`fallbackOn403-${vm.id}`}
+                          checked={vm.config?.fallbackOn403 !== false}
+                          onChange={(e) => handleStrategyConfigChange(vm.id, 'fallbackOn403', e.target.checked)}
+                        />
+                        <label htmlFor={`fallbackOn403-${vm.id}`} style={{ fontSize: '0.8rem', cursor: 'pointer' }}>Fallback on Quota Exceeded (403)</label>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <input 
+                          type="checkbox" 
+                          id={`fallbackOn5xx-${vm.id}`}
+                          checked={vm.config?.fallbackOn5xx !== false}
+                          onChange={(e) => handleStrategyConfigChange(vm.id, 'fallbackOn5xx', e.target.checked)}
+                        />
+                        <label htmlFor={`fallbackOn5xx-${vm.id}`} style={{ fontSize: '0.8rem', cursor: 'pointer' }}>Fallback on Server Errors (5xx / Network)</label>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
