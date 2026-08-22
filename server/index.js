@@ -18,7 +18,9 @@ const systemSecret = 'sk-gw-internal-' + crypto.randomBytes(16).toString('hex');
 
 const app = express();
 
-app.use(cors());
+app.use(cors({
+  exposedHeaders: ['x-gateway-provider', 'x-gateway-cache']
+}));
 app.use(express.json({ limit: '10mb' }));
 
 // Normalize double or multiple slashes in incoming request URLs (e.g. /v1//chat/completions -> /v1/chat/completions)
