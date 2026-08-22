@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { loadConfig, saveConfig, addLog } from './db.js';
+import { loadConfig, saveConfig, addLog, recordLatency, getLatency } from './db.js';
 import { resolveProxyAgent } from './proxy.js';
 import { checkRateLimit, recordUsage, setProviderCooldown } from './rateLimiter.js';
 import { getSemanticCachedResponse, addSemanticCache } from './cache.js';
@@ -322,9 +322,14 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
 
   // Implement Load-Balancing / Random target selection if specified in pool
   let evaluatedTargets = [...targets];
-  if (virtualModel && virtualModel.strategy === 'random' && (!reqPayload._failedBackends || reqPayload._failedBackends.size === 0)) {
-    // Shuffle the targets to load balance randomly
-    evaluatedTargets.sort(() => Math.random() - 0.5);
+  if (virtualModel && (!reqPayload._failedBackends || reqPayload._failedBackends.size === 0)) {
+    if (virtualModel.strategy === 'random') {
+      // Shuffle the targets to load balance randomly
+      evaluatedTargets.sort(() => Math.random() - 0.5);
+    } else if (virtualModel.strategy === 'latency') {
+      // Sort by historical latency (fastest first)
+      evaluatedTargets.sort((a, b) => getLatency(a.providerId, a.modelId) - getLatency(b.providerId, b.modelId));
+    }
   }
 
   for (const target of evaluatedTargets) {
@@ -462,6 +467,7 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
     if (isStream) {
       axiosConfig.responseType = 'stream';
       eventLog(`Initiating streaming response from ${provider.name}...`);
+      const requestStartTime = Date.now();
       const response = await axios(axiosConfig);
 
       // Set headers for SSE stream
@@ -471,8 +477,13 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
       res.setHeader('x-gateway-provider', provider.name);
 
       let accumulatedText = '';
+      let firstTokenReceived = false;
       
       response.data.on('data', (chunk) => {
+        if (!firstTokenReceived) {
+          firstTokenReceived = true;
+          recordLatency(provider.id, target.modelId, Date.now() - requestStartTime);
+        }
         // Pass stream chunk directly to client
         res.write(chunk);
 
@@ -543,7 +554,9 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
     } else {
       // Non streaming request
       eventLog(`Sending request to ${provider.name}...`);
+      const requestStartTime = Date.now();
       const response = await axios(axiosConfig);
+      recordLatency(provider.id, target.modelId, Date.now() - requestStartTime);
 
       let openaiData = response.data;
       if (providerType === 'anthropic') {

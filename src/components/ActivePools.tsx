@@ -459,6 +459,7 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
                     >
                       <option value="priority">Priority Failover</option>
                       <option value="random">Load Balanced (Random)</option>
+                      <option value="latency">Fastest (Latency-Based)</option>
                     </select>
                   </div>
                   <button 

@@ -3336,3 +3336,26 @@ export function getLogs() {
 export function clearLogs() {
   memoryLogs = [];
 }
+
+export function recordLatency(providerId, modelId, latencyMs) {
+  const config = loadConfig();
+  if (!config.stats.latency) {
+    config.stats.latency = {};
+  }
+  const key = `${providerId}:${modelId}`;
+  const currentAvg = config.stats.latency[key];
+  if (!currentAvg) {
+    config.stats.latency[key] = latencyMs;
+  } else {
+    // Exponential moving average: 20% new, 80% old history
+    config.stats.latency[key] = Math.round((currentAvg * 0.8) + (latencyMs * 0.2));
+  }
+  saveConfig(config);
+}
+
+export function getLatency(providerId, modelId) {
+  const config = loadConfig();
+  if (!config.stats || !config.stats.latency) return 1000;
+  const key = `${providerId}:${modelId}`;
+  return config.stats.latency[key] || 1000;
+}
