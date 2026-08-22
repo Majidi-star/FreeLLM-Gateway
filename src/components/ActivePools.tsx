@@ -18,6 +18,9 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
   // New Target Selector State (virtualModelId -> { selectedProviderId, selectedModelId })
   const [newTargets, setNewTargets] = useState<{ [key: string]: { providerId: string; modelId: string } }>({});
 
+  // Search models query state per pool
+  const [searchQueries, setSearchQueries] = useState<{ [vmId: string]: string }>({});
+
   // Collapsible configuration panels state
   const [expandedConfigVmId, setExpandedConfigVmId] = useState<string | null>(null);
 
@@ -203,6 +206,71 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
     }
 
     setNewTargets({ ...newTargets, [vmId]: updated });
+  };
+
+  const getSearchResultsForPool = (query: string) => {
+    if (!query.trim()) return [];
+    const results: { providerId: string; providerName: string; modelId: string; modelName: string }[] = [];
+    localConfig.providers.forEach(p => {
+      if (p.enabled) {
+        p.models.forEach(m => {
+          const matchesId = m.id.toLowerCase().includes(query.toLowerCase());
+          const matchesName = (m.name || '').toLowerCase().includes(query.toLowerCase());
+          if (matchesId || matchesName) {
+            results.push({
+              providerId: p.id,
+              providerName: p.name,
+              modelId: m.id,
+              modelName: m.name || m.id
+            });
+          }
+        });
+      }
+    });
+    return results;
+  };
+
+  const handleImportAllMatches = (vmId: string, matchedTargets: { providerId: string; modelId: string }[]) => {
+    const virtualModel = localConfig.virtualModels.find(vm => vm.id === vmId);
+    if (!virtualModel) return;
+
+    const newAddedTargets = matchedTargets.filter(match => 
+      !virtualModel.targets.some(t => t.providerId === match.providerId && t.modelId === match.modelId)
+    );
+
+    if (newAddedTargets.length === 0) {
+      alert('All matched models are already in this pool.');
+      return;
+    }
+
+    const targets = [...virtualModel.targets, ...newAddedTargets];
+    const updatedVms = localConfig.virtualModels.map(vm => 
+      vm.id === vmId ? { ...vm, targets } : vm
+    );
+
+    setLocalConfig({ ...localConfig, virtualModels: updatedVms });
+    setSearchQueries({ ...searchQueries, [vmId]: '' });
+  };
+
+  const handleAddSingleTarget = (vmId: string, providerId: string, modelId: string) => {
+    const virtualModel = localConfig.virtualModels.find(vm => vm.id === vmId);
+    if (!virtualModel) return;
+
+    const exists = virtualModel.targets.some(t => 
+      t.providerId === providerId && t.modelId === modelId
+    );
+
+    if (exists) {
+      alert('This model is already in the priority queue.');
+      return;
+    }
+
+    const targets = [...virtualModel.targets, { providerId, modelId }];
+    const updatedVms = localConfig.virtualModels.map(vm => 
+      vm.id === vmId ? { ...vm, targets } : vm
+    );
+
+    setLocalConfig({ ...localConfig, virtualModels: updatedVms });
   };
 
   const handleStrategyChange = (vmId: string, strategy: string) => {
@@ -513,6 +581,79 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
                 >
                   + Add to Queue
                 </button>
+              </div>
+
+              {/* Search & Batch Import Section */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.5rem', background: 'oklch(17% 0.017 255.4 / 0.4)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>Search & Batch Import from All Enabled Providers:</label>
+                </div>
+                <div style={{ display: 'flex', gap: '0.75rem' }}>
+                  <input 
+                    type="text" 
+                    placeholder="Search model name/ID across all providers... (e.g. gemini, llama)"
+                    value={searchQueries[vm.id] || ''}
+                    onChange={(e) => setSearchQueries({ ...searchQueries, [vm.id]: e.target.value })}
+                    style={{ flex: 1, padding: '0.45rem', fontSize: '0.85rem', background: '#0a0a0f', color: '#c5c9db', border: '1px solid var(--border)', borderRadius: '6px', outline: 'none' }}
+                  />
+                  {searchQueries[vm.id] && (
+                    <button 
+                      type="button" 
+                      onClick={() => setSearchQueries({ ...searchQueries, [vm.id]: '' })}
+                      style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+                
+                {/* Search Results */}
+                {(() => {
+                  const query = searchQueries[vm.id] || '';
+                  if (!query.trim()) return null;
+                  const results = getSearchResultsForPool(query);
+                  if (results.length === 0) {
+                    return <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>No matching models found.</div>;
+                  }
+                  
+                  return (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.25rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.03)', padding: '0.4rem 0.6rem', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Found {results.length} matching models:</span>
+                        <button 
+                          type="button" 
+                          className="primary"
+                          onClick={() => handleImportAllMatches(vm.id, results)}
+                          style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
+                        >
+                          🚀 Import All {results.length} Models
+                        </button>
+                      </div>
+                      
+                      <div style={{ maxHeight: '150px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.35rem', paddingRight: '0.25rem' }}>
+                        {results.map((r, idx) => {
+                          const isAdded = vm.targets.some(t => t.providerId === r.providerId && t.modelId === r.modelId);
+                          return (
+                            <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.35rem 0.5rem', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '4px' }}>
+                              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                <span style={{ fontSize: '0.8rem', fontWeight: 600, color: isAdded ? 'var(--text-muted)' : '#c5c9db' }}>{r.modelName}</span>
+                                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>ID: <code>{r.modelId}</code> | Provider: {r.providerName}</span>
+                              </div>
+                              <button 
+                                type="button" 
+                                disabled={isAdded}
+                                onClick={() => handleAddSingleTarget(vm.id, r.providerId, r.modelId)}
+                                style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem' }}
+                              >
+                                {isAdded ? 'Added' : '+ Add'}
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
 
             </div>

@@ -53,10 +53,21 @@ export interface VirtualModelTarget {
   modelId: string;
 }
 
+export interface VirtualModelStrategyConfig {
+  maxRetries?: number;
+  timeoutMs?: number;
+  cooldownMs?: number;
+  fallbackOn5xx?: boolean;
+  fallbackOn429?: boolean;
+  fallbackOn403?: boolean;
+}
+
 export interface VirtualModel {
   id: string;
   name: string;
   targets: VirtualModelTarget[];
+  strategy?: string;
+  config?: VirtualModelStrategyConfig;
 }
 
 export interface Stats {
