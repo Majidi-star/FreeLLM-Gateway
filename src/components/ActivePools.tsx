@@ -319,16 +319,31 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
       </div>
 
       {/* Config parameters */}
-      <div className="glass-panel" style={{ padding: '1.25rem', display: 'flex', gap: '1rem', alignItems: 'center' }}>
-        <input 
-          type="checkbox" 
-          id="rateLimitQueueEnabled" 
-          checked={localConfig.rateLimitQueueEnabled !== false}
-          onChange={(e) => setLocalConfig({ ...localConfig, rateLimitQueueEnabled: e.target.checked })}
-        />
-        <label htmlFor="rateLimitQueueEnabled" style={{ fontWeight: 600, cursor: 'pointer' }}>
-          Enable Queue retry (If all priority backends are rate-limited, wait up to 30s before returning failure)
-        </label>
+      <div className="glass-panel" style={{ padding: '1.25rem', display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <input 
+            type="checkbox" 
+            id="rateLimitQueueEnabled" 
+            checked={localConfig.rateLimitQueueEnabled !== false}
+            onChange={(e) => setLocalConfig({ ...localConfig, rateLimitQueueEnabled: e.target.checked })}
+          />
+          <label htmlFor="rateLimitQueueEnabled" style={{ fontWeight: 600, cursor: 'pointer' }}>
+            Enable Queue retry (Wait before returning failure if rate-limited)
+          </label>
+        </div>
+        {localConfig.rateLimitQueueEnabled !== false && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginLeft: 'auto' }}>
+            <label style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Max Queue Timeout (seconds):</label>
+            <input 
+              type="number" 
+              min={1}
+              max={300}
+              value={((localConfig.rateLimitQueueTimeoutMs ?? 30000) / 1000)}
+              onChange={(e) => setLocalConfig({ ...localConfig, rateLimitQueueTimeoutMs: (parseInt(e.target.value) || 30) * 1000 })}
+              style={{ width: '80px', padding: '0.2rem 0.5rem', background: '#0a0a0f', color: '#c5c9db', border: '1px solid var(--border)', borderRadius: '4px' }}
+            />
+          </div>
+        )}
       </div>
 
       {/* Add New VM Pool Overlay */}
@@ -560,17 +575,21 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
 
                 {/* Select Model */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', flex: 1, minWidth: '150px' }}>
-                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Target Model (Synced)</label>
-                  <select 
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Target Model (Select or Type ID)</label>
+                  <input 
+                    type="text"
+                    list={`model-list-${vm.id}`}
                     value={targetSelector.modelId}
                     onChange={(e) => handleTargetSelectorChange(vm.id, 'modelId', e.target.value)}
                     disabled={!targetSelector.providerId}
-                  >
-                    <option value="">Select Model...</option>
+                    placeholder="e.g. gpt-4o or meta/llama3..."
+                    style={{ padding: '0.45rem', fontSize: '0.85rem', background: '#0a0a0f', color: '#c5c9db', border: '1px solid var(--border)', borderRadius: '6px' }}
+                  />
+                  <datalist id={`model-list-${vm.id}`}>
                     {selectedProvider?.models?.map(m => (
                       <option key={m.id} value={m.id}>{m.name || m.id}</option>
                     ))}
-                  </select>
+                  </datalist>
                 </div>
 
                 <button 

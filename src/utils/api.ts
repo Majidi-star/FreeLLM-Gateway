@@ -90,6 +90,7 @@ export interface GatewayConfig {
   globalProxy: string;
   globalProxyEnabled: boolean;
   rateLimitQueueEnabled?: boolean;
+  rateLimitQueueTimeoutMs?: number;
   providers: Provider[];
   virtualModels: VirtualModel[];
   aliases?: Record<string, string>;

@@ -377,6 +377,7 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
   if (!chosenTarget && rateLimitedTargets.length > 0) {
     // Queue wait settings
     const queueEnabled = config.rateLimitQueueEnabled !== false;
+    const maxWaitMs = config.rateLimitQueueTimeoutMs ?? 30000;
     
     if (queueEnabled) {
       // Sort to find the one that recovers first
@@ -384,7 +385,7 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
       const bestCandidate = rateLimitedTargets[0];
       const waitMs = bestCandidate.retryAfterMs;
 
-      if (waitMs <= 30000) { // Limit wait time to max 30s
+      if (waitMs <= maxWaitMs) { // Limit wait time to user configured max
         eventLog(`All endpoints rate limited. Queueing request... Waiting ${Math.ceil(waitMs / 1000)}s for ${bestCandidate.provider.id}/${bestCandidate.target.modelId}`);
         await new Promise(r => setTimeout(r, waitMs));
         
