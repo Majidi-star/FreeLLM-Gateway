@@ -21,7 +21,14 @@ const DEFAULT_PROVIDERS = [
     "signupUrl": "https://openrouter.ai/keys",
     "creditsDescription": "Aggregator with dozens of permanently free models (:free suffix).",
     "limitsDescription": "20 requests/minute, 50 requests/day (Up to 1000 requests/day with $10 lifetime deposit).",
-    "models": []
+    "models": [],
+    "limits": {
+      "rpm": 20,
+      "rpd": 50,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 1
+    }
   },
   {
     "id": "gemini",
@@ -36,7 +43,14 @@ const DEFAULT_PROVIDERS = [
     "signupUrl": "https://aistudio.google.com",
     "creditsDescription": "Permanently free tier. Data used for training outside UK/EU.",
     "limitsDescription": "Flash: 5 RPM, 20 RPD. Flash-Lite: 15 RPM, 500 RPD. Gemma: 30 RPM, 14,400 RPD.",
-    "models": []
+    "models": [],
+    "limits": {
+      "rpm": 15,
+      "rpd": 1000,
+      "tpm": 250000,
+      "tpd": null,
+      "concurrent": 2
+    }
   },
   {
     "id": "nvidia-nim",
@@ -51,7 +65,14 @@ const DEFAULT_PROVIDERS = [
     "signupUrl": "https://build.nvidia.com/explore/discover",
     "creditsDescription": "Phone number verification required. Standard open models.",
     "limitsDescription": "40 requests/minute.",
-    "models": []
+    "models": [],
+    "limits": {
+      "rpm": 40,
+      "rpd": 1000,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 2
+    }
   },
   {
     "id": "mistral-la-plateforme",
@@ -66,7 +87,14 @@ const DEFAULT_PROVIDERS = [
     "signupUrl": "https://console.mistral.ai/",
     "creditsDescription": "Requires phone verification and opting into data training.",
     "limitsDescription": "Set per-model (typically 25k to 20M tokens/minute depending on the model).",
-    "models": []
+    "models": [],
+    "limits": {
+      "rpm": 2,
+      "rpd": null,
+      "tpm": 500000,
+      "tpd": null,
+      "concurrent": 1
+    }
   },
   {
     "id": "mistral-codestral",
@@ -96,7 +124,14 @@ const DEFAULT_PROVIDERS = [
     "signupUrl": "https://huggingface.co/settings/tokens",
     "creditsDescription": "Access to open models smaller than 10GB.",
     "limitsDescription": "$0.10/month free tier credits.",
-    "models": []
+    "models": [],
+    "limits": {
+      "rpm": 5,
+      "rpd": 1000,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 1
+    }
   },
   {
     "id": "vercel-gateway",
@@ -111,7 +146,14 @@ const DEFAULT_PROVIDERS = [
     "signupUrl": "https://vercel.com/dashboard",
     "creditsDescription": "Routes to various supported provider models.",
     "limitsDescription": "$5/month free allotment.",
-    "models": []
+    "models": [],
+    "limits": {
+      "rpm": 60,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 5
+    }
   },
   {
     "id": "kilo-gateway",
@@ -126,7 +168,14 @@ const DEFAULT_PROVIDERS = [
     "signupUrl": "https://kilo.ai/docs/gateway",
     "creditsDescription": "Free models work without an account. May use prompts for training.",
     "limitsDescription": "200 requests/hour per IP, shared.",
-    "models": []
+    "models": [],
+    "limits": {
+      "rpm": 30,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 2
+    }
   },
   {
     "id": "opencode-zen",
@@ -141,7 +190,14 @@ const DEFAULT_PROVIDERS = [
     "signupUrl": "https://opencode.ai/docs/zen/",
     "creditsDescription": "AI gateway with curated open models. May use data for training.",
     "limitsDescription": "Free tiers based on standard usage limits.",
-    "models": []
+    "models": [],
+    "limits": {
+      "rpm": 30,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 2
+    }
   },
   {
     "id": "cerebras",
@@ -156,7 +212,14 @@ const DEFAULT_PROVIDERS = [
     "signupUrl": "https://cloud.cerebras.ai/",
     "creditsDescription": "Ultra-fast inference platform with free keys.",
     "limitsDescription": "5 RPM, 30k TPM, 1M tokens/day.",
-    "models": []
+    "models": [],
+    "limits": {
+      "rpm": 30,
+      "rpd": 14400,
+      "tpm": 60000,
+      "tpd": null,
+      "concurrent": 1
+    }
   },
   {
     "id": "groq",
@@ -171,7 +234,14 @@ const DEFAULT_PROVIDERS = [
     "signupUrl": "https://console.groq.com",
     "creditsDescription": "Permanently free developer key for open models.",
     "limitsDescription": "Llama 3.3 70B: 1,000 RPD / 12k TPM. Llama 3.1 8B: 14,400 RPD / 6k TPM.",
-    "models": []
+    "models": [],
+    "limits": {
+      "rpm": 30,
+      "rpd": 14400,
+      "tpm": 6000,
+      "tpd": 500000,
+      "concurrent": 1
+    }
   },
   {
     "id": "cohere",
@@ -186,7 +256,14 @@ const DEFAULT_PROVIDERS = [
     "signupUrl": "https://dashboard.cohere.com/api-keys",
     "creditsDescription": "Free developer key for testing. Common monthly quota.",
     "limitsDescription": "20 RPM, 1,000 requests/month.",
-    "models": []
+    "models": [],
+    "limits": {
+      "rpm": 20,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 1
+    }
   },
   {
     "id": "cloudflare",
@@ -201,7 +278,14 @@ const DEFAULT_PROVIDERS = [
     "signupUrl": "https://dash.cloudflare.com",
     "creditsDescription": "Free tier for Cloudflare account holders.",
     "limitsDescription": "10,000 neurons/day (approx 1M tokens).",
-    "models": []
+    "models": [],
+    "limits": {
+      "rpm": 1200,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 20
+    }
   },
   {
     "id": "fireworks",
@@ -216,7 +300,14 @@ const DEFAULT_PROVIDERS = [
     "signupUrl": "https://fireworks.ai/",
     "creditsDescription": "$1 free trial credits.",
     "limitsDescription": "Standard trial tier limits.",
-    "models": []
+    "models": [],
+    "limits": {
+      "rpm": 60,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 2
+    }
   },
   {
     "id": "baseten",
@@ -231,7 +322,14 @@ const DEFAULT_PROVIDERS = [
     "signupUrl": "https://app.baseten.co/",
     "creditsDescription": "$30 free credits for compute deployment.",
     "limitsDescription": "Capped by trial credit budget.",
-    "models": []
+    "models": [],
+    "limits": {
+      "rpm": 60,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 2
+    }
   },
   {
     "id": "nebius",
@@ -246,7 +344,14 @@ const DEFAULT_PROVIDERS = [
     "signupUrl": "https://tokenfactory.nebius.com/",
     "creditsDescription": "$1 free trial credits.",
     "limitsDescription": "Capped by credit budget.",
-    "models": []
+    "models": [],
+    "limits": {
+      "rpm": 30,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 2
+    }
   },
   {
     "id": "novita",
@@ -261,7 +366,14 @@ const DEFAULT_PROVIDERS = [
     "signupUrl": "https://novita.ai/",
     "creditsDescription": "$0.5 free credits for 1 year.",
     "limitsDescription": "Capped by credit budget.",
-    "models": []
+    "models": [],
+    "limits": {
+      "rpm": 30,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 2
+    }
   },
   {
     "id": "ai21",
@@ -276,7 +388,14 @@ const DEFAULT_PROVIDERS = [
     "signupUrl": "https://studio.ai21.com/",
     "creditsDescription": "$10 free credits for 3 months (Jamba models).",
     "limitsDescription": "Capped by trial credits.",
-    "models": []
+    "models": [],
+    "limits": {
+      "rpm": 10,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 1
+    }
   },
   {
     "id": "upstage",
@@ -291,7 +410,14 @@ const DEFAULT_PROVIDERS = [
     "signupUrl": "https://console.upstage.ai/",
     "creditsDescription": "$10 free credits for 3 months (Solar models).",
     "limitsDescription": "Capped by trial credits.",
-    "models": []
+    "models": [],
+    "limits": {
+      "rpm": 10,
+      "rpd": 100,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 1
+    }
   },
   {
     "id": "nlp-cloud",
@@ -306,7 +432,14 @@ const DEFAULT_PROVIDERS = [
     "signupUrl": "https://nlpcloud.com/home",
     "creditsDescription": "$15 free credits. Requires phone verification.",
     "limitsDescription": "Capped by trial credits.",
-    "models": []
+    "models": [],
+    "limits": {
+      "rpm": 3,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 1
+    }
   },
   {
     "id": "alibaba",
@@ -321,7 +454,14 @@ const DEFAULT_PROVIDERS = [
     "signupUrl": "https://bailian.console.alibabacloud.com/",
     "creditsDescription": "1 million tokens per Qwen model, valid for 90 days (Singapore node).",
     "limitsDescription": "Capped by free token allocation.",
-    "models": []
+    "models": [],
+    "limits": {
+      "rpm": 30,
+      "rpd": null,
+      "tpm": 60000,
+      "tpd": null,
+      "concurrent": 2
+    }
   },
   {
     "id": "modal",
@@ -336,7 +476,14 @@ const DEFAULT_PROVIDERS = [
     "signupUrl": "https://modal.com",
     "creditsDescription": "$30/month free starter tier credits.",
     "limitsDescription": "Capped by budget compute hours.",
-    "models": []
+    "models": [],
+    "limits": {
+      "rpm": 60,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 5
+    }
   },
   {
     "id": "inferencenet",
@@ -351,7 +498,14 @@ const DEFAULT_PROVIDERS = [
     "signupUrl": "https://inference.net",
     "creditsDescription": "$1 free, or $25 for responding to an email survey.",
     "limitsDescription": "Capped by credit budget.",
-    "models": []
+    "models": [],
+    "limits": {
+      "rpm": 20,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 1
+    }
   },
   {
     "id": "hyperbolic",
@@ -366,7 +520,14 @@ const DEFAULT_PROVIDERS = [
     "signupUrl": "https://app.hyperbolic.ai/",
     "creditsDescription": "$1 free trial credits.",
     "limitsDescription": "Capped by credit budget.",
-    "models": []
+    "models": [],
+    "limits": {
+      "rpm": 20,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 1
+    }
   },
   {
     "id": "sambanova",
@@ -381,7 +542,14 @@ const DEFAULT_PROVIDERS = [
     "signupUrl": "https://cloud.sambanova.ai/",
     "creditsDescription": "$5 free credits valid for 3 months.",
     "limitsDescription": "5-10 requests/minute, 100-200 requests/day.",
-    "models": []
+    "models": [],
+    "limits": {
+      "rpm": 30,
+      "rpd": null,
+      "tpm": 60000,
+      "tpd": null,
+      "concurrent": 1
+    }
   },
   {
     "id": "scaleway",
@@ -396,7 +564,14 @@ const DEFAULT_PROVIDERS = [
     "signupUrl": "https://console.scaleway.com",
     "creditsDescription": "1,000,000 free tokens plus 60 minutes of audio transcription.",
     "limitsDescription": "Capped by token usage.",
-    "models": []
+    "models": [],
+    "limits": {
+      "rpm": 15,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 1
+    }
   },
   {
     "id": "openai",
@@ -454,7 +629,14 @@ const DEFAULT_PROVIDERS = [
         "id": "reka-edge-2603",
         "name": "Reka Edge 2603"
       }
-    ]
+    ],
+    "limits": {
+      "rpm": 10,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 1
+    }
   },
   {
     "id": "pioneer",
@@ -510,7 +692,14 @@ const DEFAULT_PROVIDERS = [
         "id": "HuggingFaceTB/SmolLM3-3B-Base",
         "name": "SmolLM3 3B Base"
       }
-    ]
+    ],
+    "limits": {
+      "rpm": 20,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 1
+    }
   },
   {
     "id": "blackbox",
@@ -570,7 +759,14 @@ const DEFAULT_PROVIDERS = [
         "id": "grok-4.3",
         "name": "Grok 4.3"
       }
-    ]
+    ],
+    "limits": {
+      "rpm": 15,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 1
+    }
   },
   {
     "id": "morph",
@@ -585,7 +781,14 @@ const DEFAULT_PROVIDERS = [
     "signupUrl": "https://morphllm.com",
     "creditsDescription": "Free tier access.",
     "limitsDescription": "Free tier: 250K credits/month, $0",
-    "models": []
+    "models": [],
+    "limits": {
+      "rpm": 10,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 1
+    }
   },
   {
     "id": "liquid",
@@ -605,7 +808,14 @@ const DEFAULT_PROVIDERS = [
         "id": "liquid-lfm-40b",
         "name": "Liquid LFM 40B"
       }
-    ]
+    ],
+    "limits": {
+      "rpm": 15,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 1
+    }
   },
   {
     "id": "inception",
@@ -625,7 +835,14 @@ const DEFAULT_PROVIDERS = [
         "id": "mercury-2",
         "name": "Mercury 2"
       }
-    ]
+    ],
+    "limits": {
+      "rpm": 10,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 1
+    }
   },
   {
     "id": "openvecta",
@@ -677,7 +894,14 @@ const DEFAULT_PROVIDERS = [
         "id": "nemotron-3-super-120b",
         "name": "Nemotron 3 Super 120B"
       }
-    ]
+    ],
+    "limits": {
+      "rpm": 15,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 1
+    }
   },
   {
     "id": "poolside",
@@ -701,7 +925,14 @@ const DEFAULT_PROVIDERS = [
         "id": "poolside/laguna-s-2.1",
         "name": "Laguna S 2.1"
       }
-    ]
+    ],
+    "limits": {
+      "rpm": 10,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 1
+    }
   },
   {
     "id": "siliconflow",
@@ -993,7 +1224,14 @@ const DEFAULT_PROVIDERS = [
         "id": "ByteDance-Seed/Seed-OSS-36B-Instruct",
         "name": "Seed OSS 36B"
       }
-    ]
+    ],
+    "limits": {
+      "rpm": 100,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 2
+    }
   },
   {
     "id": "deepinfra",
@@ -1008,7 +1246,14 @@ const DEFAULT_PROVIDERS = [
     "signupUrl": "https://deepinfra.com",
     "creditsDescription": "Free tier access.",
     "limitsDescription": "Free signup credits for API testing and model exploration",
-    "models": []
+    "models": [],
+    "limits": {
+      "rpm": 30,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 2
+    }
   },
   {
     "id": "nscale",
@@ -1023,7 +1268,14 @@ const DEFAULT_PROVIDERS = [
     "signupUrl": "https://nscale.com",
     "creditsDescription": "Free tier access.",
     "limitsDescription": "$5 free credits on signup for inference testing",
-    "models": []
+    "models": [],
+    "limits": {
+      "rpm": 20,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 1
+    }
   },
   {
     "id": "friendliai",
@@ -1038,7 +1290,14 @@ const DEFAULT_PROVIDERS = [
     "signupUrl": "https://friendli.ai",
     "creditsDescription": "Free tier access.",
     "limitsDescription": "Free tier for serverless inference — no credit card required",
-    "models": []
+    "models": [],
+    "limits": {
+      "rpm": 30,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 1
+    }
   },
   {
     "id": "bytez",
@@ -1053,7 +1312,14 @@ const DEFAULT_PROVIDERS = [
     "signupUrl": "https://bytez.com",
     "creditsDescription": "Free tier access.",
     "limitsDescription": "$1 free credits, refreshes every 4 weeks",
-    "models": []
+    "models": [],
+    "limits": {
+      "rpm": 10,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 1
+    }
   },
   {
     "id": "monsterapi",
@@ -1077,7 +1343,14 @@ const DEFAULT_PROVIDERS = [
         "id": "meta-llama/Llama-3.3-70B-Instruct",
         "name": "Llama 3.3 70B Instruct"
       }
-    ]
+    ],
+    "limits": {
+      "rpm": 10,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 1
+    }
   },
   {
     "id": "modelscope",
@@ -1092,7 +1365,14 @@ const DEFAULT_PROVIDERS = [
     "signupUrl": "https://modelscope.cn",
     "creditsDescription": "Free tier access.",
     "limitsDescription": "Free tier via ModelScope API-Inference — Alibaba account required.",
-    "models": []
+    "models": [],
+    "limits": {
+      "rpm": 20,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 1
+    }
   },
   {
     "id": "byteplus",
@@ -1124,7 +1404,14 @@ const DEFAULT_PROVIDERS = [
         "id": "gpt-oss-120b",
         "name": "GPT-OSS-120B"
       }
-    ]
+    ],
+    "limits": {
+      "rpm": 30,
+      "rpd": null,
+      "tpm": 60000,
+      "tpd": null,
+      "concurrent": 2
+    }
   },
   {
     "id": "deepseek",
@@ -1148,7 +1435,14 @@ const DEFAULT_PROVIDERS = [
         "id": "deepseek-v4-flash",
         "name": "DeepSeek V4 Flash (0731)"
       }
-    ]
+    ],
+    "limits": {
+      "rpm": 60,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 2
+    }
   },
   {
     "id": "longcat",
@@ -1168,7 +1462,14 @@ const DEFAULT_PROVIDERS = [
         "id": "LongCat-2.0",
         "name": "LongCat 2.0 (10M tok free 🆓)"
       }
-    ]
+    ],
+    "limits": {
+      "rpm": 60,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 2
+    }
   },
   {
     "id": "baidu",
@@ -1248,7 +1549,14 @@ const DEFAULT_PROVIDERS = [
         "id": "ernie-tiny-8k",
         "name": "ERNIE Tiny 8K"
       }
-    ]
+    ],
+    "limits": {
+      "rpm": 60,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 2
+    }
   },
   {
     "id": "tencent",
@@ -1288,7 +1596,14 @@ const DEFAULT_PROVIDERS = [
         "id": "hunyuan-lite",
         "name": "Hunyuan Lite"
       }
-    ]
+    ],
+    "limits": {
+      "rpm": 60,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 2
+    }
   },
   {
     "id": "iflytek",
@@ -1328,7 +1643,14 @@ const DEFAULT_PROVIDERS = [
         "id": "lite",
         "name": "Spark Lite"
       }
-    ]
+    ],
+    "limits": {
+      "rpm": 60,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 2
+    }
   },
   {
     "id": "baichuan",
@@ -1364,7 +1686,14 @@ const DEFAULT_PROVIDERS = [
         "id": "Baichuan3-Turbo-128k",
         "name": "Baichuan 3 Turbo 128k"
       }
-    ]
+    ],
+    "limits": {
+      "rpm": 30,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 1
+    }
   },
   {
     "id": "stepfun",
@@ -1400,7 +1729,14 @@ const DEFAULT_PROVIDERS = [
         "id": "step-1v",
         "name": "Step 1V"
       }
-    ]
+    ],
+    "limits": {
+      "rpm": 30,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 1
+    }
   },
   {
     "id": "coze",
@@ -1420,7 +1756,14 @@ const DEFAULT_PROVIDERS = [
         "id": "claude-3-7-sonnet-20250514",
         "name": "Claude 3.7 Sonnet"
       }
-    ]
+    ],
+    "limits": {
+      "rpm": 20,
+      "rpd": 500,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 2
+    }
   },
   {
     "id": "doubao",
@@ -1472,7 +1815,14 @@ const DEFAULT_PROVIDERS = [
         "id": "doubao-pro-32k",
         "name": "Doubao Pro 32K"
       }
-    ]
+    ],
+    "limits": {
+      "rpm": 30,
+      "rpd": null,
+      "tpm": 60000,
+      "tpd": null,
+      "concurrent": 2
+    }
   },
   {
     "id": "sensenova",
@@ -1500,7 +1850,14 @@ const DEFAULT_PROVIDERS = [
         "id": "glm-5.2",
         "name": "GLM 5.2"
       }
-    ]
+    ],
+    "limits": {
+      "rpm": 30,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 1
+    }
   },
   {
     "id": "sparkdesk",
@@ -1532,7 +1889,14 @@ const DEFAULT_PROVIDERS = [
         "id": "lite",
         "name": "Spark Lite"
       }
-    ]
+    ],
+    "limits": {
+      "rpm": 60,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 2
+    }
   },
   {
     "id": "hcnsec",
@@ -1547,7 +1911,14 @@ const DEFAULT_PROVIDERS = [
     "signupUrl": "https://api.hcnsec.cn",
     "creditsDescription": "Get API key at api.hcnsec.cn",
     "limitsDescription": "Xinjiang Huancheng Cybersecurity public LLM API platform: free credits with daily check-ins.",
-    "models": []
+    "models": [],
+    "limits": {
+      "rpm": 10,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 1
+    }
   },
   {
     "id": "agnes",
@@ -1575,7 +1946,14 @@ const DEFAULT_PROVIDERS = [
         "id": "agnes-2.5-flash",
         "name": "Agnes 2.5 Flash"
       }
-    ]
+    ],
+    "limits": {
+      "rpm": 10,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 1
+    }
   },
   {
     "id": "sealion",
@@ -1611,7 +1989,14 @@ const DEFAULT_PROVIDERS = [
         "id": "aisingapore/Qwen-SEA-LION-v4-32B-IT",
         "name": "Qwen SEA-LION v4 32B IT"
       }
-    ]
+    ],
+    "limits": {
+      "rpm": 20,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 1
+    }
   },
   {
     "id": "internlm",
@@ -1647,7 +2032,14 @@ const DEFAULT_PROVIDERS = [
         "id": "intern-latest",
         "name": "Intern Latest"
       }
-    ]
+    ],
+    "limits": {
+      "rpm": 20,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 1
+    }
   },
   {
     "id": "sarvam",
@@ -1671,7 +2063,14 @@ const DEFAULT_PROVIDERS = [
         "id": "sarvam-30b",
         "name": "Sarvam 30B"
       }
-    ]
+    ],
+    "limits": {
+      "rpm": 10,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 1
+    }
   },
   {
     "id": "typhoon",
@@ -1691,7 +2090,14 @@ const DEFAULT_PROVIDERS = [
         "id": "typhoon-v2.5-30b-a3b-instruct",
         "name": "Typhoon v2.5 30B A3B Instruct"
       }
-    ]
+    ],
+    "limits": {
+      "rpm": 20,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 1
+    }
   },
   {
     "id": "freebuff",
@@ -1743,7 +2149,14 @@ const DEFAULT_PROVIDERS = [
         "id": "meta/muse-spark-1.2-contributor",
         "name": "Meta Muse Spark 1.2 Contributor"
       }
-    ]
+    ],
+    "limits": {
+      "rpm": 20,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 1
+    }
   },
   {
     "id": "agentrouter",
@@ -1771,7 +2184,14 @@ const DEFAULT_PROVIDERS = [
         "id": "gpt-5.6-sol",
         "name": "GPT-5.6 Sol"
       }
-    ]
+    ],
+    "limits": {
+      "rpm": 30,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 2
+    }
   },
   {
     "id": "unorouter",
@@ -1786,7 +2206,14 @@ const DEFAULT_PROVIDERS = [
     "signupUrl": "https://unorouter.ai",
     "creditsDescription": "Free tier access.",
     "limitsDescription": "Models with the :free suffix do not debit balance; limit is 1 request/minute per free model per user.",
-    "models": []
+    "models": [],
+    "limits": {
+      "rpm": 1,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 1
+    }
   },
   {
     "id": "requesty",
@@ -1801,7 +2228,14 @@ const DEFAULT_PROVIDERS = [
     "signupUrl": "https://requesty.ai",
     "creditsDescription": "Free tier access.",
     "limitsDescription": "Free tier ~200 requests/day - multi-model routing gateway (300+ models)",
-    "models": []
+    "models": [],
+    "limits": {
+      "rpm": 20,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 1
+    }
   },
   {
     "id": "fastrouter",
@@ -1816,7 +2250,14 @@ const DEFAULT_PROVIDERS = [
     "signupUrl": "https://fastrouter.ai",
     "creditsDescription": "Free tier access.",
     "limitsDescription": "Models with the :free suffix allow 10 requests/day per organization and model; availability may change.",
-    "models": []
+    "models": [],
+    "limits": {
+      "rpm": 10,
+      "rpd": 10,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 1
+    }
   },
   {
     "id": "anyapi",
@@ -1831,7 +2272,14 @@ const DEFAULT_PROVIDERS = [
     "signupUrl": "https://anyapi.ai",
     "creditsDescription": "Free tier access.",
     "limitsDescription": "Free plan: 100,000 ANY Tokens/day and 100 RPM for eligible Free/Basic models; no credit card required.",
-    "models": []
+    "models": [],
+    "limits": {
+      "rpm": 20,
+      "rpd": 200,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 1
+    }
   },
   {
     "id": "electronhub",
@@ -1846,7 +2294,14 @@ const DEFAULT_PROVIDERS = [
     "signupUrl": "https://www.electronhub.ai",
     "creditsDescription": "Free tier access.",
     "limitsDescription": "Free plan: 5 RPM, $0.25 weekly credits and 10 Neutrinos/day for :free models; family budgets also apply.",
-    "models": []
+    "models": [],
+    "limits": {
+      "rpm": 5,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 1
+    }
   },
   {
     "id": "llmgateway",
@@ -1861,7 +2316,14 @@ const DEFAULT_PROVIDERS = [
     "signupUrl": "https://llmgateway.io",
     "creditsDescription": "Free tier access.",
     "limitsDescription": "Hosted Free plan: free-priced models are limited to 5 requests per 10 minutes when the account has no credits.",
-    "models": []
+    "models": [],
+    "limits": {
+      "rpm": 1,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 1
+    }
   },
   {
     "id": "literouter",
@@ -1876,7 +2338,14 @@ const DEFAULT_PROVIDERS = [
     "signupUrl": "https://literouter.com",
     "creditsDescription": "Free tier access.",
     "limitsDescription": "Free model variants use the :free suffix; daily credit limits vary by model and free input is capped at 5,000 tokens.",
-    "models": []
+    "models": [],
+    "limits": {
+      "rpm": 10,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 1
+    }
   },
   {
     "id": "mixlayer",
@@ -1896,7 +2365,14 @@ const DEFAULT_PROVIDERS = [
         "id": "qwen/qwen3.5-4b-free",
         "name": "Qwen 3.5 4B (free)"
       }
-    ]
+    ],
+    "limits": {
+      "rpm": 20,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 1
+    }
   },
   {
     "id": "speka",
@@ -1911,7 +2387,14 @@ const DEFAULT_PROVIDERS = [
     "signupUrl": "https://speka.me",
     "creditsDescription": "Free tier access.",
     "limitsDescription": "Free plan: $1 monthly usage, 10 RPM, one API key and access to open models and the playground; no card required.",
-    "models": []
+    "models": [],
+    "limits": {
+      "rpm": 10,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 1
+    }
   },
   {
     "id": "tokenreply",
@@ -1926,7 +2409,14 @@ const DEFAULT_PROVIDERS = [
     "signupUrl": "https://www.tokenreply.com",
     "creditsDescription": "Free tier access.",
     "limitsDescription": "Free-tagged models have model- and campaign-specific daily limits; no fixed global free quota is published.",
-    "models": []
+    "models": [],
+    "limits": {
+      "rpm": 10,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 1
+    }
   },
   {
     "id": "dxnt",
@@ -1941,7 +2431,14 @@ const DEFAULT_PROVIDERS = [
     "signupUrl": "https://www.dxnt.com",
     "creditsDescription": "Free tier access.",
     "limitsDescription": "Free accounts are documented at 100 calls/day; the quota may increase through invitations and can vary by account.",
-    "models": []
+    "models": [],
+    "limits": {
+      "rpm": 10,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 1
+    }
   },
   {
     "id": "ofoxai",
@@ -1956,7 +2453,14 @@ const DEFAULT_PROVIDERS = [
     "signupUrl": "https://ofox.ai",
     "creditsDescription": "Free tier access.",
     "limitsDescription": "The current catalog advertises 10+ free models without a public numeric quota; review upstream provenance, retention and training terms before production use.",
-    "models": []
+    "models": [],
+    "limits": {
+      "rpm": 15,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 1
+    }
   },
   {
     "id": "zerolimitai",
@@ -1971,7 +2475,14 @@ const DEFAULT_PROVIDERS = [
     "signupUrl": "https://www.zerolimitai.com",
     "creditsDescription": "Free tier access.",
     "limitsDescription": "Temporary free trial is advertised, but official pages conflict between 3 and 7 days; a 100-calls/day claim is not treated as permanent.",
-    "models": []
+    "models": [],
+    "limits": {
+      "rpm": 10,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 1
+    }
   },
   {
     "id": "chatanywhere",
@@ -1986,7 +2497,14 @@ const DEFAULT_PROVIDERS = [
     "signupUrl": "https://chatanywhere.tech",
     "creditsDescription": "Free tier access.",
     "limitsDescription": "Personal, educational or research use only: public documentation cites 10,000 points/day and 200 requests/day per IP/key; do not use for commercial traffic.",
-    "models": []
+    "models": [],
+    "limits": {
+      "rpm": 3,
+      "rpd": 200,
+      "tpm": 2000,
+      "tpd": null,
+      "concurrent": 1
+    }
   },
   {
     "id": "helyxai",
@@ -2001,7 +2519,14 @@ const DEFAULT_PROVIDERS = [
     "signupUrl": "https://helyxai.space",
     "creditsDescription": "Free tier access.",
     "limitsDescription": "Operational Free plan documents 100,000 tokens/day; the site",
-    "models": []
+    "models": [],
+    "limits": {
+      "rpm": 15,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 1
+    }
   },
   {
     "id": "auriko",
@@ -2016,7 +2541,14 @@ const DEFAULT_PROVIDERS = [
     "signupUrl": "https://www.auriko.ai",
     "creditsDescription": "Free tier access.",
     "limitsDescription": "Free plan publishes 1,000 Platform RPM and 10,000 BYOK RPM. Platform inference still passes through provider cost; this is not a free-token pool or unlimited free inference.",
-    "models": []
+    "models": [],
+    "limits": {
+      "rpm": 10,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 1
+    }
   },
   {
     "id": "freeinference",
@@ -2031,7 +2563,14 @@ const DEFAULT_PROVIDERS = [
     "signupUrl": "https://freeinference.org",
     "creditsDescription": "Free tier access.",
     "limitsDescription": "Free research access without a card; non-Harvard applicants require manual approval and no numeric quota is publicly guaranteed.",
-    "models": []
+    "models": [],
+    "limits": {
+      "rpm": 10,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 1
+    }
   },
   {
     "id": "dgrid",
@@ -2051,7 +2590,14 @@ const DEFAULT_PROVIDERS = [
         "id": "dgridai/free",
         "name": "DGrid Free Models Router"
       }
-    ]
+    ],
+    "limits": {
+      "rpm": 10,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 1
+    }
   },
   {
     "id": "bazaarlink",
@@ -2199,7 +2745,14 @@ const DEFAULT_PROVIDERS = [
         "id": "nemotron-3-super-120b-a12b",
         "name": "Nemotron 3 Super"
       }
-    ]
+    ],
+    "limits": {
+      "rpm": 20,
+      "rpd": 150,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 1
+    }
   },
   {
     "id": "dahl",
@@ -2223,7 +2776,14 @@ const DEFAULT_PROVIDERS = [
         "id": "moonshotai/Kimi-K2.6",
         "name": "Kimi K2.6"
       }
-    ]
+    ],
+    "limits": {
+      "rpm": 10,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 1
+    }
   },
   {
     "id": "uncloseai",
@@ -2251,7 +2811,14 @@ const DEFAULT_PROVIDERS = [
         "id": "gemma4:31b",
         "name": "Gemma 4 31B (🆓 Free)"
       }
-    ]
+    ],
+    "limits": {
+      "rpm": 10,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 1
+    }
   },
   {
     "id": "hackclub",
@@ -2279,7 +2846,14 @@ const DEFAULT_PROVIDERS = [
         "id": "deepseek-ai/deepseek-coder-33b",
         "name": "DeepSeek Coder 33B"
       }
-    ]
+    ],
+    "limits": {
+      "rpm": 10,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 1
+    }
   },
   {
     "id": "freetheai",
@@ -2307,7 +2881,14 @@ const DEFAULT_PROVIDERS = [
         "id": "deepseek-chat",
         "name": "DeepSeek Chat"
       }
-    ]
+    ],
+    "limits": {
+      "rpm": 10,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 1
+    }
   },
   {
     "id": "llm7",
@@ -2339,7 +2920,14 @@ const DEFAULT_PROVIDERS = [
         "id": "qwen2.5-coder-32b-instruct",
         "name": "Qwen2.5 Coder 32B (LLM7)"
       }
-    ]
+    ],
+    "limits": {
+      "rpm": 60,
+      "rpd": null,
+      "tpm": null,
+      "tpd": 1000000,
+      "concurrent": 2
+    }
   },
   {
     "id": "bluesminds",
@@ -2443,7 +3031,14 @@ const DEFAULT_PROVIDERS = [
         "id": "qwen-max",
         "name": "Qwen Max (VIP)"
       }
-    ]
+    ],
+    "limits": {
+      "rpm": 20,
+      "rpd": 300,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 1
+    }
   },
   {
     "id": "zenmux",
@@ -2495,7 +3090,14 @@ const DEFAULT_PROVIDERS = [
         "id": "z-ai/glm-4.6v-flash",
         "name": "GLM 4.6V Flash (ZenMux)"
       }
-    ]
+    ],
+    "limits": {
+      "rpm": 10,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 1
+    }
   },
   {
     "id": "openadapter",
@@ -2515,7 +3117,14 @@ const DEFAULT_PROVIDERS = [
         "id": "glm-4.7",
         "name": "GLM 4.7 (OpenAdapter)"
       }
-    ]
+    ],
+    "limits": {
+      "rpm": 15,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 1
+    }
   },
   {
     "id": "tokenrouter",
@@ -2543,7 +3152,14 @@ const DEFAULT_PROVIDERS = [
         "id": "deepseek-v4-flash",
         "name": "DeepSeek V4 Flash (TokenRouter)"
       }
-    ]
+    ],
+    "limits": {
+      "rpm": 15,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 1
+    }
   },
   {
     "id": "navy",
@@ -2583,7 +3199,14 @@ const DEFAULT_PROVIDERS = [
         "id": "llama-4-scout",
         "name": "Llama 4 Scout"
       }
-    ]
+    ],
+    "limits": {
+      "rpm": 20,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 1
+    }
   },
   {
     "id": "ainative",
@@ -2635,7 +3258,14 @@ const DEFAULT_PROVIDERS = [
         "id": "gemini-flash",
         "name": "Gemini Flash"
       }
-    ]
+    ],
+    "limits": {
+      "rpm": 20,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 1
+    }
   },
   {
     "id": "aion",
@@ -2671,7 +3301,14 @@ const DEFAULT_PROVIDERS = [
         "id": "aion-labs/aion-rp-llama-3.1-8b",
         "name": "Aion RP Llama 3.1 8B"
       }
-    ]
+    ],
+    "limits": {
+      "rpm": 15,
+      "rpd": null,
+      "tpm": null,
+      "tpd": 20000,
+      "concurrent": 1
+    }
   },
   {
     "id": "routeway",
@@ -2719,7 +3356,14 @@ const DEFAULT_PROVIDERS = [
         "id": "llama-3.2-3b-instruct:free",
         "name": "Llama 3.2 3B Instruct (free)"
       }
-    ]
+    ],
+    "limits": {
+      "rpm": 15,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 1
+    }
   },
   {
     "id": "nara",
@@ -2747,7 +3391,14 @@ const DEFAULT_PROVIDERS = [
         "id": "mistral-medium-3-5",
         "name": "Mistral Medium 3.5"
       }
-    ]
+    ],
+    "limits": {
+      "rpm": 15,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 1
+    }
   },
   {
     "id": "vertex",
@@ -2803,7 +3454,14 @@ const DEFAULT_PROVIDERS = [
         "id": "claude-sonnet-4-6",
         "name": "Claude Sonnet 4.6 (Vertex)"
       }
-    ]
+    ],
+    "limits": {
+      "rpm": 60,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 5
+    }
   },
   {
     "id": "nlpcloud",
@@ -2839,7 +3497,14 @@ const DEFAULT_PROVIDERS = [
         "id": "llama-3-8b-instruct",
         "name": "Llama 3 8B"
       }
-    ]
+    ],
+    "limits": {
+      "rpm": 3,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 1
+    }
   },
   {
     "id": "pollinations",
@@ -2979,7 +3644,14 @@ const DEFAULT_PROVIDERS = [
         "id": "qwen-safety",
         "name": "Qwen Safety (Pollinations)"
       }
-    ]
+    ],
+    "limits": {
+      "rpm": 30,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 2
+    }
   },
   {
     "id": "magnific",
@@ -3019,7 +3691,14 @@ const DEFAULT_PROVIDERS = [
         "id": "editorial_portraits",
         "name": "Mystic Editorial Portraits"
       }
-    ]
+    ],
+    "limits": {
+      "rpm": 5,
+      "rpd": null,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 1
+    }
   },
   {
     "id": "dify",
@@ -3039,7 +3718,14 @@ const DEFAULT_PROVIDERS = [
         "id": "auto",
         "name": "Auto"
       }
-    ]
+    ],
+    "limits": {
+      "rpm": 10,
+      "rpd": 200,
+      "tpm": null,
+      "tpd": null,
+      "concurrent": 1
+    }
   }
 ];
 
