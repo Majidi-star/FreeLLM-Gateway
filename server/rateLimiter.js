@@ -96,20 +96,24 @@ export function checkRateLimit(provider, model) {
   if (mLimits.rpm) limitsToCheck.push({ name: `Model RPM (${mLimits.rpm})`, val: mLimits.rpm, window: 60 * 1000, token: false, key: `${providerId}:${modelId}` });
   if (mLimits.rph) limitsToCheck.push({ name: `Model RPH (${mLimits.rph})`, val: mLimits.rph, window: 60 * 60 * 1000, token: false, key: `${providerId}:${modelId}` });
   if (mLimits.rpd) limitsToCheck.push({ name: `Model RPD (${mLimits.rpd})`, val: mLimits.rpd, window: 24 * 60 * 60 * 1000, token: false, key: `${providerId}:${modelId}` });
+  if (mLimits.rpmo) limitsToCheck.push({ name: `Model RPMonth (${mLimits.rpmo})`, val: mLimits.rpmo, window: 30 * 24 * 60 * 60 * 1000, token: false, key: `${providerId}:${modelId}` });
   
   if (mLimits.tpm) limitsToCheck.push({ name: `Model TPM (${mLimits.tpm})`, val: mLimits.tpm, window: 60 * 1000, token: true, key: `${providerId}:${modelId}` });
   if (mLimits.tph) limitsToCheck.push({ name: `Model TPH (${mLimits.tph})`, val: mLimits.tph, window: 60 * 60 * 1000, token: true, key: `${providerId}:${modelId}` });
   if (mLimits.tpd) limitsToCheck.push({ name: `Model TPD (${mLimits.tpd})`, val: mLimits.tpd, window: 24 * 60 * 60 * 1000, token: true, key: `${providerId}:${modelId}` });
+  if (mLimits.tpmo) limitsToCheck.push({ name: `Model TPMonth (${mLimits.tpmo})`, val: mLimits.tpmo, window: 30 * 24 * 60 * 60 * 1000, token: true, key: `${providerId}:${modelId}` });
 
   // Provider-level limits (if set in provider config)
   const pLimits = provider.limits || {};
   if (pLimits.rpm) limitsToCheck.push({ name: `Provider RPM (${pLimits.rpm})`, val: pLimits.rpm, window: 60 * 1000, token: false, key: providerId });
   if (pLimits.rph) limitsToCheck.push({ name: `Provider RPH (${pLimits.rph})`, val: pLimits.rph, window: 60 * 60 * 1000, token: false, key: providerId });
   if (pLimits.rpd) limitsToCheck.push({ name: `Provider RPD (${pLimits.rpd})`, val: pLimits.rpd, window: 24 * 60 * 60 * 1000, token: false, key: providerId });
+  if (pLimits.rpmo) limitsToCheck.push({ name: `Provider RPMonth (${pLimits.rpmo})`, val: pLimits.rpmo, window: 30 * 24 * 60 * 60 * 1000, token: false, key: providerId });
   
   if (pLimits.tpm) limitsToCheck.push({ name: `Provider TPM (${pLimits.tpm})`, val: pLimits.tpm, window: 60 * 1000, token: true, key: providerId });
   if (pLimits.tph) limitsToCheck.push({ name: `Provider TPH (${pLimits.tph})`, val: pLimits.tph, window: 60 * 60 * 1000, token: true, key: providerId });
   if (pLimits.tpd) limitsToCheck.push({ name: `Provider TPD (${pLimits.tpd})`, val: pLimits.tpd, window: 24 * 60 * 60 * 1000, token: true, key: providerId });
+  if (pLimits.tpmo) limitsToCheck.push({ name: `Provider TPMonth (${pLimits.tpmo})`, val: pLimits.tpmo, window: 30 * 24 * 60 * 60 * 1000, token: true, key: providerId });
 
   // Check each limit
   for (const check of limitsToCheck) {
@@ -177,14 +181,21 @@ export function getRateLimitMetrics(providers) {
   providers.forEach((provider) => {
     // Provider level
     const pLimits = provider.limits || {};
-    if (pLimits.rpm || pLimits.rpd) {
+    if (Object.keys(pLimits).length > 0) {
       const rpmUsage = getUsage(provider.id, 60 * 1000);
+      const rphUsage = getUsage(provider.id, 60 * 60 * 1000);
       const rpdUsage = getUsage(provider.id, 24 * 60 * 60 * 1000);
+      const rpmoUsage = getUsage(provider.id, 30 * 24 * 60 * 60 * 1000);
+      
       metrics[provider.id] = {
         rpm: { used: rpmUsage.count, limit: pLimits.rpm || 0 },
+        rph: { used: rphUsage.count, limit: pLimits.rph || 0 },
         rpd: { used: rpdUsage.count, limit: pLimits.rpd || 0 },
+        rpmo: { used: rpmoUsage.count, limit: pLimits.rpmo || 0 },
         tpm: { used: rpmUsage.tokens, limit: pLimits.tpm || 0 },
+        tph: { used: rphUsage.tokens, limit: pLimits.tph || 0 },
         tpd: { used: rpdUsage.tokens, limit: pLimits.tpd || 0 },
+        tpmo: { used: rpmoUsage.tokens, limit: pLimits.tpmo || 0 },
         cooldown: getProviderCooldownTime(provider.id),
       };
     }
@@ -194,15 +205,23 @@ export function getRateLimitMetrics(providers) {
       const key = `${provider.id}:${model.id}`;
       const mLimits = { ...model.defaultLimits, ...model.limits };
       
-      const rpmUsage = getUsage(key, 60 * 1000);
-      const rpdUsage = getUsage(key, 24 * 60 * 60 * 1000);
-      
-      metrics[key] = {
-        rpm: { used: rpmUsage.count, limit: mLimits.rpm || 0 },
-        rpd: { used: rpdUsage.count, limit: mLimits.rpd || 0 },
-        tpm: { used: rpmUsage.tokens, limit: mLimits.tpm || 0 },
-        tpd: { used: rpdUsage.tokens, limit: mLimits.tpd || 0 },
-      };
+      if (Object.keys(mLimits).length > 0) {
+        const rpmUsage = getUsage(key, 60 * 1000);
+        const rphUsage = getUsage(key, 60 * 60 * 1000);
+        const rpdUsage = getUsage(key, 24 * 60 * 60 * 1000);
+        const rpmoUsage = getUsage(key, 30 * 24 * 60 * 60 * 1000);
+        
+        metrics[key] = {
+          rpm: { used: rpmUsage.count, limit: mLimits.rpm || 0 },
+          rph: { used: rphUsage.count, limit: mLimits.rph || 0 },
+          rpd: { used: rpdUsage.count, limit: mLimits.rpd || 0 },
+          rpmo: { used: rpmoUsage.count, limit: mLimits.rpmo || 0 },
+          tpm: { used: rpmUsage.tokens, limit: mLimits.tpm || 0 },
+          tph: { used: rphUsage.tokens, limit: mLimits.tph || 0 },
+          tpd: { used: rpdUsage.tokens, limit: mLimits.tpd || 0 },
+          tpmo: { used: rpmoUsage.tokens, limit: mLimits.tpmo || 0 },
+        };
+      }
     });
   });
   return metrics;
