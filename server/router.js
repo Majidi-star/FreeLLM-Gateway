@@ -471,85 +471,148 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
       const requestStartTime = Date.now();
       const response = await axios(axiosConfig);
 
-      // Set headers for SSE stream
-      res.setHeader('Content-Type', 'text/event-stream');
-      res.setHeader('Cache-Control', 'no-cache');
-      res.setHeader('Connection', 'keep-alive');
-      res.setHeader('x-gateway-provider', provider.name);
-
+      // Set headers for SSE stream later, after verifying the first chunk
       let accumulatedText = '';
       let firstTokenReceived = false;
+      let headersSent = false;
       
-      response.data.on('data', (chunk) => {
-        if (!firstTokenReceived) {
-          firstTokenReceived = true;
-          recordLatency(provider.id, target.modelId, Date.now() - requestStartTime);
-        }
-        // Pass stream chunk directly to client
-        res.write(chunk);
-
-        // Parse chunks to estimate token count
-        try {
+      await new Promise((resolve, reject) => {
+        response.data.on('data', (chunk) => {
           const chunkStr = chunk.toString();
-          const lines = chunkStr.split('\n');
-          for (const line of lines) {
-            if (line.trim().startsWith('data:')) {
-              const dataText = line.substring(5).trim();
-              if (dataText === '[DONE]') continue;
-              const parsed = JSON.parse(dataText);
-              
-              if (providerType === 'anthropic') {
-                if (parsed.type === 'content_block_delta') {
-                  accumulatedText += parsed.delta?.text || '';
+          
+          if (!headersSent) {
+            let isError = false;
+            let errorMsg = '';
+            
+            // 1. Check for raw JSON error response instead of SSE
+            if (chunkStr.trim().startsWith('{')) {
+              try {
+                const parsed = JSON.parse(chunkStr);
+                if (parsed.error) {
+                  isError = true;
+                  errorMsg = typeof parsed.error === 'string' ? parsed.error : (parsed.error.message || JSON.stringify(parsed.error));
                 }
-              } else {
-                accumulatedText += parsed.choices?.[0]?.delta?.content || '';
+              } catch (e) {}
+            }
+            
+            // 2. Check for SSE chunk containing an error
+            if (!isError) {
+              const lines = chunkStr.split('\n');
+              for (const line of lines) {
+                if (line.trim().startsWith('data:')) {
+                  const dataText = line.substring(5).trim();
+                  if (dataText === '[DONE]') continue;
+                  try {
+                    const parsed = JSON.parse(dataText);
+                    if (parsed.error) {
+                      isError = true;
+                      errorMsg = typeof parsed.error === 'string' ? parsed.error : (parsed.error.message || JSON.stringify(parsed.error));
+                      break;
+                    }
+                  } catch (e) {}
+                }
               }
             }
-          }
-        } catch (e) {
-          // Ignore parsing errors of partial chunks
-        }
-      });
-
-      response.data.on('end', () => {
-        const promptTokens = estimateTokens(JSON.stringify(reqPayload.messages));
-        const completionTokens = estimateTokens(accumulatedText);
-        const totalTokens = promptTokens + completionTokens;
-
-        recordUsage(provider.id, target.modelId, totalTokens);
-        
-        // Track stats
-        updateStats(true, requestedModel, promptTokens, completionTokens);
-        
-        eventLog(`Stream finished. Estimated tokens: ${totalTokens} (${promptTokens} prompt, ${completionTokens} completion)`);
-
-        // Add to cache
-        if (config.semanticCacheEnabled) {
-          const completionData = {
-            id: `chatcmpl-${Date.now()}`,
-            object: 'chat.completion',
-            created: Math.floor(Date.now() / 1000),
-            model: requestedModel,
-            choices: [{
-              index: 0,
-              message: { role: 'assistant', content: accumulatedText },
-              finish_reason: 'stop'
-            }],
-            usage: {
-              prompt_tokens: promptTokens,
-              completion_tokens: completionTokens,
-              total_tokens: totalTokens
+            
+            if (isError) {
+              response.data.destroy(); // Abort stream
+              const err = new Error(errorMsg);
+              err.status = 400; // treat as provider error for failover
+              return reject(err);
             }
-          };
-          addSemanticCache(reqPayload.messages, completionData);
-        }
+            
+            // Safe to send headers
+            res.setHeader('Content-Type', 'text/event-stream');
+            res.setHeader('Cache-Control', 'no-cache');
+            res.setHeader('Connection', 'keep-alive');
+            res.setHeader('x-gateway-provider', provider.name);
+            headersSent = true;
+            resolve();
+          }
 
-        res.end();
-      });
+          if (!firstTokenReceived) {
+            firstTokenReceived = true;
+            recordLatency(provider.id, target.modelId, Date.now() - requestStartTime);
+          }
+          
+          res.write(chunk);
 
-      response.data.on('error', (err) => {
-        throw err;
+          // Parse chunks to estimate token count
+          try {
+            const lines = chunkStr.split('\n');
+            for (const line of lines) {
+              if (line.trim().startsWith('data:')) {
+                const dataText = line.substring(5).trim();
+                if (dataText === '[DONE]') continue;
+                const parsed = JSON.parse(dataText);
+                
+                if (providerType === 'anthropic') {
+                  if (parsed.type === 'content_block_delta') {
+                    accumulatedText += parsed.delta?.text || '';
+                  }
+                } else {
+                  accumulatedText += parsed.choices?.[0]?.delta?.content || '';
+                }
+              }
+            }
+          } catch (e) {
+            // Ignore parsing errors of partial chunks
+          }
+        });
+
+        response.data.on('end', () => {
+          if (!headersSent) {
+            res.setHeader('Content-Type', 'text/event-stream');
+            res.setHeader('Cache-Control', 'no-cache');
+            res.setHeader('Connection', 'keep-alive');
+            res.setHeader('x-gateway-provider', provider.name);
+            headersSent = true;
+            resolve();
+          }
+
+          const promptTokens = estimateTokens(JSON.stringify(reqPayload.messages));
+          const completionTokens = estimateTokens(accumulatedText);
+          const totalTokens = promptTokens + completionTokens;
+
+          recordUsage(provider.id, target.modelId, totalTokens);
+          
+          // Track stats
+          updateStats(true, requestedModel, promptTokens, completionTokens);
+          
+          eventLog(`Stream finished. Estimated tokens: ${totalTokens} (${promptTokens} prompt, ${completionTokens} completion)`);
+
+          // Add to cache
+          if (config.semanticCacheEnabled) {
+            const completionData = {
+              id: `chatcmpl-${Date.now()}`,
+              object: 'chat.completion',
+              created: Math.floor(Date.now() / 1000),
+              model: requestedModel,
+              choices: [{
+                index: 0,
+                message: { role: 'assistant', content: accumulatedText },
+                finish_reason: 'stop'
+              }],
+              usage: {
+                prompt_tokens: promptTokens,
+                completion_tokens: completionTokens,
+                total_tokens: totalTokens
+              }
+            };
+            addSemanticCache(reqPayload.messages, completionData);
+          }
+
+          res.end();
+        });
+
+        response.data.on('error', (err) => {
+          if (!headersSent) {
+            reject(err);
+          } else {
+            eventLog(`STREAM ERROR MID-STREAM (${provider.name}):`, err.message);
+            res.end();
+          }
+        });
       });
 
     } else {

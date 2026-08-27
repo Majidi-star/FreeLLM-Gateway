@@ -3326,7 +3326,18 @@ export function addLog(level, message, details = '') {
   if (memoryLogs.length > 500) {
     memoryLogs.pop();
   }
-  console.log(`[${level}] ${message} ${details ? JSON.stringify(details) : ''}`);
+  
+  const logStr = `[${level}] ${message} ${details ? JSON.stringify(details) : ''}`;
+  console.log(logStr);
+
+  if (level === 'ERROR' || message.includes('ERROR calling')) {
+    try {
+      const logFilePath = path.join(__dirname, '..', 'gateway_errors.log');
+      fs.appendFileSync(logFilePath, `[${logItem.timestamp}] ${logStr}\n`);
+    } catch (e) {
+      // Ignore write errors
+    }
+  }
 }
 
 export function getLogs() {
