@@ -475,19 +475,23 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
       let accumulatedText = '';
       let firstTokenReceived = false;
       let headersSent = false;
+      let initialBuffer = [];
       
       await new Promise((resolve, reject) => {
         response.data.on('data', (chunk) => {
-          const chunkStr = chunk.toString();
           
           if (!headersSent) {
+            initialBuffer.push(chunk);
+            const bufferedStr = Buffer.concat(initialBuffer).toString();
+            
             let isError = false;
             let errorMsg = '';
+            let hasValidData = false;
             
             // 1. Check for raw JSON error response instead of SSE
-            if (chunkStr.trim().startsWith('{')) {
+            if (bufferedStr.trim().startsWith('{')) {
               try {
-                const parsed = JSON.parse(chunkStr);
+                const parsed = JSON.parse(bufferedStr);
                 if (parsed.error) {
                   isError = true;
                   errorMsg = typeof parsed.error === 'string' ? parsed.error : (parsed.error.message || JSON.stringify(parsed.error));
@@ -495,19 +499,25 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
               } catch (e) {}
             }
             
-            // 2. Check for SSE chunk containing an error
+            // 2. Check for SSE chunk containing an error or valid content
             if (!isError) {
-              const lines = chunkStr.split('\n');
+              const lines = bufferedStr.split('\n');
               for (const line of lines) {
                 if (line.trim().startsWith('data:')) {
                   const dataText = line.substring(5).trim();
-                  if (dataText === '[DONE]') continue;
+                  if (dataText === '[DONE]') {
+                    hasValidData = true;
+                    continue;
+                  }
                   try {
                     const parsed = JSON.parse(dataText);
                     if (parsed.error) {
                       isError = true;
                       errorMsg = typeof parsed.error === 'string' ? parsed.error : (parsed.error.message || JSON.stringify(parsed.error));
                       break;
+                    }
+                    if (parsed.choices || parsed.type === 'message_start' || parsed.type === 'content_block_delta') {
+                      hasValidData = true;
                     }
                   } catch (e) {}
                 }
@@ -521,13 +531,21 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
               return reject(err);
             }
             
-            // Safe to send headers
-            res.setHeader('Content-Type', 'text/event-stream');
-            res.setHeader('Cache-Control', 'no-cache');
-            res.setHeader('Connection', 'keep-alive');
-            res.setHeader('x-gateway-provider', provider.name);
-            headersSent = true;
-            resolve();
+            if (hasValidData) {
+              res.setHeader('Content-Type', 'text/event-stream');
+              res.setHeader('Cache-Control', 'no-cache');
+              res.setHeader('Connection', 'keep-alive');
+              res.setHeader('x-gateway-provider', provider.name);
+              headersSent = true;
+              
+              for (const bChunk of initialBuffer) {
+                res.write(bChunk);
+              }
+              initialBuffer = [];
+              resolve();
+            }
+            
+            return; // Wait for more data if neither error nor valid choices are found
           }
 
           if (!firstTokenReceived) {
@@ -536,8 +554,8 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
           }
           
           res.write(chunk);
-
-          // Parse chunks to estimate token count
+          
+          const chunkStr = chunk.toString();
           try {
             const lines = chunkStr.split('\n');
             for (const line of lines) {
@@ -567,6 +585,10 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
             res.setHeader('Connection', 'keep-alive');
             res.setHeader('x-gateway-provider', provider.name);
             headersSent = true;
+            for (const bChunk of initialBuffer) {
+              res.write(bChunk);
+            }
+            initialBuffer = [];
             resolve();
           }
 
