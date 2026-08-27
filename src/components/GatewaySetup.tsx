@@ -631,6 +631,17 @@ export const GatewaySetup: React.FC<GatewaySetupProps> = ({ config, onSave }) =>
                                   />
                                 </div>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>RPH (Req/Hour)</span>
+                                  <input 
+                                    type="number" 
+                                    min="0"
+                                    placeholder="Uncapped"
+                                    value={provider.limits?.rph ?? ''}
+                                    onChange={(e) => handleLimitChange(provider.id, 'rph', e.target.value)}
+                                    style={{ background: '#0a0a0f', color: '#c5c9db', border: '1px solid var(--border)', borderRadius: '6px', padding: '0.4rem', fontSize: '0.8rem' }}
+                                  />
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                                   <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>RPD (Req/Day)</span>
                                   <input 
                                     type="number" 
@@ -649,6 +660,17 @@ export const GatewaySetup: React.FC<GatewaySetupProps> = ({ config, onSave }) =>
                                     placeholder="Uncapped"
                                     value={provider.limits?.tpm ?? ''}
                                     onChange={(e) => handleLimitChange(provider.id, 'tpm', e.target.value)}
+                                    style={{ background: '#0a0a0f', color: '#c5c9db', border: '1px solid var(--border)', borderRadius: '6px', padding: '0.4rem', fontSize: '0.8rem' }}
+                                  />
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>TPH (Tokens/Hour)</span>
+                                  <input 
+                                    type="number" 
+                                    min="0"
+                                    placeholder="Uncapped"
+                                    value={provider.limits?.tph ?? ''}
+                                    onChange={(e) => handleLimitChange(provider.id, 'tph', e.target.value)}
                                     style={{ background: '#0a0a0f', color: '#c5c9db', border: '1px solid var(--border)', borderRadius: '6px', padding: '0.4rem', fontSize: '0.8rem' }}
                                   />
                                 </div>
