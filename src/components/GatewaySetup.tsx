@@ -56,6 +56,23 @@ export const GatewaySetup: React.FC<GatewaySetupProps> = ({ config, onSave }) =>
     setLocalConfig({ ...localConfig, providers: updated });
   };
 
+  const handleLimitChange = (id: string, limitField: string, value: string) => {
+    const numValue = value === '' ? null : Number(value);
+    const updated = localConfig.providers.map((p) => {
+      if (p.id === id) {
+        return {
+          ...p,
+          limits: {
+            ...(p.limits || {}),
+            [limitField]: numValue
+          }
+        };
+      }
+      return p;
+    });
+    setLocalConfig({ ...localConfig, providers: updated });
+  };
+
   const handleAddAccountKey = (providerId: string) => {
     const provider = localConfig.providers.find(p => p.id === providerId);
     if (!provider) return;
@@ -597,6 +614,67 @@ export const GatewaySetup: React.FC<GatewaySetupProps> = ({ config, onSave }) =>
                                 onChange={(e) => handleProviderChange(provider.id, 'baseUrl', e.target.value)}
                                 style={{ background: '#0a0a0f', color: '#c5c9db', border: '1px solid var(--border)', borderRadius: '6px', padding: '0.4rem' }}
                               />
+                            </div>
+                            
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', borderTop: '1px solid var(--border)', paddingTop: '0.75rem' }}>
+                              <label style={{ fontSize: '0.85rem', color: 'var(--text)', fontWeight: 700 }}>Rate Limits (Provider Level)</label>
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '0.75rem' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>RPM (Req/Min)</span>
+                                  <input 
+                                    type="number" 
+                                    min="0"
+                                    placeholder="Uncapped"
+                                    value={provider.limits?.rpm ?? ''}
+                                    onChange={(e) => handleLimitChange(provider.id, 'rpm', e.target.value)}
+                                    style={{ background: '#0a0a0f', color: '#c5c9db', border: '1px solid var(--border)', borderRadius: '6px', padding: '0.4rem', fontSize: '0.8rem' }}
+                                  />
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>RPD (Req/Day)</span>
+                                  <input 
+                                    type="number" 
+                                    min="0"
+                                    placeholder="Uncapped"
+                                    value={provider.limits?.rpd ?? ''}
+                                    onChange={(e) => handleLimitChange(provider.id, 'rpd', e.target.value)}
+                                    style={{ background: '#0a0a0f', color: '#c5c9db', border: '1px solid var(--border)', borderRadius: '6px', padding: '0.4rem', fontSize: '0.8rem' }}
+                                  />
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>TPM (Tokens/Min)</span>
+                                  <input 
+                                    type="number" 
+                                    min="0"
+                                    placeholder="Uncapped"
+                                    value={provider.limits?.tpm ?? ''}
+                                    onChange={(e) => handleLimitChange(provider.id, 'tpm', e.target.value)}
+                                    style={{ background: '#0a0a0f', color: '#c5c9db', border: '1px solid var(--border)', borderRadius: '6px', padding: '0.4rem', fontSize: '0.8rem' }}
+                                  />
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>TPD (Tokens/Day)</span>
+                                  <input 
+                                    type="number" 
+                                    min="0"
+                                    placeholder="Uncapped"
+                                    value={provider.limits?.tpd ?? ''}
+                                    onChange={(e) => handleLimitChange(provider.id, 'tpd', e.target.value)}
+                                    style={{ background: '#0a0a0f', color: '#c5c9db', border: '1px solid var(--border)', borderRadius: '6px', padding: '0.4rem', fontSize: '0.8rem' }}
+                                  />
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Concurrent</span>
+                                  <input 
+                                    type="number" 
+                                    min="1"
+                                    placeholder="Uncapped"
+                                    value={provider.limits?.concurrent ?? ''}
+                                    onChange={(e) => handleLimitChange(provider.id, 'concurrent', e.target.value)}
+                                    style={{ background: '#0a0a0f', color: '#c5c9db', border: '1px solid var(--border)', borderRadius: '6px', padding: '0.4rem', fontSize: '0.8rem' }}
+                                  />
+                                </div>
+                              </div>
                             </div>
                           </div>
 
