@@ -519,11 +519,11 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
     ...proxyAgent
   };
 
+  const requestStartTime = Date.now();
   try {
     if (isStream) {
       axiosConfig.responseType = 'stream';
       eventLog(`Initiating streaming response from ${provider.name}...`);
-      const requestStartTime = Date.now();
       const response = await axios(axiosConfig);
 
       // Set headers for SSE stream later, after verifying the first chunk
@@ -701,7 +701,6 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
     } else {
       // Non streaming request
       eventLog(`Sending request to ${provider.name}...`);
-      const requestStartTime = Date.now();
       const response = await axios(axiosConfig);
       recordLatency(provider.id, target.modelId, Date.now() - requestStartTime);
 
