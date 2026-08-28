@@ -744,6 +744,43 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
     const is5xx = status >= 500 && status < 600;
     const isOtherError = !isRateLimit && !isQuota && !is5xx;
     
+    // Handle auth/quota failure alerts and auto-disable
+    const isAuthError = status === 401 || status === 403 || status === 402;
+    if (isAuthError) {
+      const dbConfig = loadConfig();
+      const pIndex = dbConfig.providers.findIndex(p => p.id === provider.id);
+      if (pIndex !== -1) {
+        dbConfig.providers[pIndex].enabled = false;
+        dbConfig.providers[pIndex].errorMessage = `Disabled: ${errorMsg}`;
+        
+        // Update local memory config so remainder of this request loop skips it
+        const localIndex = config.providers.findIndex(p => p.id === provider.id);
+        if (localIndex !== -1) {
+          config.providers[localIndex].enabled = false;
+        }
+
+        if (!dbConfig.alerts) {
+          dbConfig.alerts = [];
+        }
+
+        // Add system alert
+        const exists = dbConfig.alerts.some(a => a.providerId === provider.id && a.message === errorMsg);
+        if (!exists) {
+          dbConfig.alerts.push({
+            id: `alert_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+            providerId: provider.id,
+            providerName: provider.name,
+            errorType: status === 401 ? 'Authentication Failed (401)' : (status === 402 ? 'Payment Required/Credits Exhausted (402)' : 'Forbidden/Quota Exceeded (403)'),
+            message: errorMsg,
+            timestamp: new Date().toISOString()
+          });
+        }
+
+        saveConfig(dbConfig);
+        eventLog(`CRITICAL ALERT: Provider ${provider.name} disabled due to auth/quota failure: ${errorMsg}`);
+      }
+    }
+    
     let shouldFallback = true;
     if (virtualModel && virtualModel.config) {
       const vConfig = virtualModel.config;
