@@ -6,6 +6,21 @@ interface StatisticsProps {
   config: GatewayConfig;
 }
 
+const ERROR_DESCRIPTIONS: Record<string, string> = {
+  '400': 'Bad Request: Context exceeded or malformed params.',
+  '401': 'Unauthorized: Invalid API key.',
+  '402': 'Payment Required: Paid tier needed.',
+  '403': 'Forbidden: Access denied.',
+  '404': 'Not Found: Model or endpoint missing.',
+  '409': 'Conflict: Duplicate request or locked resources.',
+  '421': 'Misdirected: Routing mismatch or proxy config error.',
+  '429': 'Too Many Requests: Rate limited by provider.',
+  '500': 'Internal Error: Provider server issue.',
+  '502': 'Bad Gateway: Upstream provider error.',
+  '503': 'Service Unavailable: Provider down or overloaded.',
+  '504': 'Gateway Timeout: Provider took too long.',
+};
+
 export const Statistics: React.FC<StatisticsProps> = ({ config }) => {
   const [history, setHistory] = useState<StatsHistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -20,6 +35,14 @@ export const Statistics: React.FC<StatisticsProps> = ({ config }) => {
   // Hovered data point for charts
   const [hoveredRequestBin, setHoveredRequestBin] = useState<any | null>(null);
   const [hoveredTokenBin, setHoveredTokenBin] = useState<any | null>(null);
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 50;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [timeRange, statusFilter, providerFilter, modelFilter]);
 
   const fetchHistory = async () => {
     try {
@@ -836,7 +859,20 @@ export const Statistics: React.FC<StatisticsProps> = ({ config }) => {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredHistory.slice(0, 15).map((item, idx) => (
+                  {filteredHistory.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((item, idx) => {
+                    let errCode = '';
+                    let errMsg = '';
+                    if (!item.success && item.error) {
+                      const match = item.error.match(/(\d{3})/);
+                      if (match) {
+                        errCode = match[1];
+                        errMsg = ERROR_DESCRIPTIONS[errCode] || item.error;
+                      } else {
+                        errMsg = item.error;
+                      }
+                    }
+
+                    return (
                     <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.02)', background: idx % 2 === 0 ? 'rgba(255,255,255,0.01)' : 'transparent' }}>
                       <td style={{ padding: '0.4rem 0.5rem', color: 'var(--text-muted)' }}>
                         {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
@@ -870,19 +906,45 @@ export const Statistics: React.FC<StatisticsProps> = ({ config }) => {
                         {item.success ? (
                           <span style={{ color: 'var(--success)', fontWeight: 600 }}>Success</span>
                         ) : (
-                          <span style={{ color: 'var(--error)', fontWeight: 600 }} title={item.error || 'Request failed'}>
-                            Failed ✖
-                          </span>
+                          <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <span style={{ color: 'var(--error)', fontWeight: 600 }} title={item.error || 'Request failed'}>
+                              Failed ✖ {errCode ? `(${errCode})` : ''}
+                            </span>
+                            {errMsg && (
+                              <span style={{ fontSize: '0.65rem', color: 'var(--error)', opacity: 0.8, maxWidth: '200px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={errMsg}>
+                                {errMsg}
+                              </span>
+                            )}
+                          </div>
                         )}
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
-            {filteredHistory.length > 15 && (
-              <div style={{ textAlign: 'center', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                Showing last 15 traces out of {filteredHistory.length} matching requests
+            {filteredHistory.length > itemsPerPage && (
+              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1rem', marginTop: '1rem' }}>
+                <button 
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="secondary"
+                  style={{ padding: '0.3rem 0.75rem', fontSize: '0.75rem', borderRadius: '6px', opacity: currentPage === 1 ? 0.5 : 1, cursor: currentPage === 1 ? 'not-allowed' : 'pointer' }}
+                >
+                  Previous
+                </button>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                  Page {currentPage} of {Math.ceil(filteredHistory.length / itemsPerPage)}
+                </span>
+                <button 
+                  onClick={() => setCurrentPage(p => Math.min(Math.ceil(filteredHistory.length / itemsPerPage), p + 1))}
+                  disabled={currentPage === Math.ceil(filteredHistory.length / itemsPerPage)}
+                  className="secondary"
+                  style={{ padding: '0.3rem 0.75rem', fontSize: '0.75rem', borderRadius: '6px', opacity: currentPage === Math.ceil(filteredHistory.length / itemsPerPage) ? 0.5 : 1, cursor: currentPage === Math.ceil(filteredHistory.length / itemsPerPage) ? 'not-allowed' : 'pointer' }}
+                >
+                  Next
+                </button>
               </div>
             )}
           </div>

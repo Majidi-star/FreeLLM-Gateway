@@ -298,7 +298,10 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
     virtualModel = config.virtualModels.find(vm => vm.id === requestedModel);
     
     if (virtualModel) {
-      targets = [...virtualModel.targets];
+      targets = [...virtualModel.targets].filter(t => t.enabled !== false);
+      if (targets.length === 0) {
+        return res.status(503).json({ error: { message: `Virtual pool "${requestedModel}" has no active/enabled models available.`, type: 'pool_empty' } });
+      }
       eventLog(`Resolved virtual model "${requestedModel}" to ${targets.length} priority targets.`);
     } else {
       // If not a virtual model, look if any provider offers this exact model ID
@@ -652,6 +655,9 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
           const totalTokens = promptTokens + completionTokens;
 
           recordRequestEnd(provider.id, target.modelId, reqReservation, totalTokens);
+          if (provider.limits && provider.limits.cooldownMs) {
+            setProviderCooldown(provider.id, Number(provider.limits.cooldownMs), true);
+          }
           
           // Track stats
           updateStats(true, requestedModel, promptTokens, completionTokens, {
@@ -715,6 +721,9 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
       const totalTokens = promptTokens + completionTokens;
 
       recordRequestEnd(provider.id, target.modelId, reqReservation, totalTokens);
+      if (provider.limits && provider.limits.cooldownMs) {
+        setProviderCooldown(provider.id, Number(provider.limits.cooldownMs), true);
+      }
       updateStats(true, requestedModel, promptTokens, completionTokens, {
         providerId: provider.id,
         modelId: target.modelId,

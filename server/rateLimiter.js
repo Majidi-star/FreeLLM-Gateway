@@ -53,12 +53,20 @@ function getUsage(key, windowMs, limitVal = 1) {
  * @param {string} providerId - Provider identifier.
  * @param {number} durationMs - Duration in milliseconds (default 15 seconds).
  */
-export function setProviderCooldown(providerId, durationMs = 15000) {
+export function setProviderCooldown(providerId, durationMs = 15000, isSilent = false) {
   const baseProviderId = providerId.split(':')[0];
   const expires = Date.now() + durationMs;
-  cooldowns[providerId] = expires;
-  cooldowns[baseProviderId] = expires;
-  addLog('WARN', `Provider "${providerId}" placed on cooldown for ${durationMs / 1000}s.`);
+  
+  if (!cooldowns[providerId] || expires > cooldowns[providerId]) {
+    cooldowns[providerId] = expires;
+  }
+  if (!cooldowns[baseProviderId] || expires > cooldowns[baseProviderId]) {
+    cooldowns[baseProviderId] = expires;
+  }
+  
+  if (!isSilent) {
+    addLog('WARN', `Provider "${providerId}" placed on cooldown for ${durationMs / 1000}s.`);
+  }
 }
 
 /**

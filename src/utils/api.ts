@@ -51,6 +51,7 @@ export interface Provider {
 export interface VirtualModelTarget {
   providerId: string;
   modelId: string;
+  enabled?: boolean;
 }
 
 export interface VirtualModelStrategyConfig {

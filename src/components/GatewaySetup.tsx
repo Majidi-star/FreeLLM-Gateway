@@ -620,6 +620,17 @@ export const GatewaySetup: React.FC<GatewaySetupProps> = ({ config, onSave }) =>
                               <label style={{ fontSize: '0.85rem', color: 'var(--text)', fontWeight: 700 }}>Rate Limits (Provider Level)</label>
                               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '0.75rem' }}>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Min Rest (ms)</span>
+                                  <input 
+                                    type="number" 
+                                    min="0"
+                                    placeholder="0 ms"
+                                    value={provider.limits?.cooldownMs ?? ''}
+                                    onChange={(e) => handleLimitChange(provider.id, 'cooldownMs', e.target.value)}
+                                    style={{ background: '#0a0a0f', color: '#c5c9db', border: '1px solid var(--border)', borderRadius: '6px', padding: '0.4rem', fontSize: '0.8rem' }}
+                                  />
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                                   <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>RPM (Req/Min)</span>
                                   <input 
                                     type="number" 

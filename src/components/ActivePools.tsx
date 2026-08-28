@@ -252,6 +252,19 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
     setSearchQueries({ ...searchQueries, [vmId]: '' });
   };
 
+  const handleToggleTargetEnabled = (vmId: string, index: number) => {
+    const updatedVms = localConfig.virtualModels.map(vm => {
+      if (vm.id === vmId) {
+        const targets = [...vm.targets];
+        const isCurrentlyEnabled = targets[index].enabled !== false;
+        targets[index] = { ...targets[index], enabled: !isCurrentlyEnabled };
+        return { ...vm, targets };
+      }
+      return vm;
+    });
+    setLocalConfig({ ...localConfig, virtualModels: updatedVms });
+  };
+
   const handleAddSingleTarget = (vmId: string, providerId: string, modelId: string) => {
     const virtualModel = localConfig.virtualModels.find(vm => vm.id === vmId);
     if (!virtualModel) return;
@@ -420,6 +433,7 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
                           background: 'oklch(20% 0.018 255.4 / 0.3)',
                           border: '1px solid var(--border)',
                           borderRadius: '8px',
+                          opacity: target.enabled !== false ? 1 : 0.5,
                         }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
                             <span style={{ fontWeight: 800, color: 'var(--accent)', fontSize: '1.1rem' }}>Priority #{index + 1}</span>
@@ -429,7 +443,20 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
                             </div>
                           </div>
 
-                          <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                            <button
+                              type="button"
+                              onClick={() => handleToggleTargetEnabled(vm.id, index)}
+                              style={{ 
+                                padding: '0.3rem 0.6rem', 
+                                fontSize: '0.75rem', 
+                                background: target.enabled !== false ? 'var(--success-glow)' : 'var(--error-glow)',
+                                color: target.enabled !== false ? 'var(--success)' : 'var(--error)',
+                                border: `1px solid ${target.enabled !== false ? 'var(--success)' : 'var(--error)'}`
+                              }}
+                            >
+                              {target.enabled !== false ? '✅ Active' : '❌ Disabled'}
+                            </button>
                             <button 
                               type="button" 
                               disabled={index === 0}

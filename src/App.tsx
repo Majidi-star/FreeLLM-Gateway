@@ -285,7 +285,7 @@ function App() {
                 { id: 'statistics', label: '6. Usage Statistics' },
                 { 
                   id: 'alerts', 
-                  label: `7. Alerts ${(config as any).alerts?.length > 0 ? `(${(config as any).alerts.length})` : ''}`
+                  label: `7. Alerts & Errors ${(config as any).alerts?.length > 0 ? `(${(config as any).alerts.length})` : ''}`
                 }
               ].map((tab) => {
                 const isActive = activeTab === tab.id;
