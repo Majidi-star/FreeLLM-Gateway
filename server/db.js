@@ -3828,6 +3828,8 @@ const DEFAULT_VIRTUAL_MODELS = [
 const DEFAULT_CONFIG = {
   globalProxy: '',
   globalProxyEnabled: false,
+  rateLimitQueueEnabled: true,
+  rateLimitQueueTimeoutMs: 180000,
   providers: DEFAULT_PROVIDERS,
   virtualModels: DEFAULT_VIRTUAL_MODELS,
   aliases: {},

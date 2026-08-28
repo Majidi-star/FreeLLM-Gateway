@@ -375,31 +375,73 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
 
   // 3. Fallback queue wait logic if all are limited
   if (!chosenTarget && rateLimitedTargets.length > 0) {
-    // Queue wait settings
     const queueEnabled = config.rateLimitQueueEnabled !== false;
-    const maxWaitMs = config.rateLimitQueueTimeoutMs ?? 30000;
+    const maxWaitMs = config.rateLimitQueueTimeoutMs || 180000; // 3 minutes default queue timeout
     
     if (queueEnabled) {
-      // Sort to find the one that recovers first
-      rateLimitedTargets.sort((a, b) => a.retryAfterMs - b.retryAfterMs);
-      const bestCandidate = rateLimitedTargets[0];
-      const waitMs = bestCandidate.retryAfterMs;
-
-      if (waitMs <= maxWaitMs) { // Limit wait time to user configured max
-        eventLog(`All endpoints rate limited. Queueing request... Waiting ${Math.ceil(waitMs / 1000)}s for ${bestCandidate.provider.id}/${bestCandidate.target.modelId}`);
-        await new Promise(r => setTimeout(r, waitMs));
+      const startTime = Date.now();
+      eventLog(`All endpoints rate limited / in cooldown. Queueing request (max queue timeout: ${Math.ceil(maxWaitMs / 1000)}s)...`);
+      
+      while (Date.now() - startTime < maxWaitMs) {
+        rateLimitedTargets.sort((a, b) => a.retryAfterMs - b.retryAfterMs);
+        const shortestRetry = rateLimitedTargets[0]?.retryAfterMs || 2500;
+        const sleepMs = Math.max(500, Math.min(shortestRetry, 2500));
         
-        // Re-evaluate limits after wait
-        const checkAgain = checkRateLimit(bestCandidate.provider, bestCandidate.modelObj);
-        if (!checkAgain.limited) {
-          chosenTarget = bestCandidate;
+        await new Promise(r => setTimeout(r, sleepMs));
+        
+        // Re-evaluate all targets in pool
+        for (const target of evaluatedTargets) {
+          if (reqPayload._failedBackends && reqPayload._failedBackends.has(`${target.providerId}:${target.modelId}`)) {
+            continue;
+          }
+          const provider = config.providers.find(p => p.id === target.providerId);
+          if (!provider || !provider.enabled) continue;
+          
+          const modelObj = provider.models.find(m => m.id === target.modelId) || { id: target.modelId };
+          const keyResolution = resolveLoadBalancedKey(provider, modelObj);
+          
+          if (!keyResolution.limited) {
+            chosenTarget = {
+              target,
+              provider: keyResolution.virtualProvider,
+              modelObj
+            };
+            eventLog(`Queue wait successful: endpoint ${provider.id}/${target.modelId} is now available after ${Math.ceil((Date.now() - startTime) / 1000)}s.`);
+            break;
+          }
+        }
+        
+        if (chosenTarget) break;
+      }
+    }
+  }
+
+  if (!chosenTarget) {
+    // Attempt emergency system-wide fallback if all pool models are limited
+    if (!reqPayload._systemFallbackTried) {
+      reqPayload._systemFallbackTried = true;
+      const anyActiveProvider = config.providers.find(p => 
+        p.enabled && 
+        (p.apiKey || p.apiKeys?.some(k => k.enabled && k.key)) && 
+        p.models?.length > 0
+      );
+      if (anyActiveProvider) {
+        const fallbackModel = anyActiveProvider.models[0];
+        const fbResolution = resolveLoadBalancedKey(anyActiveProvider, fallbackModel);
+        if (!fbResolution.limited) {
+          chosenTarget = {
+            target: { providerId: anyActiveProvider.id, modelId: fallbackModel.id },
+            provider: fbResolution.virtualProvider,
+            modelObj: fallbackModel
+          };
+          eventLog(`EMERGENCY FALLBACK: Virtual pool limited. Using active provider ${anyActiveProvider.name} (${fallbackModel.id}) as fallback.`);
         }
       }
     }
   }
 
   if (!chosenTarget) {
-    eventLog(`FAIL: All endpoints rate limited. Failing request.`);
+    eventLog(`FAIL: All endpoints rate limited and queue timeout reached. Failing request.`);
     return res.status(429).json({
       error: {
         message: 'All eligible providers are currently rate-limited or in cooldown.',
@@ -698,8 +740,20 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
       });
     }
 
-    // Set provider on cooldown
-    const cooldownMs = (virtualModel && virtualModel.config && virtualModel.config.cooldownMs) || 60000;
+    // Calculate intelligent cooldown duration
+    let cooldownMs = 15000; // 15s default for rate limits / errors
+    const retryAfterHeader = err.response?.headers?.['retry-after'];
+    if (retryAfterHeader) {
+      const parsedHeader = parseInt(retryAfterHeader, 10);
+      if (!isNaN(parsedHeader)) {
+        cooldownMs = parsedHeader * 1000;
+      }
+    } else if (virtualModel && virtualModel.config && virtualModel.config.cooldownMs) {
+      cooldownMs = virtualModel.config.cooldownMs;
+    } else if (is5xx) {
+      cooldownMs = 30000; // 30s for server errors
+    }
+
     setProviderCooldown(provider.id, cooldownMs);
     updateStats(false);
 
@@ -716,13 +770,45 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
     if (activeTargets.length > 0) {
       return routeChatCompletion(reqPayload, res, onRoutingEvent);
     } else {
-      eventLog(`FAILOVER: No targets remaining. Request failed.`);
-      return res.status(err.response?.status || 500).json({
-        error: {
-          message: `All prioritized backends failed. Last error: ${errorMsg}`,
-          provider: provider.name
+      // All targets in the pool failed in this cycle!
+      const currentCycle = reqPayload._poolCycle || 1;
+      const maxPoolCycles = 3;
+      
+      if (currentCycle < maxPoolCycles) {
+        reqPayload._poolCycle = currentCycle + 1;
+        // Reset failed backends list for the next cycle
+        reqPayload._failedBackends.clear();
+        
+        const cyclePauseMs = 3000 * currentCycle; // 3s for cycle 2, 6s for cycle 3
+        eventLog(`FAILOVER: All backends in pool attempted (Cycle ${currentCycle}/${maxPoolCycles}). Pausing ${cyclePauseMs / 1000}s before retrying pool...`);
+        
+        await new Promise(r => setTimeout(r, cyclePauseMs));
+        return routeChatCompletion(reqPayload, res, onRoutingEvent);
+      } else {
+        // Try system-wide emergency fallback if virtual pool completely failed
+        const anyActiveProvider = config.providers.find(p => 
+          p.enabled && 
+          p.id !== provider.id && 
+          (p.apiKey || p.apiKeys?.some(k => k.enabled && k.key)) && 
+          p.models?.length > 0
+        );
+        
+        if (anyActiveProvider && !reqPayload._emergencyFallbackTried) {
+          reqPayload._emergencyFallbackTried = true;
+          reqPayload._failedBackends.clear();
+          const fbModel = anyActiveProvider.models[0];
+          eventLog(`EMERGENCY FAILOVER: All pool backends failed after ${maxPoolCycles} cycles. Retrying with emergency provider ${anyActiveProvider.name}...`);
+          return routeChatCompletion({ ...reqPayload, model: `${anyActiveProvider.id}/${fbModel.id}` }, res, onRoutingEvent);
         }
-      });
+        
+        eventLog(`FAILOVER: All backends and emergency fallbacks failed across ${maxPoolCycles} pool cycles. Request failed.`);
+        return res.status(err.response?.status || 500).json({
+          error: {
+            message: `All prioritized backends failed. Last error: ${errorMsg}`,
+            provider: provider.name
+          }
+        });
+      }
     }
   }
 }
