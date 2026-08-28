@@ -13,13 +13,14 @@ import { AgentChat } from './components/AgentChat';
 import { IntegrationHub } from './components/IntegrationHub';
 import { Playground } from './components/Playground';
 import { Statistics } from './components/Statistics';
+import { SystemAlerts } from './components/SystemAlerts';
 
 const MIN_SIDEBAR = 280;
 const MAX_SIDEBAR = 600;
 const DEFAULT_SIDEBAR = 380;
 
 function App() {
-  const [activeTab, setActiveTab] = useState<'directory' | 'setup' | 'pools' | 'playground' | 'integrations' | 'statistics'>('directory');
+  const [activeTab, setActiveTab] = useState<'directory' | 'setup' | 'pools' | 'playground' | 'integrations' | 'statistics' | 'alerts'>('directory');
   const [showAssistant, setShowAssistant] = useState(true);
   const [config, setConfig] = useState<GatewayConfig | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
@@ -281,18 +282,30 @@ function App() {
                 { id: 'pools', label: '3. Active Pools' },
                 { id: 'playground', label: '4. Playground' },
                 { id: 'integrations', label: '5. Connect Tools' },
-                { id: 'statistics', label: '6. Usage Statistics' }
+                { id: 'statistics', label: '6. Usage Statistics' },
+                { 
+                  id: 'alerts', 
+                  label: `7. Alerts ${(config as any).alerts?.length > 0 ? `(${(config as any).alerts.length})` : ''}`
+                }
               ].map((tab) => {
                 const isActive = activeTab === tab.id;
+                const hasAlerts = tab.id === 'alerts' && ((config as any).alerts?.length > 0);
+                
                 return (
                   <button
                     key={tab.id}
                     type="button"
                     onClick={() => setActiveTab(tab.id as any)}
                     style={{
-                      background: isActive ? 'var(--accent-glow)' : 'transparent',
-                      borderColor: isActive ? 'var(--accent)' : 'transparent',
-                      color: isActive ? 'var(--text)' : 'var(--text-muted)',
+                      background: isActive 
+                        ? (hasAlerts ? 'rgba(255, 68, 68, 0.15)' : 'var(--accent-glow)') 
+                        : 'transparent',
+                      borderColor: isActive 
+                        ? (hasAlerts ? 'var(--error)' : 'var(--accent)') 
+                        : 'transparent',
+                      color: isActive 
+                        ? (hasAlerts ? 'var(--error)' : 'var(--text)') 
+                        : (hasAlerts ? 'var(--error)' : 'var(--text-muted)'),
                       borderRadius: '8px',
                       padding: '0.6rem 1.2rem',
                       fontWeight: 600,
@@ -334,6 +347,10 @@ function App() {
 
               {activeTab === 'statistics' && (
                 <Statistics config={config} />
+              )}
+
+              {activeTab === 'alerts' && (
+                <SystemAlerts config={config} onSave={handleSaveConfig} />
               )}
             </main>
           </div>
