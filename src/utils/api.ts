@@ -332,3 +332,27 @@ export async function runPlaygroundCompletion(payload: {
     totalTokens: usage.total_tokens || 0,
   };
 }
+
+export interface StatsHistoryEntry {
+  timestamp: string;
+  requestedModel: string;
+  providerId: string;
+  modelId: string;
+  success: boolean;
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+  latencyMs: number;
+  cacheHit: boolean;
+  error: string | null;
+}
+
+export async function getStatsHistory(): Promise<StatsHistoryEntry[]> {
+  return fetchJson(`${API_BASE}/api/stats/history`);
+}
+
+export async function clearStatsHistory(): Promise<{ success: boolean }> {
+  return fetchJson(`${API_BASE}/api/stats/history/clear`, {
+    method: 'POST',
+  });
+}

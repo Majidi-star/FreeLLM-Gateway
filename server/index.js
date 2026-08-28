@@ -5,7 +5,7 @@ import fs from 'fs';
 import crypto from 'crypto';
 import axios from 'axios';
 import { fileURLToPath } from 'url';
-import { loadConfig, saveConfig, getLogs, clearLogs, addLog, getAllChatSessions, createChatSession, updateChatSessionTitle, deleteChatSession, getMessagesBySession, addChatMessage, truncateChatMessagesFromIndex } from './db.js';
+import { loadConfig, saveConfig, getLogs, clearLogs, addLog, getAllChatSessions, createChatSession, updateChatSessionTitle, deleteChatSession, getMessagesBySession, addChatMessage, truncateChatMessagesFromIndex, loadStatsHistory, clearStatsHistory } from './db.js';
 import { getRateLimitMetrics } from './rateLimiter.js';
 import { getProxyAgent } from './proxy.js';
 import { routeChatCompletion } from './router.js';
@@ -242,6 +242,18 @@ app.get('/api/stats', (req, res) => {
     stats: config.stats,
     limits: rateLimitMetrics
   });
+});
+
+// GET /api/stats/history - Get detailed request history for charts
+app.get('/api/stats/history', (req, res) => {
+  res.json(loadStatsHistory());
+});
+
+// POST /api/stats/history/clear - Clear detailed request history
+app.post('/api/stats/history/clear', (req, res) => {
+  clearStatsHistory();
+  addLog('INFO', 'Gateway stats history cleared.');
+  res.json({ success: true });
 });
 
 // GET /api/logs - Get operational logs

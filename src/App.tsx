@@ -12,13 +12,14 @@ import { ActivePools } from './components/ActivePools';
 import { AgentChat } from './components/AgentChat';
 import { IntegrationHub } from './components/IntegrationHub';
 import { Playground } from './components/Playground';
+import { Statistics } from './components/Statistics';
 
 const MIN_SIDEBAR = 280;
 const MAX_SIDEBAR = 600;
 const DEFAULT_SIDEBAR = 380;
 
 function App() {
-  const [activeTab, setActiveTab] = useState<'directory' | 'setup' | 'pools' | 'playground' | 'integrations'>('directory');
+  const [activeTab, setActiveTab] = useState<'directory' | 'setup' | 'pools' | 'playground' | 'integrations' | 'statistics'>('directory');
   const [showAssistant, setShowAssistant] = useState(true);
   const [config, setConfig] = useState<GatewayConfig | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
@@ -279,7 +280,8 @@ function App() {
                 { id: 'setup', label: '2. Gateway Setup' },
                 { id: 'pools', label: '3. Active Pools' },
                 { id: 'playground', label: '4. Playground' },
-                { id: 'integrations', label: '5. Connect Tools' }
+                { id: 'integrations', label: '5. Connect Tools' },
+                { id: 'statistics', label: '6. Usage Statistics' }
               ].map((tab) => {
                 const isActive = activeTab === tab.id;
                 return (
@@ -328,6 +330,10 @@ function App() {
               
               {activeTab === 'integrations' && (
                 <IntegrationHub config={config} />
+              )}
+
+              {activeTab === 'statistics' && (
+                <Statistics config={config} />
               )}
             </main>
           </div>

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { loadConfig, saveConfig, addLog, recordLatency, getLatency } from './db.js';
+import { loadConfig, saveConfig, addLog, recordLatency, getLatency, addStatsHistoryEntry } from './db.js';
 import { resolveProxyAgent } from './proxy.js';
 import { checkRateLimit, recordRequestStart, recordRequestEnd, setProviderCooldown } from './rateLimiter.js';
 import { getSemanticCachedResponse, addSemanticCache } from './cache.js';
@@ -250,7 +250,12 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
         // Stats
         const promptTokens = estimateTokens(JSON.stringify(reqPayload.messages));
         const completionTokens = estimateTokens(cachedText);
-        updateStats(true, requestedModel, promptTokens, completionTokens);
+        updateStats(true, requestedModel, promptTokens, completionTokens, {
+          providerId: 'cache',
+          modelId: requestedModel,
+          latencyMs: 10,
+          cacheHit: true
+        });
         return;
       } else {
         eventLog(`Semantic Cache HIT - returning cached payload.`);
@@ -258,7 +263,12 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
         // Stats
         const promptTokens = estimateTokens(JSON.stringify(reqPayload.messages));
         const completionTokens = estimateTokens(cachedText);
-        updateStats(true, requestedModel, promptTokens, completionTokens);
+        updateStats(true, requestedModel, promptTokens, completionTokens, {
+          providerId: 'cache',
+          modelId: requestedModel,
+          latencyMs: 5,
+          cacheHit: true
+        });
         
         return res.status(200).json(cachedCompletion);
       }
@@ -644,7 +654,12 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
           recordRequestEnd(provider.id, target.modelId, reqReservation, totalTokens);
           
           // Track stats
-          updateStats(true, requestedModel, promptTokens, completionTokens);
+          updateStats(true, requestedModel, promptTokens, completionTokens, {
+            providerId: provider.id,
+            modelId: target.modelId,
+            latencyMs: Date.now() - requestStartTime,
+            cacheHit: false
+          });
           
           eventLog(`Stream finished. Estimated tokens: ${totalTokens} (${promptTokens} prompt, ${completionTokens} completion)`);
 
@@ -701,7 +716,12 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
       const totalTokens = promptTokens + completionTokens;
 
       recordRequestEnd(provider.id, target.modelId, reqReservation, totalTokens);
-      updateStats(true, requestedModel, promptTokens, completionTokens);
+      updateStats(true, requestedModel, promptTokens, completionTokens, {
+        providerId: provider.id,
+        modelId: target.modelId,
+        latencyMs: Date.now() - requestStartTime,
+        cacheHit: false
+      });
 
       eventLog(`Request succeeded. Tokens: ${totalTokens}`);
 
@@ -736,7 +756,13 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
 
     if (!shouldFallback) {
       eventLog(`FAILOVER: Fallback bypassed/disabled for this error type (${status || 'network'}). Request failed.`);
-      updateStats(false);
+      updateStats(false, requestedModel, 0, 0, {
+        providerId: provider.id,
+        modelId: target.modelId,
+        latencyMs: Date.now() - requestStartTime,
+        cacheHit: false,
+        error: errorMsg
+      });
       return res.status(status || 500).json({
         error: {
           message: `Request failed on targeted backend: ${errorMsg}. Failover bypassed by pool configuration.`,
@@ -760,7 +786,13 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
     }
 
     setProviderCooldown(provider.id, cooldownMs);
-    updateStats(false);
+    updateStats(false, requestedModel, 0, 0, {
+      providerId: provider.id,
+      modelId: target.modelId,
+      latencyMs: Date.now() - requestStartTime,
+      cacheHit: false,
+      error: errorMsg
+    });
 
     // Trigger failover retry!
     eventLog(`FAILOVER: Retrying next target candidate...`);
@@ -821,7 +853,7 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
 /**
  * Updates stats in the configuration file.
  */
-function updateStats(success, virtualModelId = null, promptTokens = 0, completionTokens = 0) {
+function updateStats(success, virtualModelId = null, promptTokens = 0, completionTokens = 0, extra = {}) {
   const config = loadConfig();
   config.stats.totalRequests += 1;
   if (success) {
@@ -839,4 +871,21 @@ function updateStats(success, virtualModelId = null, promptTokens = 0, completio
     config.stats.failedRequests += 1;
   }
   saveConfig(config);
+
+  try {
+    addStatsHistoryEntry({
+      requestedModel: virtualModelId || extra.requestedModel || 'unknown',
+      providerId: extra.providerId || (extra.cacheHit ? 'cache' : 'unknown'),
+      modelId: extra.modelId || 'unknown',
+      success: !!success,
+      promptTokens: promptTokens || 0,
+      completionTokens: completionTokens || 0,
+      totalTokens: (promptTokens || 0) + (completionTokens || 0),
+      latencyMs: extra.latencyMs || 0,
+      cacheHit: !!extra.cacheHit,
+      error: extra.error || null
+    });
+  } catch (err) {
+    console.error('Failed to add stats history entry:', err);
+  }
 }

@@ -4058,3 +4058,55 @@ export function getLatency(providerId, modelId) {
   const key = `${providerId}:${modelId}`;
   return config.stats.latency[key] || 1000;
 }
+
+const STATS_HISTORY_PATH = path.join(__dirname, '..', 'stats-history.json');
+let statsHistory = [];
+
+export function loadStatsHistory() {
+  try {
+    if (fs.existsSync(STATS_HISTORY_PATH)) {
+      statsHistory = JSON.parse(fs.readFileSync(STATS_HISTORY_PATH, 'utf8'));
+    } else {
+      statsHistory = [];
+    }
+  } catch (err) {
+    console.error('Error loading stats history:', err);
+    statsHistory = [];
+  }
+  return statsHistory;
+}
+
+export function saveStatsHistory() {
+  try {
+    fs.writeFileSync(STATS_HISTORY_PATH, JSON.stringify(statsHistory, null, 2), 'utf8');
+  } catch (err) {
+    console.error('Error saving stats history:', err);
+  }
+}
+
+export function addStatsHistoryEntry(entry) {
+  if (statsHistory.length === 0 && fs.existsSync(STATS_HISTORY_PATH)) {
+    loadStatsHistory();
+  }
+  const fullEntry = {
+    timestamp: new Date().toISOString(),
+    ...entry
+  };
+  statsHistory.unshift(fullEntry);
+  if (statsHistory.length > 3000) {
+    statsHistory = statsHistory.slice(0, 3000);
+  }
+  saveStatsHistory();
+}
+
+export function clearStatsHistory() {
+  statsHistory = [];
+  try {
+    if (fs.existsSync(STATS_HISTORY_PATH)) {
+      fs.unlinkSync(STATS_HISTORY_PATH);
+    }
+  } catch (err) {
+    console.error('Error deleting stats history file:', err);
+  }
+}
+
