@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { loadConfig, saveConfig, addLog, recordLatency, getLatency } from './db.js';
 import { resolveProxyAgent } from './proxy.js';
-import { checkRateLimit, recordUsage, setProviderCooldown } from './rateLimiter.js';
+import { checkRateLimit, recordRequestStart, recordRequestEnd, setProviderCooldown } from './rateLimiter.js';
 import { getSemanticCachedResponse, addSemanticCache } from './cache.js';
 
 // Simple model cost database (approximate price per 1M tokens in USD)
@@ -453,6 +453,9 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
   const { target, provider, modelObj } = chosenTarget;
   eventLog(`Selected backend target: ${provider.name} (model: ${target.modelId})`);
   
+  // Register pre-flight request start and increment concurrency counter
+  const reqReservation = recordRequestStart(provider.id, target.modelId);
+  
   const providerType = provider.id.split(':')[0];
 
   // 4. Dispatch the call
@@ -638,7 +641,7 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
           const completionTokens = estimateTokens(accumulatedText);
           const totalTokens = promptTokens + completionTokens;
 
-          recordUsage(provider.id, target.modelId, totalTokens);
+          recordRequestEnd(provider.id, target.modelId, reqReservation, totalTokens);
           
           // Track stats
           updateStats(true, requestedModel, promptTokens, completionTokens);
@@ -673,6 +676,7 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
           if (!headersSent) {
             reject(err);
           } else {
+            recordRequestEnd(provider.id, target.modelId, reqReservation, 0);
             eventLog(`STREAM ERROR MID-STREAM (${provider.name}):`, err.message);
             res.end();
           }
@@ -696,7 +700,7 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
       const completionTokens = openaiData.usage?.completion_tokens || estimateTokens(openaiData.choices?.[0]?.message?.content);
       const totalTokens = promptTokens + completionTokens;
 
-      recordUsage(provider.id, target.modelId, totalTokens);
+      recordRequestEnd(provider.id, target.modelId, reqReservation, totalTokens);
       updateStats(true, requestedModel, promptTokens, completionTokens);
 
       eventLog(`Request succeeded. Tokens: ${totalTokens}`);
@@ -710,6 +714,7 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
       return res.status(200).json(openaiData);
     }
   } catch (err) {
+    recordRequestEnd(provider.id, target.modelId, reqReservation, 0);
     const errorMsg = err.response?.data?.error?.message || err.response?.data?.message || err.message;
     eventLog(`ERROR calling ${provider.name}:`, errorMsg);
     
