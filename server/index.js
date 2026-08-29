@@ -6,7 +6,7 @@ import crypto from 'crypto';
 import axios from 'axios';
 import { fileURLToPath } from 'url';
 import { loadConfig, saveConfig, getLogs, clearLogs, addLog, getAllChatSessions, createChatSession, updateChatSessionTitle, deleteChatSession, getMessagesBySession, addChatMessage, truncateChatMessagesFromIndex, loadStatsHistory, clearStatsHistory } from './db.js';
-import { getRateLimitMetrics } from './rateLimiter.js';
+import { getRateLimitMetrics, activeRequests } from './rateLimiter.js';
 import { getProxyAgent } from './proxy.js';
 import { routeChatCompletion } from './router.js';
 import { initCache, clearCache, getCacheSize } from './cache.js';
@@ -240,7 +240,8 @@ app.get('/api/stats', (req, res) => {
   const rateLimitMetrics = getRateLimitMetrics(config.providers);
   res.json({
     stats: config.stats,
-    limits: rateLimitMetrics
+    limits: rateLimitMetrics,
+    activeRequests: activeRequests
   });
 });
 
@@ -249,10 +250,26 @@ app.get('/api/stats/history', (req, res) => {
   res.json(loadStatsHistory());
 });
 
-// POST /api/stats/history/clear - Clear detailed request history
+// POST /api/stats/history/clear - Hide detailed request history before a timestamp
 app.post('/api/stats/history/clear', (req, res) => {
-  clearStatsHistory();
-  addLog('INFO', 'Gateway stats history cleared.');
+  const { hiddenBefore, unhide, forceDelete } = req.body;
+  if (unhide) {
+    const config = loadConfig();
+    if (config.stats) {
+      delete config.stats.hiddenBefore;
+      saveConfig(config);
+    }
+    addLog('INFO', 'Gateway stats history unhidden (showing all recorded data).');
+  } else if (hiddenBefore) {
+    const config = loadConfig();
+    if (!config.stats) config.stats = {};
+    config.stats.hiddenBefore = hiddenBefore;
+    saveConfig(config);
+    addLog('INFO', `Gateway stats history hidden before ${new Date(hiddenBefore).toLocaleString()}.`);
+  } else if (forceDelete) {
+    clearStatsHistory();
+    addLog('INFO', 'Gateway stats history permanently deleted.');
+  }
   res.json({ success: true });
 });
 

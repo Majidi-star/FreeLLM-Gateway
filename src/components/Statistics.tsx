@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { StatsHistoryEntry, GatewayConfig } from '../utils/api';
-import { getStatsHistory, clearStatsHistory } from '../utils/api';
+import { clearStatsHistory } from '../utils/api';
 
 interface StatisticsProps {
   config: GatewayConfig;
@@ -40,36 +40,73 @@ export const Statistics: React.FC<StatisticsProps> = ({ config }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 50;
 
+  const [showHideModal, setShowHideModal] = useState(false);
+  const [hideDate, setHideDate] = useState(() => {
+    const d = new Date();
+    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+    return d.toISOString().slice(0, 16);
+  });
+  const [showViewAllProviders, setShowViewAllProviders] = useState(false);
+  const [showViewAllModels, setShowViewAllModels] = useState(false);
+  const [showViewAllErrors, setShowViewAllErrors] = useState(false);
+  const [errorSearch, setErrorSearch] = useState('');
+  const [showViewAllLimits, setShowViewAllLimits] = useState(false);
+  const [limitsCurrentPage, setLimitsCurrentPage] = useState(1);
+
   useEffect(() => {
     setCurrentPage(1);
   }, [timeRange, statusFilter, providerFilter, modelFilter]);
 
-  const fetchHistory = async () => {
+  const [activeRequests, setActiveRequests] = useState<any[]>([]);
+  const [rateLimits, setRateLimits] = useState<any>({});
+
+  const fetchData = async (isBackground = false) => {
     try {
-      setLoading(true);
-      const data = await getStatsHistory();
-      setHistory(data);
+      if (!isBackground) setLoading(true);
+      // dynamically import getStats to avoid unused imports warning if not imported yet
+      const { getStatsHistory, getStats } = await import('../utils/api');
+      const [historyData, statsData] = await Promise.all([
+        getStatsHistory(),
+        getStats()
+      ]);
+      setHistory(historyData);
+      setActiveRequests(statsData.activeRequests || []);
+      setRateLimits(statsData.limits || {});
+      setError(null);
     } catch (err: any) {
       console.error(err);
-      setError('Failed to load statistics history.');
+      if (!isBackground) setError('Failed to load statistics data.');
     } finally {
-      setLoading(false);
+      if (!isBackground) setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchHistory();
+    fetchData();
+    const interval = setInterval(() => fetchData(true), 1000);
+    return () => clearInterval(interval);
   }, [config]);
 
-  const handleClearStats = async () => {
-    if (!window.confirm('Are you sure you want to clear all statistics history? This cannot be undone.')) {
-      return;
-    }
+  const handleHideStats = async () => {
     try {
-      await clearStatsHistory();
-      setHistory([]);
+      const isoDate = new Date(hideDate).toISOString();
+      await clearStatsHistory(isoDate);
+      setShowHideModal(false);
+      fetchData(false);
     } catch (err: any) {
-      alert(`Error clearing statistics: ${err.message}`);
+      console.error(err);
+      setError('Failed to hide statistics history.');
+    }
+  };
+
+  const handleUnhideStats = async () => {
+    try {
+      await clearStatsHistory(undefined, true);
+      setShowHideModal(false);
+      fetchData(false);
+    } catch (err: any) {
+      console.error(err);
+      setError('Failed to unhide statistics history.');
     }
   };
 
@@ -212,14 +249,15 @@ export const Statistics: React.FC<StatisticsProps> = ({ config }) => {
   const maxTokens = Math.max(...timelineBins.map(b => b.promptTokens + b.completionTokens), 1000);
 
   // 5. Providers Breakdown Data
-  const providersMap: Record<string, { count: number; tokens: number }> = {};
+  const providersMap: Record<string, { count: number; tokens: number; totalLatencyMs: number }> = {};
   filteredHistory.forEach(item => {
     const prov = item.providerId || (item.cacheHit ? 'cache' : 'unknown');
     if (!providersMap[prov]) {
-      providersMap[prov] = { count: 0, tokens: 0 };
+      providersMap[prov] = { count: 0, tokens: 0, totalLatencyMs: 0 };
     }
     providersMap[prov].count++;
     providersMap[prov].tokens += item.totalTokens || 0;
+    providersMap[prov].totalLatencyMs += item.latencyMs || 0;
   });
 
   const providersData = Object.keys(providersMap).map(id => {
@@ -230,26 +268,29 @@ export const Statistics: React.FC<StatisticsProps> = ({ config }) => {
       id,
       name,
       count: providersMap[id].count,
-      tokens: providersMap[id].tokens
+      tokens: providersMap[id].tokens,
+      avgLatencyMs: providersMap[id].count > 0 ? Math.round(providersMap[id].totalLatencyMs / providersMap[id].count) : 0
     };
   }).sort((a, b) => b.count - a.count);
 
   // 6. Models Breakdown Data
-  const modelsMap: Record<string, { count: number; tokens: number }> = {};
+  const modelsMap: Record<string, { count: number; tokens: number; totalLatencyMs: number }> = {};
   filteredHistory.forEach(item => {
-    const model = item.requestedModel || 'unknown';
+    const model = item.modelId || 'unknown';
     if (!modelsMap[model]) {
-      modelsMap[model] = { count: 0, tokens: 0 };
+      modelsMap[model] = { count: 0, tokens: 0, totalLatencyMs: 0 };
     }
     modelsMap[model].count++;
     modelsMap[model].tokens += item.totalTokens || 0;
+    modelsMap[model].totalLatencyMs += item.latencyMs || 0;
   });
 
   const modelsData = Object.keys(modelsMap).map(name => {
     return {
       name,
       count: modelsMap[name].count,
-      tokens: modelsMap[name].tokens
+      tokens: modelsMap[name].tokens,
+      avgLatencyMs: modelsMap[name].count > 0 ? Math.round(modelsMap[name].totalLatencyMs / modelsMap[name].count) : 0
     };
   }).sort((a, b) => b.count - a.count);
 
@@ -266,6 +307,31 @@ export const Statistics: React.FC<StatisticsProps> = ({ config }) => {
     msg,
     count: errorsMap[msg]
   })).sort((a, b) => b.count - a.count);
+
+  // 8. Rate Limits Formatting
+  const configuredLimits = Object.keys(rateLimits).map(key => {
+    const data = rateLimits[key];
+    const metrics = Object.keys(data).filter(m => m !== 'cooldown' && data[m] && data[m].limit > 0).map(m => ({
+      name: m,
+      used: data[m].used,
+      limit: data[m].limit,
+      pct: Math.min((data[m].used / data[m].limit) * 100, 100)
+    }));
+    const maxPct = metrics.reduce((max, m) => Math.max(max, m.pct), 0);
+    const totalUsed = metrics.reduce((sum, m) => sum + m.used, 0);
+    return { key, metrics, maxPct, totalUsed };
+  }).filter(ent => ent.metrics.length > 0);
+
+  const activeLimits = configuredLimits.filter(ent => ent.totalUsed > 0).sort((a, b) => b.maxPct - a.maxPct);
+  const displayedLimits = activeLimits.slice(0, 4);
+
+  const limitRows = configuredLimits.flatMap(ent => ent.metrics.map(m => ({
+    entity: ent.key,
+    metric: m.name,
+    used: m.used,
+    limit: m.limit,
+    pct: m.pct
+  }))).sort((a, b) => b.pct - a.pct);
 
   // Render SVG Chart Paths helper
   const getSvgCoordinates = (bins: any[], type: 'requests' | 'hits' | 'tokens' | 'prompt' | 'comp', width: number, height: number) => {
@@ -417,21 +483,23 @@ export const Statistics: React.FC<StatisticsProps> = ({ config }) => {
 
         </div>
 
-        <div style={{ display: 'flex', gap: '0.6rem' }}>
+        <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
+          {config.stats?.hiddenBefore && (
+            <button
+              type="button"
+              onClick={handleUnhideStats}
+              style={{ padding: '0.3rem 0.75rem', fontSize: '0.75rem', borderRadius: '6px', background: 'var(--success-glow)', border: '1px solid var(--success)', color: 'var(--success)', cursor: 'pointer' }}
+              title="History is currently partially hidden. Click to unhide."
+            >
+              👁️ Unhide All
+            </button>
+          )}
           <button
             type="button"
-            onClick={fetchHistory}
-            className="secondary"
-            style={{ padding: '0.3rem 0.75rem', fontSize: '0.75rem', borderRadius: '6px' }}
+            onClick={() => setShowHideModal(true)}
+            style={{ padding: '0.3rem 0.75rem', fontSize: '0.75rem', borderRadius: '6px', background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-muted)', cursor: 'pointer' }}
           >
-            🔄 Refresh
-          </button>
-          <button
-            type="button"
-            onClick={handleClearStats}
-            style={{ padding: '0.3rem 0.75rem', fontSize: '0.75rem', borderRadius: '6px', background: 'transparent', border: '1px solid var(--error)', color: 'var(--error)', cursor: 'pointer' }}
-          >
-            🗑️ Clear History
+            🙈 Hide History
           </button>
         </div>
       </div>
@@ -731,15 +799,22 @@ export const Statistics: React.FC<StatisticsProps> = ({ config }) => {
             
             {/* Providers Breakdown */}
             <div className="glass-panel" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
-              <h3 style={{ fontSize: '0.9rem', margin: 0 }}>📡 Providers Share</h3>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3 style={{ fontSize: '0.9rem', margin: 0 }}>📡 Providers Share</h3>
+                {providersData.length > 4 && (
+                  <button type="button" onClick={() => setShowViewAllProviders(true)} style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem', background: 'transparent', border: '1px solid var(--border)', borderRadius: '4px', cursor: 'pointer', color: 'var(--text-muted)' }}>
+                    View All
+                  </button>
+                )}
+              </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                {providersData.map((prov, index) => {
+                {providersData.slice(0, 4).map((prov, index) => {
                   const percent = totalRequests > 0 ? (prov.count / totalRequests) * 100 : 0;
                   return (
                     <div key={prov.id} style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem' }}>
                         <span style={{ fontWeight: 600, color: 'var(--text)' }}>
-                          {index + 1}. {prov.name}
+                          {index + 1}. {prov.name} <span style={{ color: 'var(--text-muted)', fontWeight: 400, marginLeft: '0.25rem' }}>~{prov.avgLatencyMs}ms</span>
                         </span>
                         <span style={{ color: 'var(--text-muted)' }}>
                           <strong>{prov.count}</strong> reqs ({percent.toFixed(1)}%)
@@ -762,41 +837,50 @@ export const Statistics: React.FC<StatisticsProps> = ({ config }) => {
 
             {/* Models Breakdown */}
             <div className="glass-panel" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
-              <h3 style={{ fontSize: '0.9rem', margin: 0 }}>🔀 Model Aliases Share</h3>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3 style={{ fontSize: '0.9rem', margin: 0 }}>🧠 Models Share</h3>
+                {modelsData.length > 4 && (
+                  <button type="button" onClick={() => setShowViewAllModels(true)} style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem', background: 'transparent', border: '1px solid var(--border)', borderRadius: '4px', cursor: 'pointer', color: 'var(--text-muted)' }}>
+                    View All
+                  </button>
+                )}
+              </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                {modelsData.slice(0, 5).map((model) => {
-                  const percent = totalRequests > 0 ? (model.count / totalRequests) * 100 : 0;
+                {modelsData.slice(0, 4).map((mod, index) => {
+                  const percent = totalRequests > 0 ? (mod.count / totalRequests) * 100 : 0;
                   return (
-                    <div key={model.name} style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                    <div key={mod.name} style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem' }}>
-                        <span style={{ fontWeight: 600, color: 'var(--text)', fontFamily: 'monospace' }}>
-                          {model.name}
+                        <span style={{ fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '160px' }} title={mod.name}>
+                          {index + 1}. {mod.name} <span style={{ color: 'var(--text-muted)', fontWeight: 400, marginLeft: '0.25rem' }}>~{mod.avgLatencyMs}ms</span>
                         </span>
                         <span style={{ color: 'var(--text-muted)' }}>
-                          <strong>{model.count}</strong> reqs ({percent.toFixed(1)}%)
+                          <strong>{mod.count}</strong> reqs ({percent.toFixed(1)}%)
                         </span>
                       </div>
                       <div style={{ height: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden' }}>
                         <div style={{
                           height: '100%',
                           width: `${percent}%`,
-                          background: 'linear-gradient(to right, rgba(124, 141, 255, 0.4), var(--slate-accent))'
+                          background: `linear-gradient(to right, #6b40ac, #a168ff)`
                         }} />
                       </div>
                     </div>
                   );
                 })}
-                {modelsData.length > 5 && (
-                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textAlign: 'right' }}>
-                    + {modelsData.length - 5} more active models
-                  </span>
-                )}
               </div>
             </div>
 
             {/* Success/Error breakdown */}
             <div className="glass-panel" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
-              <h3 style={{ fontSize: '0.9rem', margin: 0 }}>🚨 Failure Analysis</h3>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3 style={{ fontSize: '0.9rem', margin: 0 }}>🚨 Failure Analysis</h3>
+                {errorsData.length > 5 && (
+                  <button type="button" onClick={() => setShowViewAllErrors(true)} style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem', background: 'transparent', border: '1px solid var(--border)', borderRadius: '4px', cursor: 'pointer', color: 'var(--text-muted)' }}>
+                    View All
+                  </button>
+                )}
+              </div>
               {failedRequests === 0 ? (
                 <div style={{ display: 'flex', flex: 1, flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '120px', gap: '0.5rem' }}>
                   <span style={{ fontSize: '2rem' }}>🎉</span>
@@ -826,20 +910,112 @@ export const Statistics: React.FC<StatisticsProps> = ({ config }) => {
                   </div>
                   
                   {/* Detailed Errors list */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', maxHeight: '100px', overflowY: 'auto' }}>
-                    {errorsData.map((err, idx) => (
-                      <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', padding: '0.2rem 0.4rem', background: 'var(--error-glow)', borderRadius: '4px', border: '1px solid rgba(255, 68, 68, 0.1)' }}>
-                        <span style={{ color: 'var(--error)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '80%' }} title={err.msg}>
-                          ⚠️ {err.msg}
-                        </span>
-                        <strong style={{ color: 'var(--text)' }}>{err.count}</strong>
-                      </div>
-                    ))}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', maxHeight: '120px', overflowY: 'auto' }}>
+                    {errorsData.slice(0, 5).map((err, idx) => {
+                      const isInternal = err.msg.toLowerCase().includes('timeout') || err.msg.toLowerCase().includes('econnrefused') || err.msg.toLowerCase().includes('internal') || err.msg.toLowerCase().includes('fetch failed');
+                      return (
+                        <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', padding: '0.3rem 0.5rem', background: isInternal ? 'rgba(255, 165, 0, 0.1)' : 'var(--error-glow)', borderRadius: '4px', border: `1px solid ${isInternal ? 'rgba(255, 165, 0, 0.2)' : 'rgba(255, 68, 68, 0.1)'}` }}>
+                          <span style={{ color: isInternal ? 'orange' : 'var(--error)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '80%' }} title={err.msg}>
+                            {isInternal ? '⚙️' : '⚠️'} {err.msg}
+                          </span>
+                          <strong style={{ color: 'var(--text)' }}>{err.count}</strong>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
             </div>
 
+          </div>
+
+          {/* Rate Limits Visualization */}
+          {configuredLimits.length > 0 && (
+            <div className="glass-panel" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3 style={{ fontSize: '0.9rem', margin: 0 }}>📊 Rate Limits & Quotas</h3>
+                {configuredLimits.length > 4 && (
+                  <button type="button" onClick={() => { setShowViewAllLimits(true); setLimitsCurrentPage(1); }} style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem', background: 'transparent', border: '1px solid var(--border)', borderRadius: '4px', cursor: 'pointer', color: 'var(--text-muted)' }}>
+                    View All
+                  </button>
+                )}
+              </div>
+              
+              {activeLimits.length === 0 ? (
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textAlign: 'center', padding: '1rem' }}>No rate limits currently being consumed.</div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem' }}>
+                  {displayedLimits.map(ent => (
+                    <div key={ent.key} style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', background: 'rgba(0,0,0,0.3)', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)' }}>
+                      <strong style={{ fontSize: '0.75rem', color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={ent.key}>{ent.key.toUpperCase()}</strong>
+                      {ent.metrics.map(m => {
+                        const color = m.pct >= 90 ? 'var(--error)' : (m.pct >= 75 ? 'var(--warning)' : 'var(--success)');
+                        return (
+                          <div key={m.name} style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem' }}>
+                              <span style={{ color: 'var(--text-muted)', textTransform: 'uppercase' }}>{m.name}</span>
+                              <span style={{ color: 'var(--text)' }}><strong>{m.used.toLocaleString()}</strong> / {m.limit.toLocaleString()}</span>
+                            </div>
+                            <div style={{ height: '3px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px', overflow: 'hidden' }}>
+                              <div style={{ height: '100%', width: `${m.pct}%`, background: color }} />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Active In-Flight Requests */}
+          <div className="glass-panel" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', border: activeRequests.length > 0 ? '1px solid var(--accent)' : '1px solid var(--border)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ fontSize: '0.9rem', margin: 0, color: activeRequests.length > 0 ? 'var(--accent)' : 'var(--text)' }}>🟢 Active In-Flight Requests ({activeRequests.length})</h3>
+              {activeRequests.length > 0 && <div className="status-indicator active" style={{ width: '8px', height: '8px' }}></div>}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {activeRequests.length === 0 ? (
+                <div style={{ padding: '1rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.8rem', background: 'rgba(255,255,255,0.02)', borderRadius: '8px' }}>
+                  No active requests currently in flight.
+                </div>
+              ) : (
+                activeRequests.map((req, idx) => {
+                  const secondsPassed = Math.floor((Date.now() - req.timestamp) / 1000);
+                  return (
+                    <div key={idx} style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '0.6rem 1rem',
+                      background: '#0a0a0f',
+                      border: '1px solid var(--border)',
+                      borderRadius: '8px',
+                      fontSize: '0.8rem'
+                    }}>
+                      <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
+                        <div>
+                          <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem', display: 'block' }}>Provider</span>
+                          <strong>{req.providerId}</strong>
+                        </div>
+                        <div>
+                          <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem', display: 'block' }}>Model</span>
+                          <strong>{req.modelId}</strong>
+                        </div>
+                        <div>
+                          <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem', display: 'block' }}>Prompt Tokens</span>
+                          <strong>{req.tokens || '?'}</strong>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--accent)', fontWeight: 'bold' }}>
+                        ⏱️ {secondsPassed}s
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
           </div>
 
           {/* Recent History Table Log */}
@@ -949,6 +1125,189 @@ export const Statistics: React.FC<StatisticsProps> = ({ config }) => {
             )}
           </div>
         </>
+      )}
+
+      {/* Hide History Modal */}
+      {showHideModal && (
+        <div style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.7)', zIndex: 9999 }}>
+          <div className="glass-panel" style={{ padding: '1.5rem', width: '300px', display: 'flex', flexDirection: 'column', gap: '1rem', border: '1px solid var(--border)' }}>
+            <h3 style={{ margin: 0, fontSize: '1rem' }}>Hide History Before</h3>
+            <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>Select a date and time. Any request prior to this will be hidden from view but not deleted from disk.</p>
+            <input type="datetime-local" value={hideDate} onChange={e => setHideDate(e.target.value)} style={{ padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--border)', background: '#1a1a24', color: 'var(--text)', outline: 'none' }} />
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '0.5rem' }}>
+              {config.stats?.hiddenBefore && (
+                <button type="button" onClick={handleUnhideStats} style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', borderRadius: '4px', background: 'var(--success)', color: '#fff', border: 'none', cursor: 'pointer', marginRight: 'auto' }}>Unhide All</button>
+              )}
+              <button type="button" className="secondary" onClick={() => setShowHideModal(false)} style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', borderRadius: '4px' }}>Cancel</button>
+              <button type="button" onClick={handleHideStats} style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', borderRadius: '4px', background: 'var(--error)', color: '#fff', border: 'none', cursor: 'pointer' }}>Apply</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* View All Providers Modal */}
+      {showViewAllProviders && (
+        <div style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.7)', zIndex: 9999 }}>
+          <div className="glass-panel" style={{ padding: '1.5rem', width: '400px', maxHeight: '80vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem', border: '1px solid var(--border)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ margin: 0, fontSize: '1rem' }}>All Providers Share</h3>
+              <button type="button" onClick={() => setShowViewAllProviders(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '1.2rem' }}>×</button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {providersData.map((prov, index) => {
+                const percent = totalRequests > 0 ? (prov.count / totalRequests) * 100 : 0;
+                return (
+                  <div key={prov.id} style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem' }}>
+                      <span style={{ fontWeight: 600, color: 'var(--text)' }}>{index + 1}. {prov.name} <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>~{prov.avgLatencyMs}ms</span></span>
+                      <span style={{ color: 'var(--text-muted)' }}><strong>{prov.count}</strong> reqs ({percent.toFixed(1)}%)</span>
+                    </div>
+                    <div style={{ height: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${percent}%`, background: prov.id === 'cache' ? 'var(--success)' : `linear-gradient(to right, var(--accent-glow), var(--accent))` }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* View All Models Modal */}
+      {showViewAllModels && (
+        <div style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.7)', zIndex: 9999 }}>
+          <div className="glass-panel" style={{ padding: '1.5rem', width: '400px', maxHeight: '80vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem', border: '1px solid var(--border)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ margin: 0, fontSize: '1rem' }}>All Models Share</h3>
+              <button type="button" onClick={() => setShowViewAllModels(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '1.2rem' }}>×</button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {modelsData.map((mod, index) => {
+                const percent = totalRequests > 0 ? (mod.count / totalRequests) * 100 : 0;
+                return (
+                  <div key={mod.name} style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem' }}>
+                      <span style={{ fontWeight: 600, color: 'var(--text)' }}>{index + 1}. {mod.name} <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>~{mod.avgLatencyMs}ms</span></span>
+                      <span style={{ color: 'var(--text-muted)' }}><strong>{mod.count}</strong> reqs ({percent.toFixed(1)}%)</span>
+                    </div>
+                    <div style={{ height: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${percent}%`, background: `linear-gradient(to right, #6b40ac, #a168ff)` }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* View All Errors Modal */}
+      {showViewAllErrors && (
+        <div style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.7)', zIndex: 9999 }}>
+          <div className="glass-panel" style={{ padding: '1.5rem', width: '450px', maxHeight: '80vh', display: 'flex', flexDirection: 'column', gap: '1rem', border: '1px solid var(--border)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ margin: 0, fontSize: '1rem' }}>All Recorded Errors</h3>
+              <button type="button" onClick={() => setShowViewAllErrors(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '1.2rem' }}>×</button>
+            </div>
+            <input 
+              type="text" 
+              placeholder="Search errors..." 
+              value={errorSearch} 
+              onChange={e => setErrorSearch(e.target.value)} 
+              style={{ padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--border)', background: '#1a1a24', color: 'var(--text)', outline: 'none', width: '100%', boxSizing: 'border-box' }} 
+            />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', overflowY: 'auto' }}>
+              {errorsData.filter(e => e.msg.toLowerCase().includes(errorSearch.toLowerCase())).map((err, idx) => {
+                const isInternal = err.msg.toLowerCase().includes('timeout') || err.msg.toLowerCase().includes('econnrefused') || err.msg.toLowerCase().includes('internal') || err.msg.toLowerCase().includes('fetch failed');
+                return (
+                  <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', padding: '0.4rem 0.6rem', background: isInternal ? 'rgba(255, 165, 0, 0.1)' : 'var(--error-glow)', borderRadius: '4px', border: `1px solid ${isInternal ? 'rgba(255, 165, 0, 0.2)' : 'rgba(255, 68, 68, 0.1)'}` }}>
+                    <span style={{ color: isInternal ? 'orange' : 'var(--error)' }}>
+                      {isInternal ? '⚙️' : '⚠️'} {err.msg}
+                    </span>
+                    <strong style={{ color: 'var(--text)' }}>{err.count}</strong>
+                  </div>
+                );
+              })}
+              {errorsData.filter(e => e.msg.toLowerCase().includes(errorSearch.toLowerCase())).length === 0 && (
+                <div style={{ textAlign: 'center', padding: '1rem', color: 'var(--text-muted)', fontSize: '0.8rem' }}>No matching errors found.</div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* View All Rate Limits Modal */}
+      {showViewAllLimits && (
+        <div style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.7)', zIndex: 9999 }}>
+          <div className="glass-panel" style={{ padding: '1.5rem', width: '600px', maxHeight: '80vh', display: 'flex', flexDirection: 'column', gap: '1rem', border: '1px solid var(--border)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ margin: 0, fontSize: '1rem' }}>All Configured Rate Limits</h3>
+              <button type="button" onClick={() => setShowViewAllLimits(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '1.2rem' }}>×</button>
+            </div>
+            
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', textAlign: 'left' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                    <th style={{ padding: '0.5rem', color: 'var(--text-muted)' }}>Target</th>
+                    <th style={{ padding: '0.5rem', color: 'var(--text-muted)' }}>Metric</th>
+                    <th style={{ padding: '0.5rem', color: 'var(--text-muted)' }}>Usage</th>
+                    <th style={{ padding: '0.5rem', color: 'var(--text-muted)', width: '120px' }}>Capacity</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {limitRows.slice((limitsCurrentPage - 1) * 15, limitsCurrentPage * 15).map((row, idx) => {
+                    const color = row.pct >= 90 ? 'var(--error)' : (row.pct >= 75 ? 'var(--warning)' : 'var(--success)');
+                    return (
+                      <tr key={`${row.entity}-${row.metric}-${idx}`} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                        <td style={{ padding: '0.5rem' }}><strong style={{ color: 'var(--text)' }}>{row.entity}</strong></td>
+                        <td style={{ padding: '0.5rem', textTransform: 'uppercase', color: 'var(--text-muted)' }}>{row.metric}</td>
+                        <td style={{ padding: '0.5rem' }}>{row.used.toLocaleString()} <span style={{ color: 'var(--text-muted)' }}>/ {row.limit.toLocaleString()}</span></td>
+                        <td style={{ padding: '0.5rem' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <div style={{ height: '4px', flex: 1, background: 'rgba(255,255,255,0.1)', borderRadius: '2px', overflow: 'hidden' }}>
+                              <div style={{ height: '100%', width: `${row.pct}%`, background: color }} />
+                            </div>
+                            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', minWidth: '35px', textAlign: 'right' }}>{row.pct.toFixed(1)}%</span>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {limitRows.length === 0 && (
+                    <tr>
+                      <td colSpan={4} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>No rate limits configured.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {limitRows.length > 15 && (
+              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1rem', marginTop: 'auto' }}>
+                <button 
+                  onClick={() => setLimitsCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={limitsCurrentPage === 1}
+                  className="secondary"
+                  style={{ padding: '0.3rem 0.75rem', fontSize: '0.75rem', borderRadius: '6px', opacity: limitsCurrentPage === 1 ? 0.5 : 1, cursor: limitsCurrentPage === 1 ? 'not-allowed' : 'pointer' }}
+                >
+                  Previous
+                </button>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                  Page {limitsCurrentPage} of {Math.ceil(limitRows.length / 15)}
+                </span>
+                <button 
+                  onClick={() => setLimitsCurrentPage(p => Math.min(Math.ceil(limitRows.length / 15), p + 1))}
+                  disabled={limitsCurrentPage === Math.ceil(limitRows.length / 15)}
+                  className="secondary"
+                  style={{ padding: '0.3rem 0.75rem', fontSize: '0.75rem', borderRadius: '6px', opacity: limitsCurrentPage === Math.ceil(limitRows.length / 15) ? 0.5 : 1, cursor: limitsCurrentPage === Math.ceil(limitRows.length / 15) ? 'not-allowed' : 'pointer' }}
+                >
+                  Next
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
     </div>

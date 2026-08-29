@@ -10,6 +10,9 @@ const history = {
 // Active in-flight concurrency tracker per key
 const activeConcurrency = {};
 
+// Full details of active in-flight requests for UI
+export const activeRequests = [];
+
 // Cooldown expiry timestamps (for API errors or unexpected 429s)
 // Format: { providerId: timestamp }
 const cooldowns = {};
@@ -208,9 +211,10 @@ export function checkRateLimit(provider, model) {
  * Increments concurrency and records an immediate request entry.
  * @param {string} providerId - Provider identifier.
  * @param {string} modelId - Model identifier.
+ * @param {number} estimatedTokens - Optional prompt token count for live view.
  * @returns {object} - The created history entry object reference.
  */
-export function recordRequestStart(providerId, modelId) {
+export function recordRequestStart(providerId, modelId, estimatedTokens = 0) {
   const baseProviderId = providerId.split(':')[0];
   const modelKey = `${providerId}:${modelId}`;
   
@@ -221,7 +225,9 @@ export function recordRequestStart(providerId, modelId) {
   activeConcurrency[modelKey] = (activeConcurrency[modelKey] || 0) + 1;
 
   const now = Date.now();
-  const entry = { timestamp: now, tokens: 0 };
+  const entry = { timestamp: now, tokens: estimatedTokens, providerId, modelId };
+
+  activeRequests.push(entry);
 
   const append = (key) => {
     if (!history.requests[key]) history.requests[key] = [];
@@ -253,6 +259,10 @@ export function recordRequestEnd(providerId, modelId, entry, tokens = 0) {
 
   if (entry) {
     entry.tokens = tokens;
+    const idx = activeRequests.findIndex(r => r === entry);
+    if (idx !== -1) {
+      activeRequests.splice(idx, 1);
+    }
   }
 }
 

@@ -467,7 +467,8 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
   eventLog(`Selected backend target: ${provider.name} (model: ${target.modelId})`);
   
   // Register pre-flight request start and increment concurrency counter
-  const reqReservation = recordRequestStart(provider.id, target.modelId);
+  const promptTokens = estimateTokens(JSON.stringify(reqPayload.messages || []));
+  const reqReservation = recordRequestStart(provider.id, target.modelId, promptTokens);
   
   const providerType = provider.id.split(':')[0];
 

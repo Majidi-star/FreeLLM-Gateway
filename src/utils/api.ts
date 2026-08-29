@@ -77,6 +77,7 @@ export interface Stats {
   failedRequests: number;
   tokensSaved: number;
   approximateCostSaved: number;
+  hiddenBefore?: string;
 }
 
 export interface VirtualKey {
@@ -123,7 +124,7 @@ export async function saveConfig(config: GatewayConfig): Promise<{ success: bool
   });
 }
 
-export async function getStats(): Promise<{ stats: Stats; limits: any }> {
+export async function getStats(): Promise<{ stats: Stats; limits: any; activeRequests: any[] }> {
   return fetchJson(`${API_BASE}/api/stats`);
 }
 
@@ -352,8 +353,9 @@ export async function getStatsHistory(): Promise<StatsHistoryEntry[]> {
   return fetchJson(`${API_BASE}/api/stats/history`);
 }
 
-export async function clearStatsHistory(): Promise<{ success: boolean }> {
+export async function clearStatsHistory(hiddenBefore?: string, unhide?: boolean): Promise<{ success: boolean }> {
   return fetchJson(`${API_BASE}/api/stats/history/clear`, {
     method: 'POST',
+    body: JSON.stringify({ hiddenBefore, unhide })
   });
 }

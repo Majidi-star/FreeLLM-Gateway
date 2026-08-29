@@ -4073,6 +4073,13 @@ export function loadStatsHistory() {
     console.error('Error loading stats history:', err);
     statsHistory = [];
   }
+  
+  const config = loadConfig();
+  if (config.stats && config.stats.hiddenBefore) {
+    const hiddenTime = new Date(config.stats.hiddenBefore).getTime();
+    return statsHistory.filter(entry => new Date(entry.timestamp).getTime() >= hiddenTime);
+  }
+  
   return statsHistory;
 }
 
