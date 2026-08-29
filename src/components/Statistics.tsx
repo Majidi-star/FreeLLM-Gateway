@@ -605,6 +605,7 @@ export const Statistics: React.FC<StatisticsProps> = ({ config }) => {
           >
             🙈 Hide History
           </button>
+        </div>
       </div>
 
       {/* Custom Time Config Panel */}
