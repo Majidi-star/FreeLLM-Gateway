@@ -513,8 +513,15 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
     headers['Authorization'] = `Bearer ${provider.apiKey}`;
   } else if (providerType === 'gemini') {
     // Gemini OpenAI compatibility endpoint:
-    // Can pass api key via standard Authorization header or query parameter
-    targetUrl = `${provider.baseUrl}/openai/chat/completions`;
+    let base = provider.baseUrl;
+    if (base.endsWith('/models')) {
+      base = base.substring(0, base.length - 7);
+    }
+    if (base.endsWith('/openai')) {
+      targetUrl = `${base}/chat/completions`;
+    } else {
+      targetUrl = `${base}/openai/chat/completions`;
+    }
     headers['Authorization'] = `Bearer ${provider.apiKey}`;
   } else {
     headers['Authorization'] = `Bearer ${provider.apiKey}`;
