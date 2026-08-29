@@ -518,8 +518,13 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
     headers['Authorization'] = `Bearer ${provider.apiKey}`;
   }
 
-  // Adjust model ID in paylod
+  // Adjust model ID in payload and remove all internal tracking fields (starting with _)
   const apiPayload = { ...reqPayload, model: target.modelId };
+  for (const key of Object.keys(apiPayload)) {
+    if (key.startsWith('_')) {
+      delete apiPayload[key];
+    }
+  }
 
   // Translate payload if Anthropic
   let payloadToSend = apiPayload;
@@ -527,7 +532,8 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
     payloadToSend = convertToAnthropic(apiPayload);
   }
 
-  const timeoutMs = (virtualModel && virtualModel.config && virtualModel.config.timeoutMs) || 60000;
+  const targetTimeoutMs = target.timeoutMs;
+  const timeoutMs = targetTimeoutMs || (virtualModel && virtualModel.config && virtualModel.config.timeoutMs) || 60000;
 
   const axiosConfig = {
     method: 'POST',

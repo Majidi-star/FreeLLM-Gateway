@@ -28,6 +28,7 @@ config.json
 config.json.*
 chat-sessions.json
 server/cache.json
+stats-history.json
 *.local
 .env
 .env.*

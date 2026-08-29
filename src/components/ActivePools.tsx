@@ -121,6 +121,26 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
     onSave(newConfig); // Instant apply to backend
   };
 
+  const handleTargetTimeoutChange = (vmId: string, index: number, value: string) => {
+    const updatedVms = localConfig.virtualModels.map(vm => {
+      if (vm.id === vmId) {
+        const targets = [...vm.targets];
+        const ms = parseInt(value);
+        if (!isNaN(ms) && ms > 0) {
+          targets[index] = { ...targets[index], timeoutMs: ms * 1000 };
+        } else {
+          // If empty, remove the override
+          const newTarget = { ...targets[index] };
+          delete newTarget.timeoutMs;
+          targets[index] = newTarget;
+        }
+        return { ...vm, targets };
+      }
+      return vm;
+    });
+    setLocalConfig({ ...localConfig, virtualModels: updatedVms });
+  };
+
   const handleRemoveTarget = (vmId: string, index: number) => {
     const virtualModel = localConfig.virtualModels.find(vm => vm.id === vmId);
     if (!virtualModel) return;
@@ -421,6 +441,7 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
                     {vm.targets.map((target, index) => {
                       const provider = localConfig.providers.find(p => p.id === target.providerId);
                       const modelObj = provider?.models.find(m => m.id === target.modelId);
+                      const isMissing = provider && !modelObj;
                       
                       return (
                         <div key={index} 
@@ -441,8 +462,8 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
                           alignItems: 'center',
                           justifyContent: 'space-between',
                           padding: '0.75rem 1rem',
-                          background: 'oklch(20% 0.018 255.4 / 0.3)',
-                          border: '1px solid var(--border)',
+                          background: isMissing ? 'oklch(20% 0.05 25 / 0.3)' : 'oklch(20% 0.018 255.4 / 0.3)',
+                          border: isMissing ? '1px dashed var(--error)' : '1px solid var(--border)',
                           borderRadius: '8px',
                           opacity: target.enabled !== false ? 1 : 0.5,
                           cursor: 'grab'
@@ -451,12 +472,25 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
                             <span style={{ cursor: 'grab', fontSize: '1.2rem', color: 'var(--text-muted)' }}>☰</span>
                             <span style={{ fontWeight: 800, color: 'var(--accent)', fontSize: '1.1rem' }}>Priority #{index + 1}</span>
                             <div style={{ display: 'flex', flexDirection: 'column' }}>
-                              <span style={{ fontWeight: 600 }}>{modelObj?.name || target.modelId}</span>
+                              <span style={{ fontWeight: 600, color: isMissing ? 'var(--error)' : 'inherit' }}>
+                                {modelObj?.name || target.modelId} {isMissing && <span style={{ fontSize: '0.75rem', background: 'var(--error)', color: '#fff', padding: '0.1rem 0.3rem', borderRadius: '4px', marginLeft: '0.5rem' }}>⚠️ Removed from Provider</span>}
+                              </span>
                               <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Provider: {provider?.name || target.providerId}</span>
                             </div>
                           </div>
 
-                          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginRight: '0.5rem' }}>
+                              <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }} title="Override the pool's default timeout for this specific model">Timeout (s):</label>
+                              <input 
+                                type="number" 
+                                min={1}
+                                placeholder="Auto"
+                                value={target.timeoutMs ? target.timeoutMs / 1000 : ''}
+                                onChange={(e) => handleTargetTimeoutChange(vm.id, index, e.target.value)}
+                                style={{ width: '60px', padding: '0.2rem 0.4rem', fontSize: '0.75rem', background: '#0a0a0f', color: '#c5c9db', border: '1px solid var(--border)', borderRadius: '4px' }}
+                              />
+                            </div>
                             <button
                               type="button"
                               onClick={() => handleToggleTargetEnabled(vm.id, index)}

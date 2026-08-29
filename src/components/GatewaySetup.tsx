@@ -192,10 +192,25 @@ export const GatewaySetup: React.FC<GatewaySetupProps> = ({ config, onSave }) =>
       setLocalConfig(newConfig);
       onSave(newConfig);
       
+      // Check for removed models used in pools
+      let removedCount = 0;
+      localConfig.virtualModels.forEach(vm => {
+        vm.targets.forEach(t => {
+          if (t.providerId === provider.id) {
+            const stillExists = res.models.some(m => m.id === t.modelId);
+            if (!stillExists) removedCount++;
+          }
+        });
+      });
+
+      if (removedCount > 0) {
+        alert(`Warning: ${removedCount} model(s) from ${provider.name} currently used in your Active Routing Pools were removed from their API list. They are now flagged as unavailable in your pools.`);
+      }
+      
       setActionResult({ 
         id: provider.id, 
         success: true, 
-        message: `Successfully synced ${res.models.length} models!` 
+        message: `Successfully synced ${res.models.length} models!${removedCount > 0 ? ` (${removedCount} removed from pools)` : ''}` 
       });
     } catch (err: any) {
       setActionResult({ 
@@ -205,6 +220,54 @@ export const GatewaySetup: React.FC<GatewaySetupProps> = ({ config, onSave }) =>
       });
     } finally {
       setSyncingId(null);
+    }
+  };
+
+  const [syncingAll, setSyncingAll] = useState(false);
+
+  const handleSyncAllModels = async () => {
+    setSyncingAll(true);
+    let totalSynced = 0;
+    let totalRemoved = 0;
+    const updatedProviders = [...localConfig.providers];
+
+    for (let i = 0; i < updatedProviders.length; i++) {
+      const p = updatedProviders[i];
+      if (!p.enabled) continue;
+      
+      try {
+        const res = await syncProviderModels(p.id, {
+          apiKey: p.apiKey,
+          baseUrl: p.baseUrl,
+          proxyEnabled: p.proxyEnabled,
+          proxyUrl: p.proxyUrl
+        });
+        
+        updatedProviders[i] = { ...p, models: res.models };
+        totalSynced += res.models.length;
+
+        localConfig.virtualModels.forEach(vm => {
+          vm.targets.forEach(t => {
+            if (t.providerId === p.id) {
+              const stillExists = res.models.some(m => m.id === t.modelId);
+              if (!stillExists) totalRemoved++;
+            }
+          });
+        });
+      } catch (err) {
+        console.error(`Failed to sync ${p.name}:`, err);
+      }
+    }
+
+    const newConfig = { ...localConfig, providers: updatedProviders };
+    setLocalConfig(newConfig);
+    onSave(newConfig);
+    setSyncingAll(false);
+
+    if (totalRemoved > 0) {
+      alert(`Sync Complete: Synced ${totalSynced} models across providers. \n\nWarning: ${totalRemoved} model(s) currently used in your Active Routing Pools were removed from their API list. They are now flagged as unavailable in your pools.`);
+    } else {
+      alert(`Sync Complete: Successfully synced ${totalSynced} models across providers.`);
     }
   };
 
@@ -323,9 +386,19 @@ export const GatewaySetup: React.FC<GatewaySetupProps> = ({ config, onSave }) =>
       {/* Header with "+ Add custom provider" button */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h3 style={{ margin: 0 }}>Manage API Providers</h3>
-        <button type="button" className="primary" onClick={() => setShowAddForm(!showAddForm)}>
-          {showAddForm ? 'Cancel' : '+ Add Custom Provider'}
-        </button>
+        <div style={{ display: 'flex', gap: '0.75rem' }}>
+          <button 
+            type="button" 
+            onClick={handleSyncAllModels}
+            disabled={syncingAll}
+            style={{ padding: '0.5rem 1rem', background: 'oklch(20% 0.018 255.4 / 0.5)', border: '1px solid var(--border)', borderRadius: '6px', cursor: syncingAll ? 'wait' : 'pointer' }}
+          >
+            {syncingAll ? 'Syncing...' : '🔄 Sync All Models'}
+          </button>
+          <button type="button" className="primary" onClick={() => setShowAddForm(!showAddForm)}>
+            {showAddForm ? 'Cancel' : '+ Add Custom Provider'}
+          </button>
+        </div>
       </div>
 
       {/* Add Custom Provider Form drawer */}

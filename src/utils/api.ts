@@ -52,6 +52,7 @@ export interface VirtualModelTarget {
   providerId: string;
   modelId: string;
   enabled?: boolean;
+  timeoutMs?: number;
 }
 
 export interface VirtualModelStrategyConfig {
