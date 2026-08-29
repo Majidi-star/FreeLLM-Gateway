@@ -488,6 +488,142 @@ const ASSISTANT_TOOLS = [
   {
     type: 'function',
     function: {
+      name: 'ask_pool_completion',
+      description: 'Sends a chat prompt to a gateway routing pool and returns the text response.',
+      parameters: {
+        type: 'object',
+        properties: {
+          poolId: { type: 'string', description: 'The virtual pool ID' },
+          prompt: { type: 'string', description: 'The user message prompt' },
+          systemPrompt: { type: 'string', description: 'Optional system context' },
+          temperature: { type: 'number', description: 'Temperature' }
+        },
+        required: ['poolId', 'prompt']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'update_global_settings',
+      description: 'Update global gateway settings.',
+      parameters: {
+        type: 'object',
+        properties: {
+          globalProxy: { type: 'string' },
+          globalProxyEnabled: { type: 'boolean' },
+          rateLimitQueueEnabled: { type: 'boolean' },
+          rateLimitQueueTimeoutMs: { type: 'number' }
+        }
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'update_provider_settings',
+      description: 'Update settings for a specific provider.',
+      parameters: {
+        type: 'object',
+        properties: {
+          providerId: { type: 'string' },
+          enabled: { type: 'boolean' },
+          baseUrl: { type: 'string' },
+          proxyEnabled: { type: 'boolean' },
+          proxyUrl: { type: 'string' },
+          category: { type: 'string' },
+          website: { type: 'string' },
+          signupUrl: { type: 'string' },
+          creditsDescription: { type: 'string' },
+          limitsDescription: { type: 'string' }
+        },
+        required: ['providerId']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'get_logs',
+      description: 'Retrieve operational gateway logs.',
+      parameters: { type: 'object', properties: {} }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'clear_logs',
+      description: 'Clear all operational gateway logs.',
+      parameters: { type: 'object', properties: {} }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'manage_stats_history',
+      description: 'Hide, unhide, or clear stats history.',
+      parameters: {
+        type: 'object',
+        properties: {
+          unhide: { type: 'boolean' },
+          hiddenBefore: { type: 'number', description: 'Timestamp to hide before' },
+          forceDelete: { type: 'boolean' }
+        }
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'get_cache_stats',
+      description: 'Get semantic cache size.',
+      parameters: { type: 'object', properties: {} }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'manage_chat_sessions',
+      description: 'List, create, update, or delete chat sessions.',
+      parameters: {
+        type: 'object',
+        properties: {
+          action: { type: 'string', enum: ['list', 'create', 'update', 'delete'] },
+          sessionId: { type: 'string' },
+          title: { type: 'string' }
+        },
+        required: ['action']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'get_chat_messages',
+      description: 'Get all messages in a chat session.',
+      parameters: {
+        type: 'object',
+        properties: { sessionId: { type: 'string' } },
+        required: ['sessionId']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'delete_chat_messages',
+      description: 'Truncate chat messages from a specific index.',
+      parameters: {
+        type: 'object',
+        properties: { sessionId: { type: 'string' }, fromIndex: { type: 'number' } },
+        required: ['sessionId', 'fromIndex']
+      }
+    }
+  },
+
+  {
+    type: 'function',
+    function: {
       name: 'get_gateway_status',
       description: 'Get general statistics of the gateway (requests count, tokens pooled, and approximate cost saved in USD).',
       parameters: { type: 'object', properties: {} }
@@ -672,6 +808,105 @@ const ASSISTANT_TOOLS = [
 // Local tool executor
 async function executeLocalTool(name, args) {
   const config = loadConfig();
+
+
+  if (name === 'ask_pool_completion') {
+    const { poolId, prompt, systemPrompt, temperature } = args;
+    try {
+      const res = await axios.post(`http://localhost:${process.env.PORT || 3000}/v1/chat/completions`, {
+        model: poolId, messages: systemPrompt ? [{role: 'system', content: systemPrompt}, {role: 'user', content: prompt}] : [{role: 'user', content: prompt}],
+        temperature: temperature || 0.3
+      }, { timeout: 30000 });
+      return `Success: ${res.data.choices[0].message.content}`;
+    } catch(err) {
+      return `Error: ${err.message}`;
+    }
+  }
+
+  if (name === 'update_global_settings') {
+    const { globalProxy, globalProxyEnabled, rateLimitQueueEnabled, rateLimitQueueTimeoutMs } = args;
+    if (globalProxy !== undefined) config.globalProxy = globalProxy;
+    if (globalProxyEnabled !== undefined) config.globalProxyEnabled = globalProxyEnabled;
+    if (rateLimitQueueEnabled !== undefined) config.rateLimitQueueEnabled = rateLimitQueueEnabled;
+    if (rateLimitQueueTimeoutMs !== undefined) config.rateLimitQueueTimeoutMs = rateLimitQueueTimeoutMs;
+    saveConfig(config);
+    return `Success: Global settings updated.`;
+  }
+
+  if (name === 'update_provider_settings') {
+    const { providerId, enabled, baseUrl, proxyEnabled, proxyUrl, category, website, signupUrl, creditsDescription, limitsDescription } = args;
+    const provider = config.providers.find(p => p.id === providerId);
+    if (!provider) return `Error: Provider "${providerId}" not found.`;
+    if (enabled !== undefined) provider.enabled = enabled;
+    if (baseUrl !== undefined) provider.baseUrl = baseUrl;
+    if (proxyEnabled !== undefined) provider.proxyEnabled = proxyEnabled;
+    if (proxyUrl !== undefined) provider.proxyUrl = proxyUrl;
+    if (category !== undefined) provider.category = category;
+    if (website !== undefined) provider.website = website;
+    if (signupUrl !== undefined) provider.signupUrl = signupUrl;
+    if (creditsDescription !== undefined) provider.creditsDescription = creditsDescription;
+    if (limitsDescription !== undefined) provider.limitsDescription = limitsDescription;
+    saveConfig(config);
+    return `Success: Settings for provider "${providerId}" updated.`;
+  }
+
+  if (name === 'get_logs') {
+    return JSON.stringify(getLogs().slice(-20)); // Return last 20 logs
+  }
+
+  if (name === 'clear_logs') {
+    clearLogs();
+    return `Success: Logs cleared.`;
+  }
+
+  if (name === 'manage_stats_history') {
+    const { unhide, hiddenBefore, forceDelete } = args;
+    if (unhide) {
+      if (config.stats) { delete config.stats.hiddenBefore; saveConfig(config); }
+      return `Success: Stats history unhidden.`;
+    } else if (hiddenBefore) {
+      if (!config.stats) config.stats = {};
+      config.stats.hiddenBefore = hiddenBefore; saveConfig(config);
+      return `Success: Stats history hidden before ${hiddenBefore}.`;
+    } else if (forceDelete) {
+      clearStatsHistory();
+      return `Success: Stats history permanently deleted.`;
+    }
+    return `Error: No valid action provided.`;
+  }
+
+  if (name === 'get_cache_stats') {
+    return `Success: Cache size is ${getCacheSize()} bytes.`;
+  }
+
+  if (name === 'manage_chat_sessions') {
+    const { action, sessionId, title } = args;
+    if (action === 'list') {
+      return JSON.stringify(getAllChatSessions());
+    } else if (action === 'create') {
+      const session = createChatSession();
+      return `Success: Created session ${session.id}`;
+    } else if (action === 'update') {
+      if (!sessionId || !title) return 'Error: sessionId and title required.';
+      updateChatSessionTitle(sessionId, title);
+      return `Success: Updated session ${sessionId} title to ${title}`;
+    } else if (action === 'delete') {
+      if (!sessionId) return 'Error: sessionId required.';
+      deleteChatSession(sessionId);
+      return `Success: Deleted session ${sessionId}`;
+    }
+  }
+
+  if (name === 'get_chat_messages') {
+    const { sessionId } = args;
+    return JSON.stringify(getMessagesBySession(sessionId));
+  }
+
+  if (name === 'delete_chat_messages') {
+    const { sessionId, fromIndex } = args;
+    truncateChatMessagesFromIndex(sessionId, fromIndex);
+    return `Success: Truncated messages in session ${sessionId} from index ${fromIndex}`;
+  }
   
   if (name === 'get_gateway_status') {
     const stats = config.stats;

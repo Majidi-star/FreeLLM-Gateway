@@ -9,8 +9,8 @@ import axios from 'axios';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { loadConfig, saveConfig } from './db.js';
-import { clearCache } from './cache.js';
+import { loadConfig, saveConfig, getLogs, clearLogs, getAllChatSessions, createChatSession, updateChatSessionTitle, deleteChatSession, getMessagesBySession, truncateChatMessagesFromIndex, clearStatsHistory } from './db.js';
+import { clearCache, getCacheSize } from './cache.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -57,6 +57,90 @@ rl.on('line', async (line) => {
     } else if (method === 'tools/list') {
       sendResponse(id, {
         tools: [
+          {
+            name: 'test_provider_connection',
+            description: 'Verify API credentials and connectivity for a provider.',
+            inputSchema: { type: 'object', properties: { providerId: { type: 'string' } }, required: ['providerId'] }
+          },
+          {
+            name: 'add_custom_provider',
+            description: 'Dynamically add a new custom provider.',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                id: { type: 'string' }, name: { type: 'string' }, baseUrl: { type: 'string' }, apiKey: { type: 'string' },
+                category: { type: 'string' }, creditsDescription: { type: 'string' }, limitsDescription: { type: 'string' }
+              }, required: ['id', 'name', 'baseUrl']
+            }
+          },
+          {
+            name: 'delete_provider',
+            description: 'Delete an existing provider.',
+            inputSchema: { type: 'object', properties: { providerId: { type: 'string' } }, required: ['providerId'] }
+          },
+          {
+            name: 'get_app_documentation',
+            description: 'Get comprehensive app documentation.',
+            inputSchema: { type: 'object', properties: {} }
+          },
+          {
+            name: 'update_global_settings',
+            description: 'Update global gateway settings.',
+            inputSchema: {
+              type: 'object', properties: {
+                globalProxy: { type: 'string' }, globalProxyEnabled: { type: 'boolean' }, rateLimitQueueEnabled: { type: 'boolean' }, rateLimitQueueTimeoutMs: { type: 'number' }
+              }
+            }
+          },
+          {
+            name: 'update_provider_settings',
+            description: 'Update settings for a specific provider.',
+            inputSchema: {
+              type: 'object', properties: {
+                providerId: { type: 'string' }, enabled: { type: 'boolean' }, baseUrl: { type: 'string' }, proxyEnabled: { type: 'boolean' }, proxyUrl: { type: 'string' }, category: { type: 'string' }, website: { type: 'string' }, signupUrl: { type: 'string' }, creditsDescription: { type: 'string' }, limitsDescription: { type: 'string' }
+              }, required: ['providerId']
+            }
+          },
+          {
+            name: 'get_logs',
+            description: 'Retrieve operational logs.',
+            inputSchema: { type: 'object', properties: {} }
+          },
+          {
+            name: 'clear_logs',
+            description: 'Clear operational logs.',
+            inputSchema: { type: 'object', properties: {} }
+          },
+          {
+            name: 'manage_stats_history',
+            description: 'Hide, unhide, or clear stats history.',
+            inputSchema: {
+              type: 'object', properties: { unhide: { type: 'boolean' }, hiddenBefore: { type: 'number' }, forceDelete: { type: 'boolean' } }
+            }
+          },
+          {
+            name: 'get_cache_stats',
+            description: 'Get semantic cache size.',
+            inputSchema: { type: 'object', properties: {} }
+          },
+          {
+            name: 'manage_chat_sessions',
+            description: 'List, create, update, or delete chat sessions.',
+            inputSchema: {
+              type: 'object', properties: { action: { type: 'string', enum: ['list', 'create', 'update', 'delete'] }, sessionId: { type: 'string' }, title: { type: 'string' } }, required: ['action']
+            }
+          },
+          {
+            name: 'get_chat_messages',
+            description: 'Get all messages in a chat session.',
+            inputSchema: { type: 'object', properties: { sessionId: { type: 'string' } }, required: ['sessionId'] }
+          },
+          {
+            name: 'delete_chat_messages',
+            description: 'Truncate chat messages.',
+            inputSchema: { type: 'object', properties: { sessionId: { type: 'string' }, fromIndex: { type: 'number' } }, required: ['sessionId', 'fromIndex'] }
+          },
+
           {
             name: 'get_gateway_status',
             description: 'Returns the gateway status, total cost saved, total requests, and pooled tokens count.',
@@ -189,6 +273,94 @@ rl.on('line', async (line) => {
 async function handleToolCall(name, args) {
   try {
     const config = loadConfig();
+
+
+    if (name === 'test_provider_connection') {
+      const { providerId } = args;
+      const provider = config.providers.find(p => p.id === providerId);
+      if (!provider) return { content: [{ type: 'text', text: `Error: Provider "${providerId}" not found.` }] };
+      const url = `http://localhost:${runtimePort}/api/test-provider`;
+      try {
+        const res = await axios.post(url, {
+          providerId, apiKey: provider.apiKey || (provider.apiKeys?.[0]?.key || ''), baseUrl: provider.baseUrl, proxyEnabled: provider.proxyEnabled, proxyUrl: provider.proxyUrl, testModelId: provider.models[0]?.id || 'test'
+        }, { timeout: 15000 });
+        return { content: [{ type: 'text', text: `Success: Connection test succeeded!` }] };
+      } catch (err) {
+        return { content: [{ type: 'text', text: `Failed: ${err.message}` }] };
+      }
+    }
+
+    if (name === 'add_custom_provider') {
+      const { id, name: provName, baseUrl, apiKey, category, creditsDescription, limitsDescription } = args;
+      const cleanId = id.toLowerCase().trim().replace(/\s+/g, '-');
+      if (config.providers.some(p => p.id === cleanId)) return { content: [{ type: 'text', text: `Error: Provider exists.` }] };
+      config.providers.push({
+        id: cleanId, name: provName, enabled: true, apiKey: apiKey || '', baseUrl: baseUrl.trim(), proxyEnabled: false, proxyUrl: '', category: category || 'Custom Local', website: '', signupUrl: '', creditsDescription: creditsDescription || '', limitsDescription: limitsDescription || '', models: []
+      });
+      saveConfig(config);
+      return { content: [{ type: 'text', text: `Success: Added ${provName}` }] };
+    }
+
+    if (name === 'delete_provider') {
+      config.providers = config.providers.filter(p => p.id !== args.providerId);
+      saveConfig(config);
+      return { content: [{ type: 'text', text: `Success: Deleted provider.` }] };
+    }
+
+    if (name === 'get_app_documentation') {
+      return { content: [{ type: 'text', text: `--- LLM FREE POOL GATEWAY DOCS ---` }] };
+    }
+
+    if (name === 'update_global_settings') {
+      const { globalProxy, globalProxyEnabled, rateLimitQueueEnabled, rateLimitQueueTimeoutMs } = args;
+      if (globalProxy !== undefined) config.globalProxy = globalProxy;
+      if (globalProxyEnabled !== undefined) config.globalProxyEnabled = globalProxyEnabled;
+      if (rateLimitQueueEnabled !== undefined) config.rateLimitQueueEnabled = rateLimitQueueEnabled;
+      if (rateLimitQueueTimeoutMs !== undefined) config.rateLimitQueueTimeoutMs = rateLimitQueueTimeoutMs;
+      saveConfig(config);
+      return { content: [{ type: 'text', text: `Success: Global settings updated.` }] };
+    }
+
+    if (name === 'update_provider_settings') {
+      const { providerId, enabled, baseUrl, proxyEnabled, proxyUrl, category, website, signupUrl, creditsDescription, limitsDescription } = args;
+      const provider = config.providers.find(p => p.id === providerId);
+      if (!provider) return { content: [{ type: 'text', text: `Error: Provider not found.` }] };
+      if (enabled !== undefined) provider.enabled = enabled;
+      if (baseUrl !== undefined) provider.baseUrl = baseUrl;
+      if (proxyEnabled !== undefined) provider.proxyEnabled = proxyEnabled;
+      if (proxyUrl !== undefined) provider.proxyUrl = proxyUrl;
+      if (category !== undefined) provider.category = category;
+      if (website !== undefined) provider.website = website;
+      if (signupUrl !== undefined) provider.signupUrl = signupUrl;
+      if (creditsDescription !== undefined) provider.creditsDescription = creditsDescription;
+      if (limitsDescription !== undefined) provider.limitsDescription = limitsDescription;
+      saveConfig(config);
+      return { content: [{ type: 'text', text: `Success: Settings for provider "${providerId}" updated.` }] };
+    }
+
+    if (name === 'get_logs') return { content: [{ type: 'text', text: JSON.stringify(getLogs().slice(-20)) }] };
+    if (name === 'clear_logs') { clearLogs(); return { content: [{ type: 'text', text: `Success: Logs cleared.` }] }; }
+
+    if (name === 'manage_stats_history') {
+      const { unhide, hiddenBefore, forceDelete } = args;
+      if (unhide) { if (config.stats) { delete config.stats.hiddenBefore; saveConfig(config); } }
+      else if (hiddenBefore) { if (!config.stats) config.stats = {}; config.stats.hiddenBefore = hiddenBefore; saveConfig(config); }
+      else if (forceDelete) { clearStatsHistory(); }
+      return { content: [{ type: 'text', text: `Success: Action performed.` }] };
+    }
+
+    if (name === 'get_cache_stats') return { content: [{ type: 'text', text: `Success: Cache size ${getCacheSize()}` }] };
+
+    if (name === 'manage_chat_sessions') {
+      const { action, sessionId, title } = args;
+      if (action === 'list') return { content: [{ type: 'text', text: JSON.stringify(getAllChatSessions()) }] };
+      if (action === 'create') return { content: [{ type: 'text', text: `Success: ${createChatSession().id}` }] };
+      if (action === 'update') { updateChatSessionTitle(sessionId, title); return { content: [{ type: 'text', text: `Success` }] }; }
+      if (action === 'delete') { deleteChatSession(sessionId); return { content: [{ type: 'text', text: `Success` }] }; }
+    }
+
+    if (name === 'get_chat_messages') return { content: [{ type: 'text', text: JSON.stringify(getMessagesBySession(args.sessionId)) }] };
+    if (name === 'delete_chat_messages') { truncateChatMessagesFromIndex(args.sessionId, args.fromIndex); return { content: [{ type: 'text', text: `Success` }] }; }
 
     if (name === 'get_gateway_status') {
       const stats = config.stats;
