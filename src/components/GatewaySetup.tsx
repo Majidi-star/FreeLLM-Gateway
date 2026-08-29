@@ -617,13 +617,26 @@ export const GatewaySetup: React.FC<GatewaySetupProps> = ({ config, onSave }) =>
                                 {(!provider.apiKeys || provider.apiKeys.length === 0) ? (
                                   <div style={{ padding: '0.75rem', border: '1px dashed var(--border)', borderRadius: '6px', fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center' }}>
                                     No custom key accounts configured. Balancing defaults to primary key:
-                                    <input 
-                                      type="password" 
-                                      placeholder="Primary API Key"
-                                      value={provider.apiKey}
-                                      onChange={(e) => handleProviderChange(provider.id, 'apiKey', e.target.value)}
-                                      style={{ marginTop: '0.5rem', width: '100%', fontSize: '0.8rem', padding: '0.4rem', background: '#0a0a0f', color: '#c5c9db', border: '1px solid var(--border)', borderRadius: '6px' }}
-                                    />
+                                    <div style={{ display: 'flex', gap: '0.25rem', width: '100%', marginTop: '0.5rem' }}>
+                                      <input 
+                                        type="password" 
+                                        placeholder="Primary API Key"
+                                        value={provider.apiKey}
+                                        onChange={(e) => handleProviderChange(provider.id, 'apiKey', e.target.value)}
+                                        style={{ flex: 1, fontSize: '0.8rem', padding: '0.4rem', background: '#0a0a0f', color: '#c5c9db', border: '1px solid var(--border)', borderRadius: '6px' }}
+                                      />
+                                      <button
+                                        type="button"
+                                        title="Copy API Key"
+                                        onClick={() => {
+                                          navigator.clipboard.writeText(provider.apiKey);
+                                          alert('API Key copied to clipboard!');
+                                        }}
+                                        style={{ padding: '0.4rem', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: '1px solid var(--border)', borderRadius: '6px', cursor: 'pointer' }}
+                                      >
+                                        📋
+                                      </button>
+                                    </div>
                                   </div>
                                 ) : (
                                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -635,13 +648,26 @@ export const GatewaySetup: React.FC<GatewaySetupProps> = ({ config, onSave }) =>
                                           onChange={(e) => handleAccountKeyChange(provider.id, k.id, 'enabled', e.target.checked)}
                                           style={{ cursor: 'pointer', margin: 0 }}
                                         />
-                                        <input 
-                                          type="password"
-                                          placeholder="API Key string"
-                                          value={k.key}
-                                          onChange={(e) => handleAccountKeyChange(provider.id, k.id, 'key', e.target.value)}
-                                          style={{ flex: 1, fontSize: '0.8rem', padding: '0.35rem 0.5rem', background: '#0a0a0f', color: '#c5c9db', border: '1px solid var(--border)', borderRadius: '6px' }}
-                                        />
+                                        <div style={{ display: 'flex', flex: 1, gap: '0.25rem', alignItems: 'center' }}>
+                                          <input 
+                                            type="password"
+                                            placeholder="API Key string"
+                                            value={k.key}
+                                            onChange={(e) => handleAccountKeyChange(provider.id, k.id, 'key', e.target.value)}
+                                            style={{ flex: 1, fontSize: '0.8rem', padding: '0.35rem 0.5rem', background: '#0a0a0f', color: '#c5c9db', border: '1px solid var(--border)', borderRadius: '6px', width: '100%' }}
+                                          />
+                                          <button
+                                            type="button"
+                                            title="Copy API Key"
+                                            onClick={() => {
+                                              navigator.clipboard.writeText(k.key);
+                                              alert('API Key copied to clipboard!');
+                                            }}
+                                            style={{ padding: '0.35rem 0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: '1px solid var(--border)', borderRadius: '6px', cursor: 'pointer' }}
+                                          >
+                                            📋
+                                          </button>
+                                        </div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', width: '80px' }}>
                                           <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Wt:</span>
                                           <input 
@@ -666,13 +692,26 @@ export const GatewaySetup: React.FC<GatewaySetupProps> = ({ config, onSave }) =>
                                     
                                     <div style={{ marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                                       <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>Primary Default API Key:</span>
-                                      <input 
-                                        type="password" 
-                                        placeholder="Primary Default key (used for syncing)"
-                                        value={provider.apiKey}
-                                        onChange={(e) => handleProviderChange(provider.id, 'apiKey', e.target.value)}
-                                        style={{ fontSize: '0.8rem', padding: '0.4rem', width: '100%', background: '#0a0a0f', color: '#c5c9db', border: '1px solid var(--border)', borderRadius: '6px' }}
-                                      />
+                                      <div style={{ display: 'flex', gap: '0.25rem', width: '100%' }}>
+                                        <input 
+                                          type="password" 
+                                          placeholder="Primary Default key (used for syncing)"
+                                          value={provider.apiKey}
+                                          onChange={(e) => handleProviderChange(provider.id, 'apiKey', e.target.value)}
+                                          style={{ flex: 1, fontSize: '0.8rem', padding: '0.4rem', background: '#0a0a0f', color: '#c5c9db', border: '1px solid var(--border)', borderRadius: '6px' }}
+                                        />
+                                        <button
+                                          type="button"
+                                          title="Copy API Key"
+                                          onClick={() => {
+                                            navigator.clipboard.writeText(provider.apiKey);
+                                            alert('API Key copied to clipboard!');
+                                          }}
+                                          style={{ padding: '0.4rem', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: '1px solid var(--border)', borderRadius: '6px', cursor: 'pointer' }}
+                                        >
+                                          📋
+                                        </button>
+                                      </div>
                                     </div>
                                   </div>
                                 )}

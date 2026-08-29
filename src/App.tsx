@@ -319,39 +319,39 @@ function App() {
             </nav>
 
             <main style={{ minHeight: '400px' }}>
-              {activeTab === 'directory' && config && (
+              <div style={{ display: activeTab === 'directory' ? 'block' : 'none' }}>
                 <Directory providers={config.providers} />
-              )}
+              </div>
               
-              {activeTab === 'setup' && (
+              <div style={{ display: activeTab === 'setup' ? 'block' : 'none' }}>
                 <GatewaySetup 
                   config={config} 
                   onSave={handleSaveConfig} 
                 />
-              )}
+              </div>
               
-              {activeTab === 'pools' && (
+              <div style={{ display: activeTab === 'pools' ? 'block' : 'none' }}>
                 <ActivePools 
                   config={config} 
                   onSave={handleSaveConfig} 
                 />
-              )}
+              </div>
 
-              {activeTab === 'playground' && (
+              <div style={{ display: activeTab === 'playground' ? 'block' : 'none' }}>
                 <Playground config={config} />
-              )}
+              </div>
               
-              {activeTab === 'integrations' && (
+              <div style={{ display: activeTab === 'integrations' ? 'block' : 'none' }}>
                 <IntegrationHub config={config} />
-              )}
+              </div>
 
-              {activeTab === 'statistics' && (
+              <div style={{ display: activeTab === 'statistics' ? 'block' : 'none' }}>
                 <Statistics config={config} />
-              )}
+              </div>
 
-              {activeTab === 'alerts' && (
-                <SystemAlerts config={config} onSave={handleSaveConfig} />
-              )}
+              <div style={{ display: activeTab === 'alerts' ? 'block' : 'none' }}>
+                <SystemAlerts config={config} onSave={handleSaveConfig} activeTab={activeTab} />
+              </div>
             </main>
           </div>
 

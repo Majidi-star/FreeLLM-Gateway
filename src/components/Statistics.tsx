@@ -21,6 +21,25 @@ const ERROR_DESCRIPTIONS: Record<string, string> = {
   '504': 'Gateway Timeout: Provider took too long.',
 };
 
+interface CustomTimeConfig {
+  enabled: boolean;
+  startMode: 'fixed' | 'relative';
+  startFixedVal: string;
+  startRelDays: number;
+  startRelHours: number;
+  startRelMins: number;
+  startRelSecs: number;
+  startRelRef: 'end';
+
+  endMode: 'current' | 'fixed' | 'relative';
+  endFixedVal: string;
+  endRelDays: number;
+  endRelHours: number;
+  endRelMins: number;
+  endRelSecs: number;
+  endRelRef: 'start';
+}
+
 export const Statistics: React.FC<StatisticsProps> = ({ config }) => {
   const [history, setHistory] = useState<StatsHistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -28,6 +47,23 @@ export const Statistics: React.FC<StatisticsProps> = ({ config }) => {
 
   // Filters State
   const [timeRange, setTimeRange] = useState<'1h' | '24h' | '7d' | 'all'>('24h');
+  const [customTime, setCustomTime] = useState<CustomTimeConfig>({
+    enabled: false,
+    startMode: 'relative',
+    startFixedVal: '',
+    startRelDays: 0,
+    startRelHours: 1,
+    startRelMins: 0,
+    startRelSecs: 0,
+    startRelRef: 'end',
+    endMode: 'current',
+    endFixedVal: '',
+    endRelDays: 0,
+    endRelHours: 0,
+    endRelMins: 0,
+    endRelSecs: 0,
+    endRelRef: 'start'
+  });
   const [statusFilter, setStatusFilter] = useState<'all' | 'success' | 'failed' | 'cache'>('all');
   const [providerFilter, setProviderFilter] = useState<string>('all');
   const [modelFilter, setModelFilter] = useState<string>('all');
@@ -55,7 +91,7 @@ export const Statistics: React.FC<StatisticsProps> = ({ config }) => {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [timeRange, statusFilter, providerFilter, modelFilter]);
+  }, [timeRange, statusFilter, providerFilter, modelFilter, customTime]);
 
   const [activeRequests, setActiveRequests] = useState<any[]>([]);
   const [rateLimits, setRateLimits] = useState<any>({});
@@ -114,16 +150,66 @@ export const Statistics: React.FC<StatisticsProps> = ({ config }) => {
   const uniqueProviders = Array.from(new Set(history.map(item => item.providerId))).filter(Boolean);
   const uniqueModels = Array.from(new Set(history.map(item => item.requestedModel))).filter(Boolean);
 
-  // 2. Filter history based on selections
+  // 2. Resolve custom/predefined time range
+  const resolveTimeRange = (nowDate: Date): { start: Date; end: Date } => {
+    if (!customTime.enabled) {
+      let start = new Date(nowDate);
+      if (timeRange === '1h') {
+        start.setHours(nowDate.getHours() - 1);
+      } else if (timeRange === '24h') {
+        start.setHours(nowDate.getHours() - 24);
+      } else if (timeRange === '7d') {
+        start.setDate(nowDate.getDate() - 7);
+      } else {
+        // 'all'
+        start = new Date(0); // Epoch
+      }
+      return { start, end: nowDate };
+    }
+
+    let resolvedEnd = new Date(nowDate);
+    let resolvedStart = new Date(nowDate);
+
+    if (customTime.endMode === 'current') {
+      resolvedEnd = nowDate;
+    } else if (customTime.endMode === 'fixed') {
+      resolvedEnd = customTime.endFixedVal ? new Date(customTime.endFixedVal) : nowDate;
+    }
+
+    if (customTime.startMode === 'fixed') {
+      resolvedStart = customTime.startFixedVal ? new Date(customTime.startFixedVal) : new Date(0);
+    } else if (customTime.startMode === 'relative') {
+      // start is relative to End
+      const durationMs = 
+        (customTime.startRelDays * 24 * 60 * 60 +
+         customTime.startRelHours * 60 * 60 +
+         customTime.startRelMins * 60 +
+         customTime.startRelSecs) * 1000;
+      resolvedStart = new Date(resolvedEnd.getTime() - durationMs);
+    }
+
+    // If end is relative to Start
+    if (customTime.endMode === 'relative') {
+      const durationMs = 
+        (customTime.endRelDays * 24 * 60 * 60 +
+         customTime.endRelHours * 60 * 60 +
+         customTime.endRelMins * 60 +
+         customTime.endRelSecs) * 1000;
+      resolvedEnd = new Date(resolvedStart.getTime() + durationMs);
+    }
+
+    return { start: resolvedStart, end: resolvedEnd };
+  };
+
   const now = new Date();
+  const { start: rangeStart, end: rangeEnd } = resolveTimeRange(now);
+
+  // 2. Filter history based on selections
   const filteredHistory = history.filter(item => {
     const itemDate = new Date(item.timestamp);
-    const diffMs = now.getTime() - itemDate.getTime();
     
     // Time filter
-    if (timeRange === '1h' && diffMs > 3600000) return false;
-    if (timeRange === '24h' && diffMs > 86400000) return false;
-    if (timeRange === '7d' && diffMs > 604800000) return false;
+    if (itemDate.getTime() < rangeStart.getTime() || itemDate.getTime() > rangeEnd.getTime()) return false;
 
     // Status filter
     if (statusFilter === 'success' && !item.success) return false;
@@ -180,7 +266,11 @@ export const Statistics: React.FC<StatisticsProps> = ({ config }) => {
     let numBins = 12;
     let binDurationMs = 300000; // 5 mins
     
-    if (timeRange === '1h') {
+    if (customTime.enabled) {
+      numBins = 15;
+      const diffTotal = Math.max(1000, rangeEnd.getTime() - rangeStart.getTime());
+      binDurationMs = Math.ceil(diffTotal / numBins);
+    } else if (timeRange === '1h') {
       numBins = 12;
       binDurationMs = 5 * 60 * 1000; // 5 mins
     } else if (timeRange === '24h') {
@@ -198,7 +288,7 @@ export const Statistics: React.FC<StatisticsProps> = ({ config }) => {
     }
 
     const bins = [];
-    const endTime = now.getTime();
+    const endTime = customTime.enabled ? rangeEnd.getTime() : now.getTime();
     
     for (let i = numBins - 1; i >= 0; i--) {
       const binEnd = endTime - (i * binDurationMs);
@@ -217,7 +307,14 @@ export const Statistics: React.FC<StatisticsProps> = ({ config }) => {
       // Label formatting
       let label = '';
       const startDateObj = new Date(binStart);
-      if (timeRange === '1h') {
+      if (customTime.enabled) {
+        const diffHours = (rangeEnd.getTime() - rangeStart.getTime()) / (3600 * 1000);
+        if (diffHours <= 24) {
+          label = startDateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+        } else {
+          label = startDateObj.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + startDateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+        }
+      } else if (timeRange === '1h') {
         label = startDateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       } else if (timeRange === '24h') {
         label = startDateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -412,24 +509,31 @@ export const Statistics: React.FC<StatisticsProps> = ({ config }) => {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
             <label style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600 }}>Period</label>
             <div style={{ display: 'flex', background: '#07070a', border: '1px solid var(--border)', borderRadius: '6px', padding: '0.15rem' }}>
-              {(['1h', '24h', '7d', 'all'] as const).map((r) => (
+              {(['1h', '24h', '7d', 'all', 'custom'] as const).map((r) => (
                 <button
                   key={r}
                   type="button"
-                  onClick={() => setTimeRange(r)}
+                  onClick={() => {
+                    if (r === 'custom') {
+                      setCustomTime(prev => ({ ...prev, enabled: true }));
+                    } else {
+                      setCustomTime(prev => ({ ...prev, enabled: false }));
+                      setTimeRange(r);
+                    }
+                  }}
                   style={{
                     padding: '0.2rem 0.5rem',
                     fontSize: '0.75rem',
                     fontWeight: 600,
                     borderRadius: '4px',
                     border: 'none',
-                    background: timeRange === r ? 'var(--accent)' : 'transparent',
-                    color: timeRange === r ? '#05070f' : 'var(--text-muted)',
+                    background: (r === 'custom' ? customTime.enabled : (!customTime.enabled && timeRange === r)) ? 'var(--accent)' : 'transparent',
+                    color: (r === 'custom' ? customTime.enabled : (!customTime.enabled && timeRange === r)) ? '#05070f' : 'var(--text-muted)',
                     cursor: 'pointer',
                     transition: 'all 0.15s ease'
                   }}
                 >
-                  {r === '1h' ? '1h' : r === '24h' ? '24h' : r === '7d' ? '7d' : 'All'}
+                  {r === '1h' ? '1h' : r === '24h' ? '24h' : r === '7d' ? '7d' : r === 'all' ? 'All' : 'Custom ⚙️'}
                 </button>
               ))}
             </div>
@@ -501,8 +605,213 @@ export const Statistics: React.FC<StatisticsProps> = ({ config }) => {
           >
             🙈 Hide History
           </button>
-        </div>
       </div>
+
+      {/* Custom Time Config Panel */}
+      {customTime.enabled && (
+        <div className="glass-panel" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem', background: 'oklch(17% 0.017 255.4 / 0.4)' }}>
+          <h4 style={{ margin: 0, fontSize: '0.95rem', color: '#fff', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            ⚙️ Custom Time Period Configurator
+          </h4>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', flexWrap: 'wrap' }}>
+            
+            {/* Start Time Config */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', borderRight: '1px solid var(--border)', paddingRight: '1.5rem' }}>
+              <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--accent)' }}>Start Time</span>
+              <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                <label style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem', cursor: 'pointer' }}>
+                  <input 
+                    type="radio" 
+                    name="startMode" 
+                    checked={customTime.startMode === 'fixed'} 
+                    onChange={() => setCustomTime(prev => ({ ...prev, startMode: 'fixed' }))} 
+                  /> Fixed Date/Time
+                </label>
+                <label style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem', cursor: 'pointer' }}>
+                  <input 
+                    type="radio" 
+                    name="startMode" 
+                    checked={customTime.startMode === 'relative'} 
+                    onChange={() => setCustomTime(prev => ({ ...prev, startMode: 'relative' }))} 
+                  /> Relative Offset
+                </label>
+              </div>
+
+              {customTime.startMode === 'fixed' ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Choose Start DateTime:</span>
+                  <input 
+                    type="datetime-local" 
+                    step="1"
+                    value={customTime.startFixedVal}
+                    onChange={(e) => setCustomTime(prev => ({ ...prev, startFixedVal: e.target.value }))}
+                    style={{ padding: '0.35rem 0.5rem', fontSize: '0.8rem', background: '#0a0a0f', color: '#fff', border: '1px solid var(--border)', borderRadius: '6px' }}
+                  />
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Go backward from End Time by:</span>
+                  <div style={{ display: 'flex', gap: '0.35rem' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                      <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Days</span>
+                      <input 
+                        type="number" 
+                        min="0" 
+                        value={customTime.startRelDays}
+                        onChange={(e) => setCustomTime(prev => ({ ...prev, startRelDays: Math.max(0, parseInt(e.target.value) || 0) }))}
+                        style={{ padding: '0.3rem', fontSize: '0.8rem', width: '100%', background: '#0a0a0f', color: '#fff', border: '1px solid var(--border)', borderRadius: '4px' }}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                      <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Hours</span>
+                      <input 
+                        type="number" 
+                        min="0" 
+                        value={customTime.startRelHours}
+                        onChange={(e) => setCustomTime(prev => ({ ...prev, startRelHours: Math.max(0, parseInt(e.target.value) || 0) }))}
+                        style={{ padding: '0.3rem', fontSize: '0.8rem', width: '100%', background: '#0a0a0f', color: '#fff', border: '1px solid var(--border)', borderRadius: '4px' }}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                      <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Mins</span>
+                      <input 
+                        type="number" 
+                        min="0" 
+                        value={customTime.startRelMins}
+                        onChange={(e) => setCustomTime(prev => ({ ...prev, startRelMins: Math.max(0, parseInt(e.target.value) || 0) }))}
+                        style={{ padding: '0.3rem', fontSize: '0.8rem', width: '100%', background: '#0a0a0f', color: '#fff', border: '1px solid var(--border)', borderRadius: '4px' }}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                      <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Secs</span>
+                      <input 
+                        type="number" 
+                        min="0" 
+                        value={customTime.startRelSecs}
+                        onChange={(e) => setCustomTime(prev => ({ ...prev, startRelSecs: Math.max(0, parseInt(e.target.value) || 0) }))}
+                        style={{ padding: '0.3rem', fontSize: '0.8rem', width: '100%', background: '#0a0a0f', color: '#fff', border: '1px solid var(--border)', borderRadius: '4px' }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* End Time Config */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+              <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--accent)' }}>End Time</span>
+              <div style={{ display: 'flex', gap: '0.8rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                <label style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem', cursor: 'pointer' }}>
+                  <input 
+                    type="radio" 
+                    name="endMode" 
+                    checked={customTime.endMode === 'current'} 
+                    onChange={() => setCustomTime(prev => ({ ...prev, endMode: 'current' }))} 
+                  /> Current (Live Now)
+                </label>
+                <label style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem', cursor: 'pointer' }}>
+                  <input 
+                    type="radio" 
+                    name="endMode" 
+                    checked={customTime.endMode === 'fixed'} 
+                    onChange={() => setCustomTime(prev => ({ ...prev, endMode: 'fixed' }))} 
+                  /> Fixed Date/Time
+                </label>
+                <label style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem', cursor: 'pointer' }}>
+                  <input 
+                    type="radio" 
+                    name="endMode" 
+                    checked={customTime.endMode === 'relative'} 
+                    onChange={() => setCustomTime(prev => ({ ...prev, endMode: 'relative' }))} 
+                  /> Relative Offset
+                </label>
+              </div>
+
+              {customTime.endMode === 'current' && (
+                <span style={{ fontSize: '0.75rem', color: 'var(--success)', fontWeight: 600 }}>
+                  ⚡ Sliding Window: Updates to right now when dashboard refreshes.
+                </span>
+              )}
+
+              {customTime.endMode === 'fixed' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Choose End DateTime:</span>
+                  <input 
+                    type="datetime-local" 
+                    step="1"
+                    value={customTime.endFixedVal}
+                    onChange={(e) => setCustomTime(prev => ({ ...prev, endFixedVal: e.target.value }))}
+                    style={{ padding: '0.35rem 0.5rem', fontSize: '0.8rem', background: '#0a0a0f', color: '#fff', border: '1px solid var(--border)', borderRadius: '6px' }}
+                  />
+                </div>
+              )}
+
+              {customTime.endMode === 'relative' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Go forward from Start Time by:</span>
+                  <div style={{ display: 'flex', gap: '0.35rem' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                      <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Days</span>
+                      <input 
+                        type="number" 
+                        min="0" 
+                        value={customTime.endRelDays}
+                        onChange={(e) => setCustomTime(prev => ({ ...prev, endRelDays: Math.max(0, parseInt(e.target.value) || 0) }))}
+                        style={{ padding: '0.3rem', fontSize: '0.8rem', width: '100%', background: '#0a0a0f', color: '#fff', border: '1px solid var(--border)', borderRadius: '4px' }}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                      <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Hours</span>
+                      <input 
+                        type="number" 
+                        min="0" 
+                        value={customTime.endRelHours}
+                        onChange={(e) => setCustomTime(prev => ({ ...prev, endRelHours: Math.max(0, parseInt(e.target.value) || 0) }))}
+                        style={{ padding: '0.3rem', fontSize: '0.8rem', width: '100%', background: '#0a0a0f', color: '#fff', border: '1px solid var(--border)', borderRadius: '4px' }}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                      <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Mins</span>
+                      <input 
+                        type="number" 
+                        min="0" 
+                        value={customTime.endRelMins}
+                        onChange={(e) => setCustomTime(prev => ({ ...prev, endRelMins: Math.max(0, parseInt(e.target.value) || 0) }))}
+                        style={{ padding: '0.3rem', fontSize: '0.8rem', width: '100%', background: '#0a0a0f', color: '#fff', border: '1px solid var(--border)', borderRadius: '4px' }}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                      <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Secs</span>
+                      <input 
+                        type="number" 
+                        min="0" 
+                        value={customTime.endRelSecs}
+                        onChange={(e) => setCustomTime(prev => ({ ...prev, endRelSecs: Math.max(0, parseInt(e.target.value) || 0) }))}
+                        style={{ padding: '0.3rem', fontSize: '0.8rem', width: '100%', background: '#0a0a0f', color: '#fff', border: '1px solid var(--border)', borderRadius: '4px' }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border)', paddingTop: '0.75rem', marginTop: '0.25rem' }}>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+              Resolved Range: <strong style={{ color: 'var(--accent)' }}>{rangeStart.toLocaleString()}</strong> to <strong style={{ color: 'var(--accent)' }}>{rangeEnd.toLocaleString()}</strong>
+            </span>
+            <button
+              type="button"
+              className="primary"
+              onClick={() => fetchData(false)}
+              style={{ padding: '0.35rem 0.8rem', fontSize: '0.8rem' }}
+            >
+              Apply & Refresh Stats
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Metrics Summary Strip */}
       {totalRequests === 0 ? (
