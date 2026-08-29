@@ -459,12 +459,12 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
 
       {/* Virtual Pools List */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-        {localConfig.virtualModels.map((vm) => {
+        {localConfig.virtualModels.map((vm, index) => {
           const targetSelector = newTargets[vm.id] || { providerId: '', modelId: '' };
           const selectedProvider = localConfig.providers.find(p => p.id === targetSelector.providerId);
           
           return (
-            <div key={vm.id} className="glass-panel" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            <div key={index} className="glass-panel" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               
               {/* Pool Header */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem' }}>
@@ -473,8 +473,66 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
                     {collapsedPools[vm.id] ? '▶' : '▼'}
                   </button>
                   <div>
-                    <h4 style={{ margin: 0, fontSize: '1.15rem' }}>{vm.name}</h4>
-                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Client Model Identifier: <code>{vm.id}</code></span>
+                    <input 
+                      type="text" 
+                      value={vm.name} 
+                      onChange={(e) => {
+                        const updatedVms = localConfig.virtualModels.map(model => 
+                          model.id === vm.id ? { ...model, name: e.target.value } : model
+                        );
+                        setLocalConfig({ ...localConfig, virtualModels: updatedVms });
+                      }}
+                      style={{ 
+                        margin: 0, 
+                        fontSize: '1.15rem', 
+                        fontWeight: 'bold', 
+                        background: 'transparent', 
+                        border: '1px solid transparent', 
+                        color: 'inherit',
+                        padding: '0 0.25rem',
+                        borderRadius: '4px',
+                        cursor: 'text'
+                      }}
+                      onFocus={(e) => e.target.style.border = '1px solid var(--border)'}
+                      onBlur={(e) => e.target.style.border = '1px solid transparent'}
+                      title="Click to edit pool name"
+                    />
+                    <div style={{ paddingLeft: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.25rem' }}>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Client Model Identifier:</span>
+                      <input 
+                        type="text" 
+                        value={vm.id} 
+                        onChange={(e) => {
+                          const newId = e.target.value.toLowerCase().replace(/\s+/g, '-');
+                          
+                          // Update all aliases that might point to this old ID
+                          const newAliases = { ...(localConfig.aliases || {}) };
+                          Object.keys(newAliases).forEach(aliasKey => {
+                            if (newAliases[aliasKey] === vm.id) {
+                              newAliases[aliasKey] = newId;
+                            }
+                          });
+
+                          const updatedVms = localConfig.virtualModels.map(model => 
+                            model.id === vm.id ? { ...model, id: newId } : model
+                          );
+                          setLocalConfig({ ...localConfig, virtualModels: updatedVms, aliases: newAliases });
+                        }}
+                        style={{ 
+                          fontSize: '0.8rem', 
+                          fontFamily: 'monospace',
+                          background: 'transparent', 
+                          border: '1px solid transparent', 
+                          color: 'var(--text-muted)',
+                          padding: '0 0.25rem',
+                          borderRadius: '4px',
+                          cursor: 'text'
+                        }}
+                        onFocus={(e) => e.target.style.border = '1px solid var(--border)'}
+                        onBlur={(e) => e.target.style.border = '1px solid transparent'}
+                        title="Click to edit pool ID"
+                      />
+                    </div>
                   </div>
                 </div>
                 

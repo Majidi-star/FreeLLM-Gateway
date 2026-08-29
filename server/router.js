@@ -295,7 +295,8 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
     targets = [{ providerId: targetedProviderId, modelId: targetedModelId }];
     eventLog(`Direct provider-specific routing: targeting provider "${targetedProviderId}" and model "${targetedModelId}".`);
   } else {
-    virtualModel = config.virtualModels.find(vm => vm.id === requestedModel);
+    const cleanRequestedModel = requestedModel.toLowerCase().trim().replace(/\s+/g, '-').replace(/-pool$/, '');
+    virtualModel = config.virtualModels.find(vm => vm.id === requestedModel || vm.id === cleanRequestedModel);
     
     if (virtualModel) {
       targets = [...virtualModel.targets].filter(t => t.enabled !== false);
@@ -405,7 +406,8 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
         
         // Re-evaluate all targets in pool, dynamically loading latest config
         const currentConfig = loadConfig();
-        let currentVirtualModel = currentConfig.virtualModels.find(vm => vm.id === requestedModel);
+        const cleanRequestedModel = requestedModel.toLowerCase().trim().replace(/\s+/g, '-').replace(/-pool$/, '');
+        let currentVirtualModel = currentConfig.virtualModels.find(vm => vm.id === requestedModel || vm.id === cleanRequestedModel);
         
         let currentEvaluatedTargets = evaluatedTargets;
         if (currentVirtualModel) {
