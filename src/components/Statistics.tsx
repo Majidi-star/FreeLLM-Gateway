@@ -619,21 +619,23 @@ export const Statistics: React.FC<StatisticsProps> = ({ config }) => {
             {/* Start Time Config */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', borderRight: '1px solid var(--border)', paddingRight: '1.5rem' }}>
               <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--accent)' }}>Start Time</span>
-              <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                <label style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem', cursor: 'pointer' }}>
+              <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                <label style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer', whiteSpace: 'nowrap' }}>
                   <input 
                     type="radio" 
                     name="startMode" 
                     checked={customTime.startMode === 'fixed'} 
                     onChange={() => setCustomTime(prev => ({ ...prev, startMode: 'fixed' }))} 
+                    style={{ margin: 0 }}
                   /> Fixed Date/Time
                 </label>
-                <label style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem', cursor: 'pointer' }}>
+                <label style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer', whiteSpace: 'nowrap' }}>
                   <input 
                     type="radio" 
                     name="startMode" 
                     checked={customTime.startMode === 'relative'} 
                     onChange={() => setCustomTime(prev => ({ ...prev, startMode: 'relative' }))} 
+                    style={{ margin: 0 }}
                   /> Relative Offset
                 </label>
               </div>
@@ -701,29 +703,32 @@ export const Statistics: React.FC<StatisticsProps> = ({ config }) => {
             {/* End Time Config */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
               <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--accent)' }}>End Time</span>
-              <div style={{ display: 'flex', gap: '0.8rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                <label style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem', cursor: 'pointer' }}>
+              <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                <label style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer', whiteSpace: 'nowrap' }}>
                   <input 
                     type="radio" 
                     name="endMode" 
                     checked={customTime.endMode === 'current'} 
                     onChange={() => setCustomTime(prev => ({ ...prev, endMode: 'current' }))} 
+                    style={{ margin: 0 }}
                   /> Current (Live Now)
                 </label>
-                <label style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem', cursor: 'pointer' }}>
+                <label style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer', whiteSpace: 'nowrap' }}>
                   <input 
                     type="radio" 
                     name="endMode" 
                     checked={customTime.endMode === 'fixed'} 
                     onChange={() => setCustomTime(prev => ({ ...prev, endMode: 'fixed' }))} 
+                    style={{ margin: 0 }}
                   /> Fixed Date/Time
                 </label>
-                <label style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem', cursor: 'pointer' }}>
+                <label style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer', whiteSpace: 'nowrap' }}>
                   <input 
                     type="radio" 
                     name="endMode" 
                     checked={customTime.endMode === 'relative'} 
                     onChange={() => setCustomTime(prev => ({ ...prev, endMode: 'relative' }))} 
+                    style={{ margin: 0 }}
                   /> Relative Offset
                 </label>
               </div>
