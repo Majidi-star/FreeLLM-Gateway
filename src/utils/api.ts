@@ -53,6 +53,8 @@ export interface VirtualModelTarget {
   modelId: string;
   enabled?: boolean;
   timeoutMs?: number;
+  cooldownMs?: number;
+  limits?: any;
 }
 
 export interface VirtualModelStrategyConfig {
@@ -62,6 +64,7 @@ export interface VirtualModelStrategyConfig {
   fallbackOn5xx?: boolean;
   fallbackOn429?: boolean;
   fallbackOn403?: boolean;
+  cooldownScope?: 'provider' | 'model';
 }
 
 export interface VirtualModel {

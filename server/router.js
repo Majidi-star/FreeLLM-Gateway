@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { loadConfig, saveConfig, addLog, recordLatency, getLatency, addStatsHistoryEntry } from './db.js';
 import { resolveProxyAgent } from './proxy.js';
-import { checkRateLimit, recordRequestStart, recordRequestEnd, setProviderCooldown } from './rateLimiter.js';
+import { checkRateLimit, recordRequestStart, recordRequestEnd, setProviderCooldown, setModelCooldown } from './rateLimiter.js';
 import { getSemanticCachedResponse, addSemanticCache } from './cache.js';
 
 // Simple model cost database (approximate price per 1M tokens in USD)
@@ -362,7 +362,8 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
       continue;
     }
 
-    const modelObj = provider.models.find(m => m.id === target.modelId) || { id: target.modelId };
+    const baseModelObj = provider.models.find(m => m.id === target.modelId) || { id: target.modelId };
+    const modelObj = target.limits ? { ...baseModelObj, limits: { ...(baseModelObj.limits || {}), ...target.limits } } : baseModelObj;
     
     // Resolve load-balanced key
     const keyResolution = resolveLoadBalancedKey(provider, modelObj);
@@ -425,7 +426,8 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
           const provider = currentConfig.providers.find(p => p.id === target.providerId);
           if (!provider || !provider.enabled) continue;
           
-          const modelObj = provider.models.find(m => m.id === target.modelId) || { id: target.modelId };
+          const baseModelObj = provider.models.find(m => m.id === target.modelId) || { id: target.modelId };
+          const modelObj = target.limits ? { ...baseModelObj, limits: { ...(baseModelObj.limits || {}), ...target.limits } } : baseModelObj;
           const keyResolution = resolveLoadBalancedKey(provider, modelObj);
           
           if (!keyResolution.limited) {
@@ -534,6 +536,7 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
 
   const targetTimeoutMs = target.timeoutMs;
   const timeoutMs = targetTimeoutMs || (virtualModel && virtualModel.config && virtualModel.config.timeoutMs) || 60000;
+
 
   const axiosConfig = {
     method: 'POST',
@@ -846,13 +849,21 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
       if (!isNaN(parsedHeader)) {
         cooldownMs = parsedHeader * 1000;
       }
+    } else if (target.cooldownMs) {
+      cooldownMs = target.cooldownMs;
     } else if (virtualModel && virtualModel.config && virtualModel.config.cooldownMs) {
       cooldownMs = virtualModel.config.cooldownMs;
     } else if (is5xx) {
       cooldownMs = 30000; // 30s for server errors
     }
 
-    setProviderCooldown(provider.id, cooldownMs);
+    const cooldownScope = virtualModel?.config?.cooldownScope || 'provider';
+    if (cooldownScope === 'model') {
+      setModelCooldown(provider.id, target.modelId, cooldownMs);
+    } else {
+      setProviderCooldown(provider.id, cooldownMs);
+    }
+
     updateStats(false, requestedModel, 0, 0, {
       providerId: provider.id,
       modelId: target.modelId,

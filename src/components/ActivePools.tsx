@@ -23,6 +23,10 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
 
   // Collapsible configuration panels state
   const [expandedConfigVmId, setExpandedConfigVmId] = useState<string | null>(null);
+  const [collapsedPools, setCollapsedPools] = useState<{ [vmId: string]: boolean }>({});
+  
+  // Track which target settings panel is expanded for each pool
+  const [expandedTargetSettings, setExpandedTargetSettings] = useState<{ [vmId: string]: number | null }>({});
 
   // Model Aliases State
   const [newAliasRequestName, setNewAliasRequestName] = useState('');
@@ -132,6 +136,52 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
           // If empty, remove the override
           const newTarget = { ...targets[index] };
           delete newTarget.timeoutMs;
+          targets[index] = newTarget;
+        }
+        return { ...vm, targets };
+      }
+      return vm;
+    });
+    setLocalConfig({ ...localConfig, virtualModels: updatedVms });
+  };
+
+  const handleTargetCooldownChange = (vmId: string, index: number, value: string) => {
+    const updatedVms = localConfig.virtualModels.map(vm => {
+      if (vm.id === vmId) {
+        const targets = [...vm.targets];
+        const ms = parseInt(value);
+        if (!isNaN(ms) && ms > 0) {
+          targets[index] = { ...targets[index], cooldownMs: ms * 1000 };
+        } else {
+          const newTarget = { ...targets[index] };
+          delete newTarget.cooldownMs;
+          targets[index] = newTarget;
+        }
+        return { ...vm, targets };
+      }
+      return vm;
+    });
+    setLocalConfig({ ...localConfig, virtualModels: updatedVms });
+  };
+
+  const handleTargetLimitChange = (vmId: string, index: number, field: string, value: string) => {
+    const updatedVms = localConfig.virtualModels.map(vm => {
+      if (vm.id === vmId) {
+        const targets = [...vm.targets];
+        const parsed = parseInt(value);
+        const limits = { ...(targets[index].limits || {}) };
+        
+        if (!isNaN(parsed) && parsed > 0) {
+          limits[field] = parsed;
+        } else {
+          delete limits[field];
+        }
+
+        if (Object.keys(limits).length > 0) {
+          targets[index] = { ...targets[index], limits };
+        } else {
+          const newTarget = { ...targets[index] };
+          delete newTarget.limits;
           targets[index] = newTarget;
         }
         return { ...vm, targets };
@@ -418,15 +468,83 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
               
               {/* Pool Header */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem' }}>
-                <div>
-                  <h4 style={{ margin: 0, fontSize: '1.15rem' }}>{vm.name}</h4>
-                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Client Model Identifier: <code>{vm.id}</code></span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <button type="button" onClick={() => setCollapsedPools(prev => ({ ...prev, [vm.id]: !prev[vm.id] }))} style={{ background: 'transparent', border: 'none', color: 'var(--text)', fontSize: '1.2rem', cursor: 'pointer', padding: '0.2rem' }}>
+                    {collapsedPools[vm.id] ? '▶' : '▼'}
+                  </button>
+                  <div>
+                    <h4 style={{ margin: 0, fontSize: '1.15rem' }}>{vm.name}</h4>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Client Model Identifier: <code>{vm.id}</code></span>
+                  </div>
                 </div>
                 
-                <button type="button" className="danger" onClick={() => handleDeleteVirtualModel(vm.id)} style={{ padding: '0.3rem 0.7rem', fontSize: '0.8rem' }}>
-                  Delete Pool
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <button type="button" onClick={() => setExpandedConfigVmId(expandedConfigVmId === vm.id ? null : vm.id)} style={{ padding: '0.3rem 0.7rem', fontSize: '0.8rem', background: expandedConfigVmId === vm.id ? 'var(--accent)' : 'transparent', color: expandedConfigVmId === vm.id ? '#000' : 'inherit', border: '1px solid var(--border)' }}>
+                    ⚙️ Pool Settings
+                  </button>
+                  <button type="button" className="danger" onClick={() => handleDeleteVirtualModel(vm.id)} style={{ padding: '0.3rem 0.7rem', fontSize: '0.8rem' }}>
+                    Delete
+                  </button>
+                </div>
               </div>
+
+              {expandedConfigVmId === vm.id && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', background: 'oklch(17% 0.017 255.4 / 0.4)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                    <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>Routing Strategy:</label>
+                    <select 
+                      value={vm.strategy || 'priority'}
+                      onChange={(e) => handleStrategyChange(vm.id, e.target.value)}
+                      style={{ padding: '0.2rem 0.5rem', fontSize: '0.85rem' }}
+                    >
+                      <option value="priority">Priority Failover</option>
+                      <option value="random">Load Balanced (Random)</option>
+                      <option value="latency">Fastest (Latency-Based)</option>
+                    </select>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginTop: '0.5rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border)' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                        <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Max Retry Attempts</label>
+                        <input type="number" min={0} max={5} value={vm.config?.maxRetries ?? 1} onChange={(e) => handleStrategyConfigChange(vm.id, 'maxRetries', parseInt(e.target.value) || 0)} />
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                        <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Request Timeout (seconds)</label>
+                        <input type="number" min={1} max={120} value={((vm.config?.timeoutMs ?? 30000) / 1000)} onChange={(e) => handleStrategyConfigChange(vm.id, 'timeoutMs', (parseInt(e.target.value) || 30) * 1000)} />
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                        <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Failure Cooldown (seconds)</label>
+                        <input type="number" min={5} max={600} value={((vm.config?.cooldownMs ?? 60000) / 1000)} onChange={(e) => handleStrategyConfigChange(vm.id, 'cooldownMs', (parseInt(e.target.value) || 60) * 1000)} />
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', justifyContent: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <input type="checkbox" id={`fallbackOn429-${vm.id}`} checked={vm.config?.fallbackOn429 !== false} onChange={(e) => handleStrategyConfigChange(vm.id, 'fallbackOn429', e.target.checked)} />
+                        <label htmlFor={`fallbackOn429-${vm.id}`} style={{ fontSize: '0.8rem', cursor: 'pointer' }}>Fallback on Rate Limits (429)</label>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <input type="checkbox" id={`fallbackOn403-${vm.id}`} checked={vm.config?.fallbackOn403 !== false} onChange={(e) => handleStrategyConfigChange(vm.id, 'fallbackOn403', e.target.checked)} />
+                        <label htmlFor={`fallbackOn403-${vm.id}`} style={{ fontSize: '0.8rem', cursor: 'pointer' }}>Fallback on Quota Exceeded (403)</label>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <input type="checkbox" id={`fallbackOn5xx-${vm.id}`} checked={vm.config?.fallbackOn5xx !== false} onChange={(e) => handleStrategyConfigChange(vm.id, 'fallbackOn5xx', e.target.checked)} />
+                        <label htmlFor={`fallbackOn5xx-${vm.id}`} style={{ fontSize: '0.8rem', cursor: 'pointer' }}>Fallback on Server Errors (5xx / Network)</label>
+                      </div>
+                      <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                        <label style={{ fontSize: '0.8rem', fontWeight: 500, color: 'var(--text-muted)' }}>Rate Limit Cooldown Scope</label>
+                        <select className="input" style={{ padding: '0.4rem', fontSize: '0.85rem' }} value={vm.config?.cooldownScope || 'provider'} onChange={(e) => handleStrategyConfigChange(vm.id, 'cooldownScope', e.target.value)}>
+                          <option value="provider">Entire Provider (Default)</option>
+                          <option value="model">Only the Specific Model</option>
+                        </select>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>If "Specific Model", hitting a rate limit won't disable other models from the same provider.</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {!collapsedPools[vm.id] && (
+                <>
 
               {/* Priority Targets Table */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -444,8 +562,9 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
                       const isMissing = provider && !modelObj;
                       
                       return (
-                        <div key={index} 
-                          draggable
+                        <div key={index} style={{ display: 'flex', flexDirection: 'column' }}>
+                          <div 
+                            draggable
                           onDragStart={(e) => {
                             e.dataTransfer.setData('text/plain', index.toString());
                           }}
@@ -506,6 +625,20 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
                             </button>
                             <button 
                               type="button" 
+                              title="Advanced Settings (Cooldown & Rate Limits)"
+                              onClick={() => setExpandedTargetSettings(prev => ({ ...prev, [vm.id]: prev[vm.id] === index ? null : index }))}
+                              style={{ 
+                                padding: '0.3rem 0.6rem', 
+                                fontSize: '0.9rem', 
+                                background: expandedTargetSettings[vm.id] === index ? 'var(--accent)' : 'transparent',
+                                border: '1px solid var(--border)',
+                                color: expandedTargetSettings[vm.id] === index ? '#000' : 'inherit'
+                              }}
+                            >
+                              ⚙️
+                            </button>
+                            <button 
+                              type="button" 
                               className="danger" 
                               onClick={() => handleRemoveTarget(vm.id, index)}
                               style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}
@@ -514,105 +647,113 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
                             </button>
                           </div>
                         </div>
-                      );
+
+                        {expandedTargetSettings[vm.id] === index && (
+                          <div style={{
+                            margin: '0.5rem 0 1rem 2.5rem',
+                            padding: '1rem',
+                            background: '#0d0d12',
+                            border: '1px solid var(--border)',
+                            borderLeft: '2px solid var(--accent)',
+                            borderRadius: '4px'
+                          }}>
+                            <h4 style={{ margin: '0 0 1rem 0', fontSize: '0.9rem', color: 'var(--text)' }}>
+                              Advanced Overrides for {modelObj?.name || target.modelId}
+                            </h4>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Custom Cooldown (seconds)</label>
+                                <input 
+                                  type="number" 
+                                  className="input"
+                                  min={1}
+                                  placeholder="Use Pool Default"
+                                  value={target.cooldownMs ? target.cooldownMs / 1000 : ''}
+                                  onChange={(e) => handleTargetCooldownChange(vm.id, index, e.target.value)}
+                                  style={{ padding: '0.4rem', fontSize: '0.8rem' }}
+                                />
+                              </div>
+
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Concurrency Limit</label>
+                                <input 
+                                  type="number" 
+                                  className="input"
+                                  min={1}
+                                  placeholder="No override"
+                                  value={target.limits?.concurrent || ''}
+                                  onChange={(e) => handleTargetLimitChange(vm.id, index, 'concurrent', e.target.value)}
+                                  style={{ padding: '0.4rem', fontSize: '0.8rem' }}
+                                />
+                              </div>
+
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Requests Per Minute (RPM)</label>
+                                <input type="number" className="input" min={1} placeholder="No override"
+                                  value={target.limits?.rpm || ''} onChange={(e) => handleTargetLimitChange(vm.id, index, 'rpm', e.target.value)}
+                                  style={{ padding: '0.4rem', fontSize: '0.8rem' }} />
+                              </div>
+
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Requests Per Hour (RPH)</label>
+                                <input type="number" className="input" min={1} placeholder="No override"
+                                  value={target.limits?.rph || ''} onChange={(e) => handleTargetLimitChange(vm.id, index, 'rph', e.target.value)}
+                                  style={{ padding: '0.4rem', fontSize: '0.8rem' }} />
+                              </div>
+
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Requests Per Day (RPD)</label>
+                                <input type="number" className="input" min={1} placeholder="No override"
+                                  value={target.limits?.rpd || ''} onChange={(e) => handleTargetLimitChange(vm.id, index, 'rpd', e.target.value)}
+                                  style={{ padding: '0.4rem', fontSize: '0.8rem' }} />
+                              </div>
+
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Requests Per Month</label>
+                                <input type="number" className="input" min={1} placeholder="No override"
+                                  value={target.limits?.rpmo || ''} onChange={(e) => handleTargetLimitChange(vm.id, index, 'rpmo', e.target.value)}
+                                  style={{ padding: '0.4rem', fontSize: '0.8rem' }} />
+                              </div>
+
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Tokens Per Minute (TPM)</label>
+                                <input type="number" className="input" min={1} placeholder="No override"
+                                  value={target.limits?.tpm || ''} onChange={(e) => handleTargetLimitChange(vm.id, index, 'tpm', e.target.value)}
+                                  style={{ padding: '0.4rem', fontSize: '0.8rem' }} />
+                              </div>
+
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Tokens Per Hour (TPH)</label>
+                                <input type="number" className="input" min={1} placeholder="No override"
+                                  value={target.limits?.tph || ''} onChange={(e) => handleTargetLimitChange(vm.id, index, 'tph', e.target.value)}
+                                  style={{ padding: '0.4rem', fontSize: '0.8rem' }} />
+                              </div>
+
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Tokens Per Day (TPD)</label>
+                                <input type="number" className="input" min={1} placeholder="No override"
+                                  value={target.limits?.tpd || ''} onChange={(e) => handleTargetLimitChange(vm.id, index, 'tpd', e.target.value)}
+                                  style={{ padding: '0.4rem', fontSize: '0.8rem' }} />
+                              </div>
+
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Tokens Per Month</label>
+                                <input type="number" className="input" min={1} placeholder="No override"
+                                  value={target.limits?.tpmo || ''} onChange={(e) => handleTargetLimitChange(vm.id, index, 'tpmo', e.target.value)}
+                                  style={{ padding: '0.4rem', fontSize: '0.8rem' }} />
+                              </div>
+
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
                     })}
                   </div>
                 )}
               </div>
 
-              {/* Fallback Strategy Config Panel */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', background: 'oklch(17% 0.017 255.4 / 0.4)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                    <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>Routing Strategy:</label>
-                    <select 
-                      value={vm.strategy || 'priority'}
-                      onChange={(e) => handleStrategyChange(vm.id, e.target.value)}
-                      style={{ padding: '0.2rem 0.5rem', fontSize: '0.85rem' }}
-                    >
-                      <option value="priority">Priority Failover</option>
-                      <option value="random">Load Balanced (Random)</option>
-                      <option value="latency">Fastest (Latency-Based)</option>
-                    </select>
-                  </div>
-                  <button 
-                    type="button" 
-                    onClick={() => setExpandedConfigVmId(expandedConfigVmId === vm.id ? null : vm.id)}
-                    style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}
-                  >
-                    {expandedConfigVmId === vm.id ? 'Hide Settings' : '⚙️ Custom Failover Settings'}
-                  </button>
-                </div>
 
-                {expandedConfigVmId === vm.id && (
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginTop: '0.5rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border)' }}>
-                    {/* Numeric parameters */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                        <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Max Retry Attempts</label>
-                        <input 
-                          type="number" 
-                          min={0}
-                          max={5}
-                          value={vm.config?.maxRetries ?? 1}
-                          onChange={(e) => handleStrategyConfigChange(vm.id, 'maxRetries', parseInt(e.target.value) || 0)}
-                        />
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                        <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Request Timeout (seconds)</label>
-                        <input 
-                          type="number" 
-                          min={1}
-                          max={120}
-                          value={((vm.config?.timeoutMs ?? 30000) / 1000)}
-                          onChange={(e) => handleStrategyConfigChange(vm.id, 'timeoutMs', (parseInt(e.target.value) || 30) * 1000)}
-                        />
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                        <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Failure Cooldown (seconds)</label>
-                        <input 
-                          type="number" 
-                          min={5}
-                          max={600}
-                          value={((vm.config?.cooldownMs ?? 60000) / 1000)}
-                          onChange={(e) => handleStrategyConfigChange(vm.id, 'cooldownMs', (parseInt(e.target.value) || 60) * 1000)}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Checkboxes */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', justifyContent: 'center' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <input 
-                          type="checkbox" 
-                          id={`fallbackOn429-${vm.id}`}
-                          checked={vm.config?.fallbackOn429 !== false}
-                          onChange={(e) => handleStrategyConfigChange(vm.id, 'fallbackOn429', e.target.checked)}
-                        />
-                        <label htmlFor={`fallbackOn429-${vm.id}`} style={{ fontSize: '0.8rem', cursor: 'pointer' }}>Fallback on Rate Limits (429)</label>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <input 
-                          type="checkbox" 
-                          id={`fallbackOn403-${vm.id}`}
-                          checked={vm.config?.fallbackOn403 !== false}
-                          onChange={(e) => handleStrategyConfigChange(vm.id, 'fallbackOn403', e.target.checked)}
-                        />
-                        <label htmlFor={`fallbackOn403-${vm.id}`} style={{ fontSize: '0.8rem', cursor: 'pointer' }}>Fallback on Quota Exceeded (403)</label>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <input 
-                          type="checkbox" 
-                          id={`fallbackOn5xx-${vm.id}`}
-                          checked={vm.config?.fallbackOn5xx !== false}
-                          onChange={(e) => handleStrategyConfigChange(vm.id, 'fallbackOn5xx', e.target.checked)}
-                        />
-                        <label htmlFor={`fallbackOn5xx-${vm.id}`} style={{ fontSize: '0.8rem', cursor: 'pointer' }}>Fallback on Server Errors (5xx / Network)</label>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
 
               {/* Add New Target Selector Row */}
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', alignItems: 'flex-end', marginTop: '0.5rem', background: 'oklch(15% 0.015 255.4 / 0.4)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
@@ -733,6 +874,9 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
                   );
                 })()}
               </div>
+              
+              </>
+              )}
 
             </div>
           );

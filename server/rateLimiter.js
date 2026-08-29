@@ -73,6 +73,25 @@ export function setProviderCooldown(providerId, durationMs = 15000, isSilent = f
 }
 
 /**
+ * Puts a specific model on a provider on temporary cooldown.
+ * @param {string} providerId - Provider identifier.
+ * @param {string} modelId - Model identifier.
+ * @param {number} durationMs - Duration in milliseconds (default 15 seconds).
+ */
+export function setModelCooldown(providerId, modelId, durationMs = 15000, isSilent = false) {
+  const key = `${providerId}:${modelId}`;
+  const expires = Date.now() + durationMs;
+  
+  if (!cooldowns[key] || expires > cooldowns[key]) {
+    cooldowns[key] = expires;
+  }
+  
+  if (!isSilent) {
+    addLog('WARN', `Model "${modelId}" on provider "${providerId}" placed on cooldown for ${durationMs / 1000}s.`);
+  }
+}
+
+/**
  * Gets remaining cooldown time for a provider.
  * @param {string} providerId - Provider identifier.
  * @returns {number} - Cooldown time remaining in ms, or 0.
@@ -84,6 +103,20 @@ export function getProviderCooldownTime(providerId) {
   const maxExpires = Math.max(expires1, expires2);
   if (!maxExpires) return 0;
   const remaining = maxExpires - Date.now();
+  return remaining > 0 ? remaining : 0;
+}
+
+/**
+ * Gets remaining cooldown time for a specific model.
+ * @param {string} providerId - Provider identifier.
+ * @param {string} modelId - Model identifier.
+ * @returns {number} - Cooldown time remaining in ms, or 0.
+ */
+export function getModelCooldownTime(providerId, modelId) {
+  const key = `${providerId}:${modelId}`;
+  const expires = cooldowns[key] || 0;
+  if (!expires) return 0;
+  const remaining = expires - Date.now();
   return remaining > 0 ? remaining : 0;
 }
 
@@ -109,12 +142,19 @@ export function checkRateLimit(provider, model) {
   const modelId = model.id;
 
   // 1. Check active cooldown
-  const cooldownRemaining = getProviderCooldownTime(providerId);
-  if (cooldownRemaining > 0) {
+  const providerCooldownRemaining = getProviderCooldownTime(providerId);
+  const modelCooldownRemaining = getModelCooldownTime(providerId, modelId);
+  
+  const maxCooldown = Math.max(providerCooldownRemaining, modelCooldownRemaining);
+  
+  if (maxCooldown > 0) {
+    const isModelSpecific = modelCooldownRemaining > providerCooldownRemaining;
     return {
       limited: true,
-      reason: `Provider cooldown (${Math.ceil(cooldownRemaining / 1000)}s remaining)`,
-      retryAfterMs: cooldownRemaining,
+      reason: isModelSpecific 
+        ? `Model cooldown (${Math.ceil(maxCooldown / 1000)}s remaining)` 
+        : `Provider cooldown (${Math.ceil(maxCooldown / 1000)}s remaining)`,
+      retryAfterMs: maxCooldown,
     };
   }
 
