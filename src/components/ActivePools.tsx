@@ -101,26 +101,24 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
     }
   });
 
-  const handleMoveTarget = (vmId: string, index: number, direction: 'up' | 'down') => {
+
+
+  const handleDragDropTarget = (vmId: string, fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex) return;
     const virtualModel = localConfig.virtualModels.find(vm => vm.id === vmId);
     if (!virtualModel) return;
 
     const targets = [...virtualModel.targets];
-    const targetIndex = index;
-    const swapIndex = direction === 'up' ? index - 1 : index + 1;
-
-    if (swapIndex < 0 || swapIndex >= targets.length) return;
-
-    // Swap elements
-    const temp = targets[targetIndex];
-    targets[targetIndex] = targets[swapIndex];
-    targets[swapIndex] = temp;
+    const [moved] = targets.splice(fromIndex, 1);
+    targets.splice(toIndex, 0, moved);
 
     const updatedVms = localConfig.virtualModels.map(vm => 
       vm.id === vmId ? { ...vm, targets } : vm
     );
 
-    setLocalConfig({ ...localConfig, virtualModels: updatedVms });
+    const newConfig = { ...localConfig, virtualModels: updatedVms };
+    setLocalConfig(newConfig);
+    onSave(newConfig); // Instant apply to backend
   };
 
   const handleRemoveTarget = (vmId: string, index: number) => {
@@ -425,7 +423,20 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
                       const modelObj = provider?.models.find(m => m.id === target.modelId);
                       
                       return (
-                        <div key={index} style={{
+                        <div key={index} 
+                          draggable
+                          onDragStart={(e) => {
+                            e.dataTransfer.setData('text/plain', index.toString());
+                          }}
+                          onDragOver={(e) => {
+                            e.preventDefault();
+                          }}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            const fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
+                            handleDragDropTarget(vm.id, fromIndex, index);
+                          }}
+                          style={{
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'space-between',
@@ -434,8 +445,10 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
                           border: '1px solid var(--border)',
                           borderRadius: '8px',
                           opacity: target.enabled !== false ? 1 : 0.5,
+                          cursor: 'grab'
                         }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+                            <span style={{ cursor: 'grab', fontSize: '1.2rem', color: 'var(--text-muted)' }}>☰</span>
                             <span style={{ fontWeight: 800, color: 'var(--accent)', fontSize: '1.1rem' }}>Priority #{index + 1}</span>
                             <div style={{ display: 'flex', flexDirection: 'column' }}>
                               <span style={{ fontWeight: 600 }}>{modelObj?.name || target.modelId}</span>
@@ -456,22 +469,6 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
                               }}
                             >
                               {target.enabled !== false ? '✅ Active' : '❌ Disabled'}
-                            </button>
-                            <button 
-                              type="button" 
-                              disabled={index === 0}
-                              onClick={() => handleMoveTarget(vm.id, index, 'up')}
-                              style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}
-                            >
-                              ▲ Up
-                            </button>
-                            <button 
-                              type="button" 
-                              disabled={index === vm.targets.length - 1}
-                              onClick={() => handleMoveTarget(vm.id, index, 'down')}
-                              style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}
-                            >
-                              ▼ Down
                             </button>
                             <button 
                               type="button" 

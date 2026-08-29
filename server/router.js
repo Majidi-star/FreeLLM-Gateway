@@ -402,12 +402,27 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
         
         await new Promise(r => setTimeout(r, sleepMs));
         
-        // Re-evaluate all targets in pool
-        for (const target of evaluatedTargets) {
+        // Re-evaluate all targets in pool, dynamically loading latest config
+        const currentConfig = loadConfig();
+        let currentVirtualModel = currentConfig.virtualModels.find(vm => vm.id === requestedModel);
+        
+        let currentEvaluatedTargets = evaluatedTargets;
+        if (currentVirtualModel) {
+          currentEvaluatedTargets = [...currentVirtualModel.targets].filter(t => t.enabled !== false);
+          if (currentVirtualModel.strategy === 'random') {
+            currentEvaluatedTargets.sort(() => Math.random() - 0.5);
+          } else if (currentVirtualModel.strategy === 'latency') {
+            currentEvaluatedTargets.sort((a, b) => getLatency(a.providerId, a.modelId) - getLatency(b.providerId, b.modelId));
+          }
+        } else if (targetedProviderId) {
+           currentEvaluatedTargets = [{ providerId: targetedProviderId, modelId: targetedModelId }];
+        }
+        
+        for (const target of currentEvaluatedTargets) {
           if (reqPayload._failedBackends && reqPayload._failedBackends.has(`${target.providerId}:${target.modelId}`)) {
             continue;
           }
-          const provider = config.providers.find(p => p.id === target.providerId);
+          const provider = currentConfig.providers.find(p => p.id === target.providerId);
           if (!provider || !provider.enabled) continue;
           
           const modelObj = provider.models.find(m => m.id === target.modelId) || { id: target.modelId };
