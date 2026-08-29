@@ -1,5 +1,18 @@
 [
   {
+    "timestamp": "2026-08-29T07:33:41.582Z",
+    "requestedModel": "test",
+    "providerId": "reka:default",
+    "modelId": "glm5.2",
+    "success": true,
+    "promptTokens": 20765,
+    "completionTokens": 6,
+    "totalTokens": 20771,
+    "latencyMs": 3096,
+    "cacheHit": false,
+    "error": null
+  },
+  {
     "timestamp": "2026-08-29T07:33:38.371Z",
     "requestedModel": "test",
     "providerId": "reka:default",
