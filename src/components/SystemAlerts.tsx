@@ -490,3 +490,4 @@ export const SystemAlerts: React.FC<SystemAlertsProps> = ({ config, onSave, acti
 
     </div>
   );
+};
