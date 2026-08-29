@@ -9,7 +9,7 @@ Designed to work as a drop-in replacement for `http://localhost:3000/v1`.
 - **Backend:** Node.js + Express (`server/`) — no TypeScript, plain ESM JS
 - **Frontend:** React 19 + TypeScript + Vite (`src/`) — vanilla CSS (no Tailwind)
 - **DB:** Flat-file JSON (`config.json`) — loaded/saved by `server/db.js`
-- **Dev:** `npm run dev` starts both concurrently (backend :3000, frontend :5173)
+- **Dev:** `npm run dev` starts both concurrently (backend :3000, frontend :35173)
 
 ## Architecture map
 

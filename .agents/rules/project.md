@@ -20,7 +20,7 @@
 - Virtual pools, keys, and aliases must go through `db.js` functions, not direct JSON mutations.
 
 ## Common pitfalls
-- The backend runs on port 3000 (both API and static serving). Frontend dev server is on :5173.
+- The backend runs on port 3000 (both API and static serving). Frontend dev server is on :35173.
 - `config.json` is git-ignored — never suggest committing it.
 - Rate limiter uses sliding windows — do not confuse RPM (per-minute) with RPD (per-day) windows.
 - Semantic cache uses cosine similarity — threshold is configurable, default ~0.95.
