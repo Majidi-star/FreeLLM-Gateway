@@ -237,7 +237,7 @@ app.post('/api/cache-clear', (req, res) => {
 // GET /api/stats - Get metrics and current rate-limit usage
 app.get('/api/stats', (req, res) => {
   const config = loadConfig();
-  const rateLimitMetrics = getRateLimitMetrics(config.providers);
+  const rateLimitMetrics = getRateLimitMetrics(config);
   res.json({
     stats: config.stats,
     limits: rateLimitMetrics,

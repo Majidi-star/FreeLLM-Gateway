@@ -374,9 +374,9 @@ export function recordUsage(providerId, modelId, tokens = 0) {
  * @param {Array} providers - All providers from config.
  * @returns {object}
  */
-export function getRateLimitMetrics(providers) {
+export function getRateLimitMetrics(config) {
   const metrics = {};
-  providers.forEach((provider) => {
+  config.providers.forEach((provider) => {
     // Provider level
     const pLimits = provider.limits || {};
     if (Object.keys(pLimits).length > 0) {

@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { loadConfig, saveConfig, addLog, recordLatency, getLatency, addStatsHistoryEntry } from './db.js';
 import { resolveProxyAgent } from './proxy.js';
-import { checkRateLimit, recordRequestStart, recordRequestEnd, setProviderCooldown, getProviderCooldownTime, setModelCooldown, getModelCooldownTime, recordVirtualKeyUsage, getVirtualKeyUsage, checkPoolRateLimit, recordPoolUsage } from './rateLimiter.js';
+import { checkRateLimit, recordRequestStart, recordRequestEnd, setProviderCooldown, getProviderCooldownTime, setModelCooldown, getModelCooldownTime, checkPoolRateLimit, recordPoolUsage } from './rateLimiter.js';
 import { getSemanticCachedResponse, addSemanticCache } from './cache.js';
 
 // Simple model cost database (approximate price per 1M tokens in USD)
