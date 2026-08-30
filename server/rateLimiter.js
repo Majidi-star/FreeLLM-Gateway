@@ -152,6 +152,38 @@ export function getConcurrency(key) {
 }
 
 /**
+ * Checks if a virtual pool has exceeded configured rate limits.
+ */
+export function checkPoolRateLimit(poolId, limits = {}) {
+  const limitsToCheck = [];
+  if (limits.rpm) limitsToCheck.push({ name: `Pool RPM (${limits.rpm})`, val: limits.rpm, window: 60 * 1000, token: false, key: poolId });
+  if (limits.rph) limitsToCheck.push({ name: `Pool RPH (${limits.rph})`, val: limits.rph, window: 60 * 60 * 1000, token: false, key: poolId });
+  if (limits.rpd) limitsToCheck.push({ name: `Pool RPD (${limits.rpd})`, val: limits.rpd, window: 24 * 60 * 60 * 1000, token: false, key: poolId });
+  if (limits.rpmo) limitsToCheck.push({ name: `Pool RPMonth (${limits.rpmo})`, val: limits.rpmo, window: 30 * 24 * 60 * 60 * 1000, token: false, key: poolId });
+  
+  if (limits.tpm) limitsToCheck.push({ name: `Pool TPM (${limits.tpm})`, val: limits.tpm, window: 60 * 1000, token: true, key: poolId });
+  if (limits.tph) limitsToCheck.push({ name: `Pool TPH (${limits.tph})`, val: limits.tph, window: 60 * 60 * 1000, token: true, key: poolId });
+  if (limits.tpd) limitsToCheck.push({ name: `Pool TPD (${limits.tpd})`, val: limits.tpd, window: 24 * 60 * 60 * 1000, token: true, key: poolId });
+  if (limits.tpmo) limitsToCheck.push({ name: `Pool TPMonth (${limits.tpmo})`, val: limits.tpmo, window: 30 * 24 * 60 * 60 * 1000, token: true, key: poolId });
+
+  for (const check of limitsToCheck) {
+    const { count, tokens, oldestTimestamp } = getUsage(check.key, check.window, check.val);
+    if (check.token) {
+      if (tokens >= check.val) {
+        const timePassed = Date.now() - oldestTimestamp;
+        return { limited: true, reason: `Exceeded ${check.name} (${tokens} tokens used)`, retryAfterMs: Math.max(1000, check.window - timePassed) };
+      }
+    } else {
+      if (count >= check.val) {
+        const timePassed = Date.now() - oldestTimestamp;
+        return { limited: true, reason: `Exceeded ${check.name} (${count} requests made)`, retryAfterMs: Math.max(1000, check.window - timePassed) };
+      }
+    }
+  }
+  return { limited: false, reason: '', retryAfterMs: 0 };
+}
+
+/**
  * Checks if a provider or specific model has exceeded configured rate limits.
  * Supports Concurrency, RPM, RPH, RPD, RPMonth, TPM, TPH, TPD, TPMonth.
  * @param {object} provider - Provider config object.
@@ -391,6 +423,35 @@ export function getRateLimitMetrics(providers) {
         };
       }
     });
+    });
   });
+
+  // Include virtual pools limits
+  config.virtualModels.forEach(vm => {
+    if (vm.limits && Object.keys(vm.limits).length > 0) {
+      const rpmUsage = getUsage(vm.id, 60 * 1000, vm.limits.rpm || 1);
+      const rphUsage = getUsage(vm.id, 60 * 60 * 1000, vm.limits.rph || 1);
+      const rpdUsage = getUsage(vm.id, 24 * 60 * 60 * 1000, vm.limits.rpd || 1);
+      const rpmoUsage = getUsage(vm.id, 30 * 24 * 60 * 60 * 1000, vm.limits.rpmo || 1);
+      
+      metrics[vm.id] = {
+        rpm: { used: rpmUsage.count, limit: vm.limits.rpm || 0 },
+        rph: { used: rphUsage.count, limit: vm.limits.rph || 0 },
+        rpd: { used: rpdUsage.count, limit: vm.limits.rpd || 0 },
+        rpmo: { used: rpmoUsage.count, limit: vm.limits.rpmo || 0 },
+        tpm: { used: rpmUsage.tokens, limit: vm.limits.tpm || 0 },
+        tph: { used: rphUsage.tokens, limit: vm.limits.tph || 0 },
+        tpd: { used: rpdUsage.tokens, limit: vm.limits.tpd || 0 },
+        tpmo: { used: rpmoUsage.tokens, limit: vm.limits.tpmo || 0 },
+      };
+    }
+  });
+
   return metrics;
+}
+
+export function recordPoolUsage(poolId, totalTokens = 0) {
+  const now = Date.now();
+  if (!history.requests[poolId]) history.requests[poolId] = [];
+  history.requests[poolId].push({ timestamp: now, tokens: totalTokens });
 }

@@ -73,6 +73,7 @@ export interface VirtualModel {
   targets: VirtualModelTarget[];
   strategy?: string;
   config?: VirtualModelStrategyConfig;
+  limits?: any;
 }
 
 export interface Stats {

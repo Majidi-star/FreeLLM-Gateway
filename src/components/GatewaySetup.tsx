@@ -416,7 +416,7 @@ export const GatewaySetup: React.FC<GatewaySetupProps> = ({ config, onSave }) =>
     const limit = provider.limits?.[field] || Infinity;
     
     return (
-      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between' }}>
+      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: '20px' }}>
         <span>{label}</span>
         {limitsDataForProvider && (
           <span>

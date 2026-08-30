@@ -247,6 +247,54 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
     });
   };
 
+  const handlePoolLimitChange = (vmId: string, field: string, value: string) => {
+    const num = parseInt(value, 10);
+    const updatedVms = localConfig.virtualModels.map(vm => {
+      if (vm.id === vmId) {
+        const limits = { ...vm.limits };
+        if (isNaN(num)) {
+          delete limits[field];
+        } else {
+          limits[field] = num;
+        }
+        return { ...vm, limits };
+      }
+      return vm;
+    });
+    setLocalConfig({ ...localConfig, virtualModels: updatedVms });
+  };
+
+  const renderPoolLimitUsage = (vmId: string, limits: any, label: string, field: 'rpm'|'rph'|'rpd'|'rpmo'|'tpm'|'tph'|'tpd'|'tpmo') => {
+    const limitsDataForKey = limitsData?.[vmId]?.[field];
+    const used = limitsDataForKey?.used || 0;
+    const limit = limits?.[field] || Infinity;
+    
+    return (
+      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: '20px', marginBottom: '2px' }}>
+        <span>{label}</span>
+        {limitsDataForKey && (
+          <span>
+            <span style={{ color: used >= limit && limit > 0 ? 'var(--error)' : 'var(--accent)' }}>{used}</span> used
+            <button 
+              type="button" 
+              onClick={() => {
+                const newVal = prompt(`Enter new used value for ${label} (${vmId}):`, used.toString());
+                if (newVal !== null && !isNaN(Number(newVal))) {
+                  overrideRateLimit(vmId, field.startsWith('t') ? 'tokens' : 'count', Number(newVal))
+                    .then(() => fetchLimits());
+                }
+              }} 
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 0 0 4px', fontSize: '0.75rem' }}
+              title="Edit Usage"
+            >
+              ✏️
+            </button>
+          </span>
+        )}
+      </span>
+    );
+  };
+
   const renderModelLimitUsage = (providerId: string, modelId: string, targetLimits: any, label: string, field: 'rpm'|'rph'|'rpd'|'rpmo'|'tpm'|'tph'|'tpd'|'tpmo') => {
     const key = `${providerId}:${modelId}`;
     const limitsDataForKey = limitsData?.[key]?.[field];
@@ -254,7 +302,7 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
     const limit = targetLimits?.[field] || Infinity;
     
     return (
-      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
+      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: '20px', marginBottom: '2px' }}>
         <span>{label}</span>
         {limitsDataForKey && (
           <span>
@@ -644,6 +692,47 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
                       </div>
                     </div>
                   </div>
+
+                  {/* Virtual Pool Rate Limits */}
+                  <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
+                    <h5 style={{ margin: '0 0 0.75rem 0', fontSize: '0.85rem', color: 'var(--text)' }}>Global Pool Rate Limits</h5>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '0.75rem' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                        {renderPoolLimitUsage(vm.id, vm.limits, 'RPM (Req/Min)', 'rpm')}
+                        <input type="number" min={1} className="input" placeholder="No limit" value={vm.limits?.rpm || ''} onChange={(e) => handlePoolLimitChange(vm.id, 'rpm', e.target.value)} />
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                        {renderPoolLimitUsage(vm.id, vm.limits, 'RPH (Req/Hour)', 'rph')}
+                        <input type="number" min={1} className="input" placeholder="No limit" value={vm.limits?.rph || ''} onChange={(e) => handlePoolLimitChange(vm.id, 'rph', e.target.value)} />
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                        {renderPoolLimitUsage(vm.id, vm.limits, 'RPD (Req/Day)', 'rpd')}
+                        <input type="number" min={1} className="input" placeholder="No limit" value={vm.limits?.rpd || ''} onChange={(e) => handlePoolLimitChange(vm.id, 'rpd', e.target.value)} />
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                        {renderPoolLimitUsage(vm.id, vm.limits, 'Req/Month', 'rpmo')}
+                        <input type="number" min={1} className="input" placeholder="No limit" value={vm.limits?.rpmo || ''} onChange={(e) => handlePoolLimitChange(vm.id, 'rpmo', e.target.value)} />
+                      </div>
+                      
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                        {renderPoolLimitUsage(vm.id, vm.limits, 'TPM (Tok/Min)', 'tpm')}
+                        <input type="number" min={1} className="input" placeholder="No limit" value={vm.limits?.tpm || ''} onChange={(e) => handlePoolLimitChange(vm.id, 'tpm', e.target.value)} />
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                        {renderPoolLimitUsage(vm.id, vm.limits, 'TPH (Tok/Hour)', 'tph')}
+                        <input type="number" min={1} className="input" placeholder="No limit" value={vm.limits?.tph || ''} onChange={(e) => handlePoolLimitChange(vm.id, 'tph', e.target.value)} />
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                        {renderPoolLimitUsage(vm.id, vm.limits, 'TPD (Tok/Day)', 'tpd')}
+                        <input type="number" min={1} className="input" placeholder="No limit" value={vm.limits?.tpd || ''} onChange={(e) => handlePoolLimitChange(vm.id, 'tpd', e.target.value)} />
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                        {renderPoolLimitUsage(vm.id, vm.limits, 'Tok/Month', 'tpmo')}
+                        <input type="number" min={1} className="input" placeholder="No limit" value={vm.limits?.tpmo || ''} onChange={(e) => handlePoolLimitChange(vm.id, 'tpmo', e.target.value)} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
                 </div>
               )}
 

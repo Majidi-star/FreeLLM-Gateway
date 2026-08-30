@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { loadConfig, saveConfig, addLog, recordLatency, getLatency, addStatsHistoryEntry } from './db.js';
 import { resolveProxyAgent } from './proxy.js';
-import { checkRateLimit, recordRequestStart, recordRequestEnd, setProviderCooldown, setModelCooldown } from './rateLimiter.js';
+import { checkRateLimit, recordRequestStart, recordRequestEnd, setProviderCooldown, getProviderCooldownTime, setModelCooldown, getModelCooldownTime, recordVirtualKeyUsage, getVirtualKeyUsage, checkPoolRateLimit, recordPoolUsage } from './rateLimiter.js';
 import { getSemanticCachedResponse, addSemanticCache } from './cache.js';
 
 // Simple model cost database (approximate price per 1M tokens in USD)
@@ -299,6 +299,13 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
     virtualModel = config.virtualModels.find(vm => vm.id === requestedModel || vm.id === cleanRequestedModel);
     
     if (virtualModel) {
+      if (virtualModel.limits) {
+        const poolCheck = checkPoolRateLimit(virtualModel.id, virtualModel.limits);
+        if (poolCheck.limited) {
+          eventLog(`Virtual pool "${virtualModel.id}" rate limited globally: ${poolCheck.reason}`);
+          return res.status(429).json({ error: { message: `Rate limit exceeded for pool "${virtualModel.id}": ${poolCheck.reason}`, type: 'pool_rate_limit_exceeded', retry_after: Math.ceil(poolCheck.retryAfterMs / 1000) } });
+        }
+      }
       targets = [...virtualModel.targets].filter(t => t.enabled !== false);
       if (targets.length === 0) {
         return res.status(503).json({ error: { message: `Virtual pool "${requestedModel}" has no active/enabled models available.`, type: 'pool_empty' } });
@@ -689,6 +696,7 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
           const totalTokens = promptTokens + completionTokens;
 
           recordRequestEnd(provider.id, target.modelId, reqReservation, totalTokens);
+          if (virtualModel) recordPoolUsage(virtualModel.id, totalTokens);
           if (provider.limits && provider.limits.cooldownMs) {
             setProviderCooldown(provider.id, Number(provider.limits.cooldownMs), true);
           }
@@ -755,6 +763,7 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
       const totalTokens = promptTokens + completionTokens;
 
       recordRequestEnd(provider.id, target.modelId, reqReservation, totalTokens);
+      if (virtualModel) recordPoolUsage(virtualModel.id, totalTokens);
       if (provider.limits && provider.limits.cooldownMs) {
         setProviderCooldown(provider.id, Number(provider.limits.cooldownMs), true);
       }
