@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { GatewayConfig, PlaygroundResult } from '../utils/api';
 import { runPlaygroundCompletion } from '../utils/api';
+import { SearchableSelect } from './SearchableSelect';
 
 interface PlaygroundProps {
   config: GatewayConfig;
@@ -36,50 +37,42 @@ export const Playground: React.FC<PlaygroundProps> = ({ config }) => {
   const [showParams, setShowParams] = useState(false);
 
   const [providerFilter, setProviderFilter] = useState('all');
-  const [modelSearch, setModelSearch] = useState('');
 
-  // Build grouped model options from config (same logic as Agent)
+  // Build pool models array
   const poolModels = (config.virtualModels || []).map(vm => ({
     id: vm.id,
-    label: vm.name || vm.id
+    label: vm.name || vm.id,
+    group: '🔀 Routing Pools'
   }));
 
-  const providerGroups: Record<string, { id: string; label: string }[]> = {};
+  // Build provider models array and collect active providers
+  const providerModels: { id: string; label: string; group: string }[] = [];
+  const providerGroups: Record<string, boolean> = {};
+  
   (config.providers || []).forEach(p => {
     if (p.enabled && p.models && p.models.length > 0) {
-      if (!providerGroups[p.name]) providerGroups[p.name] = [];
+      providerGroups[p.name] = true;
       p.models.forEach(m => {
-        providerGroups[p.name].push({ id: m.id, label: m.id });
+        providerModels.push({ id: m.id, label: m.id, group: `📡 ${p.name}` });
       });
     }
   });
 
-  const allModelIds = [
-    ...poolModels.map(m => m.id),
-    ...Object.values(providerGroups).flatMap(g => g.map(m => m.id))
+  const allModelIds = [...poolModels.map(m => m.id), ...providerModels.map(m => m.id)];
+
+  // Options for the Source Filter SearchableSelect
+  const sourceOptions = [
+    { id: 'all', label: 'All Sources', group: 'Filters' },
+    { id: 'pools', label: 'Routing Pools', group: 'Filters' },
+    ...Object.keys(providerGroups).map(name => ({ id: name, label: name, group: 'Providers' }))
   ];
 
-  // Filtering logic
-  let filteredPools = poolModels;
-  let filteredProviders = providerGroups;
-
+  // Options for the Model SearchableSelect
+  let modelSelectOptions = [...poolModels, ...providerModels];
   if (providerFilter === 'pools') {
-    filteredProviders = {};
+    modelSelectOptions = poolModels;
   } else if (providerFilter !== 'all') {
-    filteredPools = [];
-    filteredProviders = { [providerFilter]: providerGroups[providerFilter] || [] };
-  }
-
-  if (modelSearch.trim()) {
-    const search = modelSearch.toLowerCase();
-    filteredPools = filteredPools.filter(m => m.label.toLowerCase().includes(search) || m.id.toLowerCase().includes(search));
-    
-    const newFilteredProviders: typeof providerGroups = {};
-    Object.keys(filteredProviders).forEach(group => {
-      const matched = filteredProviders[group].filter(m => m.label.toLowerCase().includes(search) || m.id.toLowerCase().includes(search));
-      if (matched.length > 0) newFilteredProviders[group] = matched;
-    });
-    filteredProviders = newFilteredProviders;
+    modelSelectOptions = providerModels.filter(m => m.group === `📡 ${providerFilter}`);
   }
 
   // Auto-select first model
@@ -198,58 +191,26 @@ export const Playground: React.FC<PlaygroundProps> = ({ config }) => {
       </div>
 
       {/* Config Row */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(120px, 1fr) minmax(150px, 1.5fr) minmax(200px, 2fr) auto', gap: '1rem', alignItems: 'end' }}>
-        <div>
-          <label style={labelStyle}>Source Filter</label>
-          <select
-            value={providerFilter}
-            onChange={(e) => setProviderFilter(e.target.value)}
-            style={{ ...inputStyle, padding: '0.45rem 0.5rem' }}
-          >
-            <option value="all">All Sources</option>
-            <option value="pools">Routing Pools</option>
-            {Object.keys(providerGroups).map(name => (
-              <option key={`filter-${name}`} value={name}>{name}</option>
-            ))}
-          </select>
-        </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(200px, 1.5fr) minmax(300px, 2.5fr) auto', gap: '1rem', alignItems: 'end' }}>
         
-        <div>
-          <label style={labelStyle}>Search</label>
-          <input
-            type="text"
-            placeholder="Filter models..."
-            value={modelSearch}
-            onChange={(e) => setModelSearch(e.target.value)}
-            style={{ ...inputStyle, padding: '0.45rem 0.5rem' }}
+        <div style={{ zIndex: 100 }}>
+          <label style={labelStyle}>Source Filter</label>
+          <SearchableSelect
+            options={sourceOptions}
+            value={providerFilter}
+            onChange={setProviderFilter}
+            placeholder="Search providers..."
           />
         </div>
 
-        <div>
+        <div style={{ zIndex: 99 }}>
           <label style={labelStyle}>Model / Pool</label>
-          <select
+          <SearchableSelect
+            options={modelSelectOptions}
             value={selectedModel}
-            onChange={(e) => setSelectedModel(e.target.value)}
-            style={{ ...inputStyle, padding: '0.45rem 0.5rem' }}
-          >
-            {filteredPools.length > 0 && (
-              <optgroup label="🔀 Routing Pools">
-                {filteredPools.map(m => (
-                  <option key={`pool-${m.id}`} value={m.id}>{m.label}</option>
-                ))}
-              </optgroup>
-            )}
-            {Object.keys(filteredProviders).map(groupName => (
-              <optgroup key={groupName} label={`📡 ${groupName}`}>
-                {filteredProviders[groupName].map(m => (
-                  <option key={`${groupName}-${m.id}`} value={m.id}>{m.label}</option>
-                ))}
-              </optgroup>
-            ))}
-            {filteredPools.length === 0 && Object.keys(filteredProviders).length === 0 && (
-              <option value="" disabled>No matches</option>
-            )}
-          </select>
+            onChange={setSelectedModel}
+            placeholder="Search models..."
+          />
         </div>
 
         <button
