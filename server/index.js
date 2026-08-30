@@ -6,7 +6,7 @@ import crypto from 'crypto';
 import axios from 'axios';
 import { fileURLToPath } from 'url';
 import { loadConfig, saveConfig, getLogs, clearLogs, addLog, getAllChatSessions, createChatSession, updateChatSessionTitle, deleteChatSession, getMessagesBySession, addChatMessage, truncateChatMessagesFromIndex, loadStatsHistory, clearStatsHistory } from './db.js';
-import { getRateLimitMetrics, activeRequests } from './rateLimiter.js';
+import { getRateLimitMetrics, activeRequests, overrideUsage } from './rateLimiter.js';
 import { getProxyAgent } from './proxy.js';
 import { routeChatCompletion } from './router.js';
 import { initCache, clearCache, getCacheSize } from './cache.js';
@@ -243,6 +243,20 @@ app.get('/api/stats', (req, res) => {
     limits: rateLimitMetrics,
     activeRequests: activeRequests
   });
+});
+
+// POST /api/rate-limits/override - Override rate limit usage manually
+app.post('/api/rate-limits/override', (req, res) => {
+  try {
+    const { key, type, value } = req.body;
+    if (!key || !type || value === undefined) {
+      return res.status(400).json({ error: 'Missing key, type, or value' });
+    }
+    overrideUsage(key, type, Number(value));
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // GET /api/stats/history - Get detailed request history for charts

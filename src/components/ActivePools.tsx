@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { GatewayConfig, VirtualModel } from '../utils/api';
-import { getCacheStats, clearCacheDatabase } from '../utils/api';
+import { getCacheStats, clearCacheDatabase, getStats, overrideRateLimit } from '../utils/api';
 
 interface ActivePoolsProps {
   config: GatewayConfig;
@@ -9,7 +9,21 @@ interface ActivePoolsProps {
 
 export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
   const [localConfig, setLocalConfig] = useState<GatewayConfig>({ ...config });
-  
+  const [limitsData, setLimitsData] = useState<any>(null);
+
+  const fetchLimits = async () => {
+    try {
+      const data = await getStats();
+      setLimitsData(data.limits);
+    } catch (e) {}
+  };
+
+  useEffect(() => {
+    fetchLimits();
+    const interval = setInterval(fetchLimits, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
   // Custom Virtual Model Creator State
   const [newVmId, setNewVmId] = useState('');
   const [newVmName, setNewVmName] = useState('');
@@ -231,6 +245,38 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
       ...newTargets,
       [vmId]: { providerId: '', modelId: '' }
     });
+  };
+
+  const renderModelLimitUsage = (providerId: string, modelId: string, targetLimits: any, label: string, field: 'rpm'|'rph'|'rpd'|'rpmo'|'tpm'|'tph'|'tpd'|'tpmo') => {
+    const key = `${providerId}:${modelId}`;
+    const limitsDataForKey = limitsData?.[key]?.[field];
+    const used = limitsDataForKey?.used || 0;
+    const limit = targetLimits?.[field] || Infinity;
+    
+    return (
+      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
+        <span>{label}</span>
+        {limitsDataForKey && (
+          <span>
+            <span style={{ color: used >= limit && limit > 0 ? 'var(--error)' : 'var(--accent)' }}>{used}</span> used
+            <button 
+              type="button" 
+              onClick={() => {
+                const newVal = prompt(`Enter new used value for ${label} (${key}):`, used.toString());
+                if (newVal !== null && !isNaN(Number(newVal))) {
+                  overrideRateLimit(key, field.startsWith('t') ? 'tokens' : 'count', Number(newVal))
+                    .then(() => fetchLimits());
+                }
+              }} 
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 0 0 4px', fontSize: '0.75rem' }}
+              title="Edit Usage"
+            >
+              ✏️
+            </button>
+          </span>
+        )}
+      </span>
+    );
   };
 
   const handleCreateVirtualModel = (e: React.FormEvent) => {
@@ -746,56 +792,56 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
                               </div>
 
                               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-                                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Requests Per Minute (RPM)</label>
+                                {renderModelLimitUsage(target.providerId, target.modelId, target.limits, 'Requests Per Minute (RPM)', 'rpm')}
                                 <input type="number" className="input" min={1} placeholder="No override"
                                   value={target.limits?.rpm || ''} onChange={(e) => handleTargetLimitChange(vm.id, index, 'rpm', e.target.value)}
                                   style={{ padding: '0.4rem', fontSize: '0.8rem' }} />
                               </div>
 
                               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-                                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Requests Per Hour (RPH)</label>
+                                {renderModelLimitUsage(target.providerId, target.modelId, target.limits, 'Requests Per Hour (RPH)', 'rph')}
                                 <input type="number" className="input" min={1} placeholder="No override"
                                   value={target.limits?.rph || ''} onChange={(e) => handleTargetLimitChange(vm.id, index, 'rph', e.target.value)}
                                   style={{ padding: '0.4rem', fontSize: '0.8rem' }} />
                               </div>
 
                               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-                                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Requests Per Day (RPD)</label>
+                                {renderModelLimitUsage(target.providerId, target.modelId, target.limits, 'Requests Per Day (RPD)', 'rpd')}
                                 <input type="number" className="input" min={1} placeholder="No override"
                                   value={target.limits?.rpd || ''} onChange={(e) => handleTargetLimitChange(vm.id, index, 'rpd', e.target.value)}
                                   style={{ padding: '0.4rem', fontSize: '0.8rem' }} />
                               </div>
 
                               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-                                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Requests Per Month</label>
+                                {renderModelLimitUsage(target.providerId, target.modelId, target.limits, 'Requests Per Month', 'rpmo')}
                                 <input type="number" className="input" min={1} placeholder="No override"
                                   value={target.limits?.rpmo || ''} onChange={(e) => handleTargetLimitChange(vm.id, index, 'rpmo', e.target.value)}
                                   style={{ padding: '0.4rem', fontSize: '0.8rem' }} />
                               </div>
 
                               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-                                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Tokens Per Minute (TPM)</label>
+                                {renderModelLimitUsage(target.providerId, target.modelId, target.limits, 'Tokens Per Minute (TPM)', 'tpm')}
                                 <input type="number" className="input" min={1} placeholder="No override"
                                   value={target.limits?.tpm || ''} onChange={(e) => handleTargetLimitChange(vm.id, index, 'tpm', e.target.value)}
                                   style={{ padding: '0.4rem', fontSize: '0.8rem' }} />
                               </div>
 
                               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-                                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Tokens Per Hour (TPH)</label>
+                                {renderModelLimitUsage(target.providerId, target.modelId, target.limits, 'Tokens Per Hour (TPH)', 'tph')}
                                 <input type="number" className="input" min={1} placeholder="No override"
                                   value={target.limits?.tph || ''} onChange={(e) => handleTargetLimitChange(vm.id, index, 'tph', e.target.value)}
                                   style={{ padding: '0.4rem', fontSize: '0.8rem' }} />
                               </div>
 
                               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-                                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Tokens Per Day (TPD)</label>
+                                {renderModelLimitUsage(target.providerId, target.modelId, target.limits, 'Tokens Per Day (TPD)', 'tpd')}
                                 <input type="number" className="input" min={1} placeholder="No override"
                                   value={target.limits?.tpd || ''} onChange={(e) => handleTargetLimitChange(vm.id, index, 'tpd', e.target.value)}
                                   style={{ padding: '0.4rem', fontSize: '0.8rem' }} />
                               </div>
 
                               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-                                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Tokens Per Month</label>
+                                {renderModelLimitUsage(target.providerId, target.modelId, target.limits, 'Tokens Per Month', 'tpmo')}
                                 <input type="number" className="input" min={1} placeholder="No override"
                                   value={target.limits?.tpmo || ''} onChange={(e) => handleTargetLimitChange(vm.id, index, 'tpmo', e.target.value)}
                                   style={{ padding: '0.4rem', fontSize: '0.8rem' }} />

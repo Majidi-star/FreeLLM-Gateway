@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { testProvider, syncProviderModels } from '../utils/api';
+import React, { useState, useEffect } from 'react';
+import { testProvider, syncProviderModels, getStats, overrideRateLimit } from '../utils/api';
 import type { Provider, GatewayConfig } from '../utils/api';
 
 interface GatewaySetupProps {
@@ -9,6 +9,48 @@ interface GatewaySetupProps {
 
 export const GatewaySetup: React.FC<GatewaySetupProps> = ({ config, onSave }) => {
   const [localConfig, setLocalConfig] = useState<GatewayConfig>({ ...config });
+  const [limitsData, setLimitsData] = useState<any>(null);
+
+  useEffect(() => {
+    fetchLimits();
+    const interval = setInterval(fetchLimits, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const fetchLimits = async () => {
+    try {
+      const data = await getStats();
+      setLimitsData(data.limits);
+    } catch(e) {}
+  };
+
+  const handleExport = () => {
+    let md = '# FreeLLM Gateway - Providers & Models\n\n';
+    localConfig.providers.forEach(p => {
+      md += `## ${p.name} (${p.id})\n`;
+      md += `- **Base URL**: ${p.baseUrl}\n`;
+      md += `- **Status**: ${p.enabled ? 'Enabled' : 'Disabled'}\n`;
+      md += `- **Models**:\n`;
+      if (p.models && p.models.length > 0) {
+        p.models.forEach(m => {
+          md += `  - ${m.id}\n`;
+        });
+      } else {
+        md += `  - *No models synced*\n`;
+      }
+      md += '\n';
+    });
+    
+    const blob = new Blob([md], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'providers_export.md';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
   
   // Custom Provider Form State
   const [showAddForm, setShowAddForm] = useState(false);
@@ -349,6 +391,37 @@ export const GatewaySetup: React.FC<GatewaySetupProps> = ({ config, onSave }) =>
     setActionResult(null);
   };
 
+  const renderLimitUsage = (provider: Provider, label: string, field: 'rpm'|'rph'|'rpd'|'rpmo'|'tpm'|'tph'|'tpd'|'tpmo') => {
+    const limitsDataForProvider = limitsData?.[provider.id]?.[field];
+    const used = limitsDataForProvider?.used || 0;
+    const limit = provider.limits?.[field] || Infinity;
+    
+    return (
+      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between' }}>
+        <span>{label}</span>
+        {limitsDataForProvider && (
+          <span>
+            <span style={{ color: used >= limit && limit > 0 ? 'var(--error)' : 'var(--accent)' }}>{used}</span> used
+            <button 
+              type="button" 
+              onClick={() => {
+                const newVal = prompt(`Enter new used value for ${label}:`, used.toString());
+                if (newVal !== null && !isNaN(Number(newVal))) {
+                  overrideRateLimit(provider.id, field.startsWith('t') ? 'tokens' : 'count', Number(newVal))
+                    .then(() => fetchLimits());
+                }
+              }} 
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 0 0 4px', fontSize: '0.75rem' }}
+              title="Edit Usage"
+            >
+              ✏️
+            </button>
+          </span>
+        )}
+      </span>
+    );
+  };
+
   return (
     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
       
@@ -387,6 +460,13 @@ export const GatewaySetup: React.FC<GatewaySetupProps> = ({ config, onSave }) =>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h3 style={{ margin: 0 }}>Manage API Providers</h3>
         <div style={{ display: 'flex', gap: '0.75rem' }}>
+          <button 
+            type="button" 
+            onClick={handleExport}
+            style={{ padding: '0.5rem 1rem', background: 'oklch(20% 0.018 255.4 / 0.5)', border: '1px solid var(--border)', borderRadius: '6px', cursor: 'pointer' }}
+          >
+            📄 Export to Markdown
+          </button>
           <button 
             type="button" 
             onClick={handleSyncAllModels}
@@ -743,7 +823,7 @@ export const GatewaySetup: React.FC<GatewaySetupProps> = ({ config, onSave }) =>
                                   />
                                 </div>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>RPM (Req/Min)</span>
+                                  {renderLimitUsage(provider, 'RPM (Req/Min)', 'rpm')}
                                   <input 
                                     type="number" 
                                     min="0"
@@ -754,7 +834,7 @@ export const GatewaySetup: React.FC<GatewaySetupProps> = ({ config, onSave }) =>
                                   />
                                 </div>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>RPH (Req/Hour)</span>
+                                  {renderLimitUsage(provider, 'RPH (Req/Hour)', 'rph')}
                                   <input 
                                     type="number" 
                                     min="0"
@@ -765,7 +845,7 @@ export const GatewaySetup: React.FC<GatewaySetupProps> = ({ config, onSave }) =>
                                   />
                                 </div>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>RPD (Req/Day)</span>
+                                  {renderLimitUsage(provider, 'RPD (Req/Day)', 'rpd')}
                                   <input 
                                     type="number" 
                                     min="0"
@@ -776,7 +856,7 @@ export const GatewaySetup: React.FC<GatewaySetupProps> = ({ config, onSave }) =>
                                   />
                                 </div>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>TPM (Tokens/Min)</span>
+                                  {renderLimitUsage(provider, 'TPM (Tokens/Min)', 'tpm')}
                                   <input 
                                     type="number" 
                                     min="0"
@@ -787,7 +867,7 @@ export const GatewaySetup: React.FC<GatewaySetupProps> = ({ config, onSave }) =>
                                   />
                                 </div>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>TPH (Tokens/Hour)</span>
+                                  {renderLimitUsage(provider, 'TPH (Tokens/Hour)', 'tph')}
                                   <input 
                                     type="number" 
                                     min="0"
@@ -798,7 +878,7 @@ export const GatewaySetup: React.FC<GatewaySetupProps> = ({ config, onSave }) =>
                                   />
                                 </div>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>TPD (Tokens/Day)</span>
+                                  {renderLimitUsage(provider, 'TPD (Tokens/Day)', 'tpd')}
                                   <input 
                                     type="number" 
                                     min="0"

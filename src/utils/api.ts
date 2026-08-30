@@ -142,6 +142,13 @@ export async function clearLogs(): Promise<{ success: boolean }> {
   });
 }
 
+export async function overrideRateLimit(key: string, type: 'count' | 'tokens', value: number): Promise<{ success: boolean }> {
+  return fetchJson(`${API_BASE}/api/rate-limits/override`, {
+    method: 'POST',
+    body: JSON.stringify({ key, type, value }),
+  });
+}
+
 export interface TestProviderPayload {
   providerId: string;
   apiKey: string;

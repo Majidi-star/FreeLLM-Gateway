@@ -34,6 +34,28 @@ function cleanHistory(key, windowMs) {
 }
 
 /**
+ * Overrides the usage history for a key to a specific value.
+ */
+export function overrideUsage(key, type, newValue) {
+  const now = Date.now();
+  const reqs = history.requests[key] || [];
+  
+  let currentCount = reqs.length;
+  let currentTokens = reqs.reduce((sum, r) => sum + (r.tokens || 0), 0);
+  
+  if (type === 'count') {
+    currentCount = Math.max(0, newValue);
+  } else if (type === 'tokens') {
+    currentTokens = Math.max(0, newValue);
+  }
+  
+  history.requests[key] = Array(currentCount).fill(null).map((_, i) => ({
+    timestamp: now,
+    tokens: i === 0 ? currentTokens : 0
+  }));
+}
+
+/**
  * Gets the current usage details for a given key and window.
  * @param {string} key - History identifier.
  * @param {number} windowMs - Window duration in milliseconds.
