@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { testProvider, syncProviderModels, getStats, overrideRateLimit } from '../utils/api';
 import type { Provider, GatewayConfig } from '../utils/api';
 
@@ -1144,8 +1145,8 @@ export const GatewaySetup: React.FC<GatewaySetupProps> = ({ config, onSave }) =>
       `}</style>
 
       {/* Export to Markdown Modal */}
-      {showExportModal && (
-        <div style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.7)', zIndex: 9999 }}>
+      {showExportModal && createPortal(
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.7)', zIndex: 9999 }}>
           <div className="glass-panel" style={{ padding: '1.5rem', width: '400px', display: 'flex', flexDirection: 'column', gap: '1rem', border: '1px solid var(--border)' }}>
             <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Export Settings</h3>
             
@@ -1194,7 +1195,8 @@ export const GatewaySetup: React.FC<GatewaySetupProps> = ({ config, onSave }) =>
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
     </div>
