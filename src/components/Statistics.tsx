@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { StatsHistoryEntry, GatewayConfig } from '../utils/api';
-import { clearStatsHistory } from '../utils/api';
+import { clearStatsHistory, overrideRateLimit } from '../utils/api';
 
 interface StatisticsProps {
   config: GatewayConfig;
@@ -1269,7 +1269,23 @@ export const Statistics: React.FC<StatisticsProps> = ({ config }) => {
                           <div key={m.name} style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem' }}>
                               <span style={{ color: 'var(--text-muted)', textTransform: 'uppercase' }}>{m.name}</span>
-                              <span style={{ color: 'var(--text)' }}><strong>{m.used.toLocaleString()}</strong> / {m.limit.toLocaleString()}</span>
+                              <span style={{ color: 'var(--text)' }}>
+                                <strong>{m.used.toLocaleString()}</strong> / {m.limit.toLocaleString()}
+                                <button 
+                                  type="button" 
+                                  onClick={() => {
+                                    const newVal = prompt(`Enter new used value for ${m.name.toUpperCase()} (${ent.key}):`, m.used.toString());
+                                    if (newVal !== null && !isNaN(Number(newVal))) {
+                                      overrideRateLimit(ent.key, m.name.startsWith('t') ? 'tokens' : 'count', Number(newVal))
+                                        .then(() => fetchData(true));
+                                    }
+                                  }} 
+                                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 0 0 4px', fontSize: '0.65rem' }}
+                                  title="Edit Usage"
+                                >
+                                  ✏️
+                                </button>
+                              </span>
                             </div>
                             <div style={{ height: '3px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px', overflow: 'hidden' }}>
                               <div style={{ height: '100%', width: `${m.pct}%`, background: color }} />
@@ -1577,7 +1593,23 @@ export const Statistics: React.FC<StatisticsProps> = ({ config }) => {
                       <tr key={`${row.entity}-${row.metric}-${idx}`} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                         <td style={{ padding: '0.5rem' }}><strong style={{ color: 'var(--text)' }}>{row.entity}</strong></td>
                         <td style={{ padding: '0.5rem', textTransform: 'uppercase', color: 'var(--text-muted)' }}>{row.metric}</td>
-                        <td style={{ padding: '0.5rem' }}>{row.used.toLocaleString()} <span style={{ color: 'var(--text-muted)' }}>/ {row.limit.toLocaleString()}</span></td>
+                        <td style={{ padding: '0.5rem' }}>
+                          {row.used.toLocaleString()} <span style={{ color: 'var(--text-muted)' }}>/ {row.limit.toLocaleString()}</span>
+                          <button 
+                            type="button" 
+                            onClick={() => {
+                              const newVal = prompt(`Enter new used value for ${row.metric.toUpperCase()} (${row.entity}):`, row.used.toString());
+                              if (newVal !== null && !isNaN(Number(newVal))) {
+                                overrideRateLimit(row.entity, row.metric.startsWith('t') ? 'tokens' : 'count', Number(newVal))
+                                  .then(() => fetchData(true));
+                              }
+                            }} 
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 0 0 8px', fontSize: '0.8rem' }}
+                            title="Edit Usage"
+                          >
+                            ✏️
+                          </button>
+                        </td>
                         <td style={{ padding: '0.5rem' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                             <div style={{ height: '4px', flex: 1, background: 'rgba(255,255,255,0.1)', borderRadius: '2px', overflow: 'hidden' }}>

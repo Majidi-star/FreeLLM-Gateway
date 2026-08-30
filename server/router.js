@@ -777,7 +777,10 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
     }
   } catch (err) {
     recordRequestEnd(provider.id, target.modelId, reqReservation, 0);
-    const errorMsg = err.response?.data?.error?.message || err.response?.data?.message || err.message;
+    let errorMsg = err.response?.data?.error?.message || err.response?.data?.message || err.message;
+    if (err.code === 'ENOTFOUND') {
+      errorMsg += ` (DNS resolution failed for ${err.hostname || err.host}. This may indicate a network block or missing Proxy configuration for ${provider.name}.)`;
+    }
     eventLog(`ERROR calling ${provider.name}:`, errorMsg);
     
     // Check if we should place on cooldown and failover based on strategy config

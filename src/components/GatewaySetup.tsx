@@ -24,9 +24,26 @@ export const GatewaySetup: React.FC<GatewaySetupProps> = ({ config, onSave }) =>
     } catch(e) {}
   };
 
-  const handleExport = () => {
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportFilter, setExportFilter] = useState<'all' | 'enabled' | 'disabled'>('all');
+  const [exportProviderFilter, setExportProviderFilter] = useState('all');
+
+  const generateExport = () => {
     let md = '# FreeLLM Gateway - Providers & Models\n\n';
-    localConfig.providers.forEach(p => {
+    
+    let filteredProviders = localConfig.providers;
+    
+    if (exportProviderFilter !== 'all') {
+      filteredProviders = filteredProviders.filter(p => p.id === exportProviderFilter);
+    }
+
+    if (exportFilter === 'enabled') {
+      filteredProviders = filteredProviders.filter(p => p.enabled);
+    } else if (exportFilter === 'disabled') {
+      filteredProviders = filteredProviders.filter(p => !p.enabled);
+    }
+
+    filteredProviders.forEach(p => {
       md += `## ${p.name} (${p.id})\n`;
       md += `- **Base URL**: ${p.baseUrl}\n`;
       md += `- **Status**: ${p.enabled ? 'Enabled' : 'Disabled'}\n`;
@@ -50,8 +67,9 @@ export const GatewaySetup: React.FC<GatewaySetupProps> = ({ config, onSave }) =>
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+    
+    setShowExportModal(false);
   };
-  
   // Custom Provider Form State
   const [showAddForm, setShowAddForm] = useState(false);
   const [newProv, setNewProv] = useState({
@@ -462,7 +480,7 @@ export const GatewaySetup: React.FC<GatewaySetupProps> = ({ config, onSave }) =>
         <div style={{ display: 'flex', gap: '0.75rem' }}>
           <button 
             type="button" 
-            onClick={handleExport}
+            onClick={() => setShowExportModal(true)}
             style={{ padding: '0.5rem 1rem', background: 'oklch(20% 0.018 255.4 / 0.5)', border: '1px solid var(--border)', borderRadius: '6px', cursor: 'pointer' }}
           >
             📄 Export to Markdown
@@ -1124,6 +1142,60 @@ export const GatewaySetup: React.FC<GatewaySetupProps> = ({ config, onSave }) =>
           to { opacity: 1; transform: translateY(0); }
         }
       `}</style>
+
+      {/* Export to Markdown Modal */}
+      {showExportModal && (
+        <div style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.7)', zIndex: 9999 }}>
+          <div className="glass-panel" style={{ padding: '1.5rem', width: '400px', display: 'flex', flexDirection: 'column', gap: '1rem', border: '1px solid var(--border)' }}>
+            <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Export Settings</h3>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+              <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Status Filter</label>
+              <select 
+                value={exportFilter} 
+                onChange={(e) => setExportFilter(e.target.value as any)}
+                style={{ padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--border)', background: '#1a1a24', color: 'var(--text)' }}
+              >
+                <option value="all">All Providers</option>
+                <option value="enabled">Enabled Only</option>
+                <option value="disabled">Disabled Only</option>
+              </select>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+              <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Provider Filter</label>
+              <select 
+                value={exportProviderFilter} 
+                onChange={(e) => setExportProviderFilter(e.target.value)}
+                style={{ padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--border)', background: '#1a1a24', color: 'var(--text)' }}
+              >
+                <option value="all">All Providers</option>
+                {localConfig.providers.map(p => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem', justifyContent: 'flex-end' }}>
+              <button 
+                type="button" 
+                onClick={() => setShowExportModal(false)}
+                style={{ padding: '0.5rem 1rem', background: 'transparent', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--text-muted)', cursor: 'pointer' }}
+              >
+                Cancel
+              </button>
+              <button 
+                type="button" 
+                onClick={generateExport}
+                className="primary"
+                style={{ padding: '0.5rem 1rem', borderRadius: '6px', cursor: 'pointer' }}
+              >
+                Download Markdown
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

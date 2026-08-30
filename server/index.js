@@ -428,7 +428,10 @@ app.post('/api/test-provider', async (req, res) => {
     const result = await testConnectionHelper(req.body);
     res.json(result);
   } catch (err) {
-    const errorMsg = err.response?.data?.error?.message || err.response?.data?.message || err.message;
+    let errorMsg = err.response?.data?.error?.message || err.response?.data?.message || err.message;
+    if (err.code === 'ENOTFOUND') {
+      errorMsg += ` (DNS resolution failed for ${err.hostname || err.host}. This may indicate a network block or missing Proxy configuration.)`;
+    }
     res.status(500).json({ success: false, error: errorMsg });
   }
 });
@@ -439,7 +442,10 @@ app.post('/api/providers/:providerId/sync-models', async (req, res) => {
     const fetchedModels = await syncModelsHelper({ providerId: req.params.providerId, ...req.body });
     res.json({ success: true, models: fetchedModels });
   } catch (err) {
-    const errorMsg = err.response?.data?.error?.message || err.response?.data?.message || err.message;
+    let errorMsg = err.response?.data?.error?.message || err.response?.data?.message || err.message;
+    if (err.code === 'ENOTFOUND') {
+      errorMsg += ` (DNS resolution failed for ${err.hostname || err.host}. This may indicate a network block or missing Proxy configuration.)`;
+    }
     res.status(500).json({ success: false, error: errorMsg });
   }
 });
