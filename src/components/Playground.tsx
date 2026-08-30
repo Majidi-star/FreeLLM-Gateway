@@ -35,6 +35,9 @@ export const Playground: React.FC<PlaygroundProps> = ({ config }) => {
   const [errorMsg, setErrorMsg] = useState('');
   const [showParams, setShowParams] = useState(false);
 
+  const [providerFilter, setProviderFilter] = useState('all');
+  const [modelSearch, setModelSearch] = useState('');
+
   // Build grouped model options from config (same logic as Agent)
   const poolModels = (config.virtualModels || []).map(vm => ({
     id: vm.id,
@@ -55,6 +58,29 @@ export const Playground: React.FC<PlaygroundProps> = ({ config }) => {
     ...poolModels.map(m => m.id),
     ...Object.values(providerGroups).flatMap(g => g.map(m => m.id))
   ];
+
+  // Filtering logic
+  let filteredPools = poolModels;
+  let filteredProviders = providerGroups;
+
+  if (providerFilter === 'pools') {
+    filteredProviders = {};
+  } else if (providerFilter !== 'all') {
+    filteredPools = [];
+    filteredProviders = { [providerFilter]: providerGroups[providerFilter] || [] };
+  }
+
+  if (modelSearch.trim()) {
+    const search = modelSearch.toLowerCase();
+    filteredPools = filteredPools.filter(m => m.label.toLowerCase().includes(search) || m.id.toLowerCase().includes(search));
+    
+    const newFilteredProviders: typeof providerGroups = {};
+    Object.keys(filteredProviders).forEach(group => {
+      const matched = filteredProviders[group].filter(m => m.label.toLowerCase().includes(search) || m.id.toLowerCase().includes(search));
+      if (matched.length > 0) newFilteredProviders[group] = matched;
+    });
+    filteredProviders = newFilteredProviders;
+  }
 
   // Auto-select first model
   useEffect(() => {
@@ -172,7 +198,33 @@ export const Playground: React.FC<PlaygroundProps> = ({ config }) => {
       </div>
 
       {/* Config Row */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '1rem', alignItems: 'end' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(120px, 1fr) minmax(150px, 1.5fr) minmax(200px, 2fr) auto', gap: '1rem', alignItems: 'end' }}>
+        <div>
+          <label style={labelStyle}>Source Filter</label>
+          <select
+            value={providerFilter}
+            onChange={(e) => setProviderFilter(e.target.value)}
+            style={{ ...inputStyle, padding: '0.45rem 0.5rem' }}
+          >
+            <option value="all">All Sources</option>
+            <option value="pools">Routing Pools</option>
+            {Object.keys(providerGroups).map(name => (
+              <option key={`filter-${name}`} value={name}>{name}</option>
+            ))}
+          </select>
+        </div>
+        
+        <div>
+          <label style={labelStyle}>Search</label>
+          <input
+            type="text"
+            placeholder="Filter models..."
+            value={modelSearch}
+            onChange={(e) => setModelSearch(e.target.value)}
+            style={{ ...inputStyle, padding: '0.45rem 0.5rem' }}
+          />
+        </div>
+
         <div>
           <label style={labelStyle}>Model / Pool</label>
           <select
@@ -180,20 +232,23 @@ export const Playground: React.FC<PlaygroundProps> = ({ config }) => {
             onChange={(e) => setSelectedModel(e.target.value)}
             style={{ ...inputStyle, padding: '0.45rem 0.5rem' }}
           >
-            {poolModels.length > 0 && (
+            {filteredPools.length > 0 && (
               <optgroup label="🔀 Routing Pools">
-                {poolModels.map(m => (
+                {filteredPools.map(m => (
                   <option key={`pool-${m.id}`} value={m.id}>{m.label}</option>
                 ))}
               </optgroup>
             )}
-            {Object.keys(providerGroups).map(groupName => (
+            {Object.keys(filteredProviders).map(groupName => (
               <optgroup key={groupName} label={`📡 ${groupName}`}>
-                {providerGroups[groupName].map(m => (
+                {filteredProviders[groupName].map(m => (
                   <option key={`${groupName}-${m.id}`} value={m.id}>{m.label}</option>
                 ))}
               </optgroup>
             ))}
+            {filteredPools.length === 0 && Object.keys(filteredProviders).length === 0 && (
+              <option value="" disabled>No matches</option>
+            )}
           </select>
         </div>
 
@@ -209,10 +264,11 @@ export const Playground: React.FC<PlaygroundProps> = ({ config }) => {
             color: showParams ? 'var(--text)' : 'var(--text-muted)',
             cursor: 'pointer',
             fontWeight: 600,
-            whiteSpace: 'nowrap'
+            whiteSpace: 'nowrap',
+            height: '35px'
           }}
         >
-          ⚙️ Parameters
+          ⚙️ Params
         </button>
       </div>
 
