@@ -733,7 +733,6 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
                     </div>
                   </div>
                 </div>
-                </div>
               )}
 
               {!collapsedPools[vm.id] && (
