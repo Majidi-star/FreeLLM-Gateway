@@ -523,6 +523,7 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
   } else if (providerType === 'gemini') {
     // Gemini OpenAI compatibility endpoint:
     let base = provider.baseUrl;
+    if (base.endsWith('/')) base = base.slice(0, -1);
     if (base.endsWith('/models')) {
       base = base.substring(0, base.length - 7);
     }

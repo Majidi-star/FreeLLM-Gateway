@@ -313,7 +313,16 @@ async function testConnectionHelper({ providerId, apiKey, baseUrl, proxyEnabled,
     headers['x-api-key'] = apiKey;
     headers['anthropic-version'] = '2023-06-01';
   } else if (providerId === 'gemini') {
-    url = `${baseUrl}/openai/chat/completions`;
+    let base = baseUrl;
+    if (base.endsWith('/')) base = base.slice(0, -1);
+    if (base.endsWith('/models')) {
+      base = base.substring(0, base.length - 7);
+    }
+    if (base.endsWith('/openai')) {
+      url = `${base}/chat/completions`;
+    } else {
+      url = `${base}/openai/chat/completions`;
+    }
     headers['Authorization'] = `Bearer ${apiKey}`;
   } else {
     headers['Authorization'] = `Bearer ${apiKey}`;
