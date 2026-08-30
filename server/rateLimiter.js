@@ -423,7 +423,6 @@ export function getRateLimitMetrics(providers) {
         };
       }
     });
-    });
   });
 
   // Include virtual pools limits
