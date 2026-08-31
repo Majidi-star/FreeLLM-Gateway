@@ -37,3 +37,10 @@ stats-history.json
 graphify-out/
 .graphifyignore
 benchmarks/
+
+# Security: never track keys, secrets, certificates
+*.key
+*.secret
+*.pem
+*.p12
+*.pfx

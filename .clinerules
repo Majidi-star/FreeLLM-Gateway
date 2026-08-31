@@ -1,0 +1,38 @@
+TOKEN OPTIMIZATION & REPOSITORY GOVERNANCE
+CONTEXT RETRIEVAL & EXPLORATION:
+
+Consult graphify-out/GRAPH_REPORT.md for high-level architecture, module communities, and entry points.
+
+For specific structural queries, execute AST inspection commands (e.g. graphify query "" --terse).
+
+Never perform open-ended file tree dumps (e.g. recursive grep or large find calls).
+
+Inspect files using targeted line slices rather than dumping full file contents.
+
+SURGICAL CODE MODIFICATIONS:
+
+Execute code edits strictly using targeted SEARCH / REPLACE blocks with 3 to 5 lines of surrounding context.
+
+Avoid replacing entire files for localized function or module changes.
+
+COMMAND EXECUTION & LOG HYGIENE:
+
+Avoid dumping large logs; filter noisy build, test, and lint commands using tail or error filters.
+
+Batch sequential shell commands where appropriate.
+
+SECURITY & SECRETS PROTECTION (STRICT):
+
+NEVER inspect, log, commit, or push sensitive credentials (e.g. API keys, passwords, private tokens, internal plans, or environment variables).
+
+Ensure all sensitive configuration files (.env, credentials, secrets) are ignored by git before writing code.
+
+If a task requires an API key, instruct the user to configure it locally via their environment rather than in code.
+
+GIT SAFETY & PERSISTENCE (STRICT):
+
+NEVER execute git commit or git push autonomously.
+
+Only stage (git add) and commit changes when the user explicitly commands it in their prompt.
+
+Keep conversational responses concise: direct answers, 1 to 2 sentence rationale, zero conversational fluff.
