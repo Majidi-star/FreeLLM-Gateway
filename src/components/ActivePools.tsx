@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import type { GatewayConfig, VirtualModel } from '../utils/api';
+import type { GatewayConfig, VirtualModel, VirtualModelTarget } from '../utils/api';
 import { getCacheStats, clearCacheDatabase, getStats, overrideRateLimit } from '../utils/api';
 
 interface ActivePoolsProps {
@@ -34,6 +34,9 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
 
   // Search models query state per pool
   const [searchQueries, setSearchQueries] = useState<{ [vmId: string]: string }>({});
+  // Search/filter state for the existing targets list per pool
+  const [targetSearchQueries, setTargetSearchQueries] = useState<{ [vmId: string]: string }>({});
+  const [targetFilters, setTargetFilters] = useState<{ [vmId: string]: 'all' | 'active' | 'inactive' }>({});
 
   // Collapsible configuration panels state
   const [expandedConfigVmId, setExpandedConfigVmId] = useState<string | null>(null);
@@ -392,6 +395,30 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
     return results;
   };
 
+  // Filter targets by search query and active/inactive state, preserving original indices
+  const getFilteredTargets = (vmId: string): { target: VirtualModelTarget; originalIndex: number }[] => {
+    const vm = localConfig.virtualModels.find(v => v.id === vmId);
+    if (!vm) return [];
+    const query = (targetSearchQueries[vmId] || '').trim().toLowerCase();
+    const filterMode = targetFilters[vmId] || 'all';
+    return vm.targets
+      .map((target, originalIndex) => {
+        const provider = localConfig.providers.find(p => p.id === target.providerId);
+        const modelObj = provider?.models.find(m => m.id === target.modelId);
+        const providerName = provider?.name || target.providerId;
+        const modelName = modelObj?.name || target.modelId;
+        const isActive = target.enabled !== false;
+        const matchesFilter = filterMode === 'all' || (filterMode === 'active' ? isActive : !isActive);
+        const matchesSearch = !query ||
+          modelName.toLowerCase().includes(query) ||
+          target.modelId.toLowerCase().includes(query) ||
+          providerName.toLowerCase().includes(query) ||
+          target.providerId.toLowerCase().includes(query);
+        return matchesFilter && matchesSearch ? { target, originalIndex } : null;
+      })
+      .filter((x): x is { target: VirtualModelTarget; originalIndex: number } => x !== null);
+  };
+
   const handleImportAllMatches = (vmId: string, matchedTargets: { providerId: string; modelId: string }[]) => {
     const virtualModel = localConfig.virtualModels.find(vm => vm.id === vmId);
     if (!virtualModel) return;
@@ -742,13 +769,46 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600 }}>Priority Failover Order:</span>
                 
+                {/* Search & Filter Bar for existing targets */}
+                <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                  <div style={{ position: 'relative', flex: 1, minWidth: '220px' }}>
+                    <input 
+                      type="text" 
+                      placeholder="Filter targets by model name/ID or provider name/ID..."
+                      value={targetSearchQueries[vm.id] || ''}
+                      onChange={(e) => setTargetSearchQueries({ ...targetSearchQueries, [vm.id]: e.target.value })}
+                      style={{ width: '100%', boxSizing: 'border-box', padding: '0.45rem 2rem 0.45rem 0.75rem', fontSize: '0.85rem', background: '#0a0a0f', color: '#c5c9db', border: '1px solid var(--border)', borderRadius: '6px', outline: 'none' }}
+                    />
+                    {targetSearchQueries[vm.id] && (
+                      <button 
+                        type="button"
+                        title="Clear search"
+                        onClick={() => setTargetSearchQueries({ ...targetSearchQueries, [vm.id]: '' })}
+                        style={{ position: 'absolute', right: '0.5rem', top: '50%', transform: 'translateY(-50%)', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '1rem', padding: '0.2rem', lineHeight: 1 }}
+                      >
+                        ×
+                      </button>
+                    )}
+                  </div>
+                  <select
+                    value={targetFilters[vm.id] || 'all'}
+                    onChange={(e) => setTargetFilters({ ...targetFilters, [vm.id]: e.target.value as 'all' | 'active' | 'inactive' })}
+                    style={{ padding: '0.45rem 0.75rem', fontSize: '0.85rem', background: '#0a0a0f', color: '#c5c9db', border: '1px solid var(--border)', borderRadius: '6px', outline: 'none', cursor: 'pointer' }}
+                  >
+                    <option value="all">All Targets</option>
+                    <option value="active">✅ Active Only</option>
+                    <option value="inactive">❌ Inactive Only</option>
+                  </select>
+                </div>
+                
                 {vm.targets.length === 0 ? (
                   <div style={{ padding: '1.5rem', border: '1px dashed var(--border)', borderRadius: '8px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
                     No targets added. Requests to <code>{vm.id}</code> will fail.
                   </div>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    {vm.targets.map((target, index) => {
+                    {getFilteredTargets(vm.id).map(({ target, originalIndex }) => {
+                      const index = originalIndex;
                       const provider = localConfig.providers.find(p => p.id === target.providerId);
                       const modelObj = provider?.models.find(m => m.id === target.modelId);
                       const isMissing = provider && !modelObj;
