@@ -5,7 +5,7 @@ import fs from 'fs';
 import crypto from 'crypto';
 import axios from 'axios';
 import { fileURLToPath } from 'url';
-import { loadConfig, saveConfig, getLogs, clearLogs, addLog, getAllChatSessions, createChatSession, updateChatSessionTitle, deleteChatSession, getMessagesBySession, addChatMessage, truncateChatMessagesFromIndex, loadStatsHistory, clearStatsHistory } from './db.js';
+import { loadConfig, saveConfig, getLogs, clearLogs, addLog, getAllChatSessions, createChatSession, updateChatSessionTitle, deleteChatSession, getMessagesBySession, addChatMessage, truncateChatMessagesFromIndex, loadStatsHistory, clearStatsHistory, getStats, flushStats } from './db.js';
 import { getRateLimitMetrics, activeRequests, overrideUsage } from './rateLimiter.js';
 import { getProxyAgent } from './proxy.js';
 import { routeChatCompletion } from './router.js';
@@ -209,8 +209,9 @@ app.post('/api/config', (req, res) => {
     // Clean up dynamic metadata to avoid polluting config.json
     delete newConfig.metadata;
     
-    // Preserve stats during updates
-    newConfig.stats = oldConfig.stats;
+    // Preserve live in-memory stats during config updates (don't clobber counters
+    // that haven't been flushed to disk yet).
+    newConfig.stats = getStats();
 
     if (saveConfig(newConfig)) {
       addLog('INFO', 'Gateway settings updated successfully.');
@@ -239,7 +240,7 @@ app.get('/api/stats', (req, res) => {
   const config = loadConfig();
   const rateLimitMetrics = getRateLimitMetrics(config);
   res.json({
-    stats: config.stats,
+    stats: getStats(),
     limits: rateLimitMetrics,
     activeRequests: activeRequests
   });
@@ -938,7 +939,7 @@ async function executeLocalTool(name, args) {
   }
   
   if (name === 'get_gateway_status') {
-    const stats = config.stats;
+    const stats = getStats();
     return `Gateway Status:\nTotal Requests: ${stats.totalRequests}\nSuccessful Requests: ${stats.successfulRequests}\nFailed Requests: ${stats.failedRequests}\nApproximate Cost Saved: $${stats.approximateCostSaved.toFixed(2)}\nTokens Saved: ${stats.tokensSaved}`;
   }
   
@@ -1430,12 +1431,14 @@ const cleanRuntimeFile = () => {
   }
 };
 
-process.on('exit', cleanRuntimeFile);
+process.on('exit', () => { flushStats(); cleanRuntimeFile(); });
 process.on('SIGINT', () => {
+  flushStats();
   cleanRuntimeFile();
   process.exit(0);
 });
 process.on('SIGTERM', () => {
+  flushStats();
   cleanRuntimeFile();
   process.exit(0);
 });

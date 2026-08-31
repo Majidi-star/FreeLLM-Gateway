@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { loadConfig, saveConfig, addLog, recordLatency, getLatency, addStatsHistoryEntry } from './db.js';
+import { loadConfig, saveConfig, addLog, recordLatency, getLatency, getStats, scheduleStatsFlush, addStatsHistoryEntry } from './db.js';
 import { resolveProxyAgent } from './proxy.js';
 import { checkRateLimit, recordRequestStart, recordRequestEnd, setProviderCooldown, getProviderCooldownTime, setModelCooldown, getModelCooldownTime, checkPoolRateLimit, recordPoolUsage, tryReserve, tryReservePool, releasePoolReservation } from './rateLimiter.js';
 import { getSemanticCachedResponse, addSemanticCache } from './cache.js';
@@ -379,7 +379,12 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
         );
       }
     }
-    // Latency strategy is now handled by physically reordering the pool targets in db.js
+    // Latency strategy: sort targets by in-memory EMA latency (no disk I/O).
+    if (virtualModel.strategy === 'latency') {
+      evaluatedTargets.sort((a, b) =>
+        getLatency(a.providerId, a.modelId) - getLatency(b.providerId, b.modelId)
+      );
+    }
   }
 
   for (const target of evaluatedTargets) {
@@ -1011,26 +1016,27 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
 }
 
 /**
- * Updates stats in the configuration file.
+ * Updates stats in the in-memory buffer (flushed to disk on a debounce).
  */
 function updateStats(success, virtualModelId = null, promptTokens = 0, completionTokens = 0, extra = {}) {
-  const config = loadConfig();
-  config.stats.totalRequests += 1;
+  // Mutate the in-memory stats buffer only; a debounced flush writes to disk.
+  const stats = getStats();
+  stats.totalRequests = (stats.totalRequests || 0) + 1;
   if (success) {
-    config.stats.successfulRequests += 1;
+    stats.successfulRequests = (stats.successfulRequests || 0) + 1;
     if (virtualModelId && (virtualModelId === 'strong-reasoning' || virtualModelId === 'coding-agent' || virtualModelId === 'fast-flash' || virtualModelId === 'gpt-4o' || virtualModelId === 'claude-3-5-sonnet-20241022')) {
       // Calculate savings! We used a free model instead of a paid one
       const promptSaved = promptTokens;
       const completionSaved = completionTokens;
       const savings = calculateCost(virtualModelId, promptSaved, completionSaved);
-      
-      config.stats.tokensSaved += (promptSaved + completionSaved);
-      config.stats.approximateCostSaved += savings;
+
+      stats.tokensSaved = (stats.tokensSaved || 0) + (promptSaved + completionSaved);
+      stats.approximateCostSaved = (stats.approximateCostSaved || 0) + savings;
     }
   } else {
-    config.stats.failedRequests += 1;
+    stats.failedRequests = (stats.failedRequests || 0) + 1;
   }
-  saveConfig(config);
+  scheduleStatsFlush();
 
   try {
     addStatsHistoryEntry({

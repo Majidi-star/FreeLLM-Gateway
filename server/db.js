@@ -4036,45 +4036,110 @@ export function clearLogs() {
   memoryLogs = [];
 }
 
-export function recordLatency(providerId, modelId, latencyMs) {
+// ---------------------------------------------------------------------------
+// In-memory stats buffer
+// ---------------------------------------------------------------------------
+// Stats counters (totalRequests, latency, etc.) are mutated on EVERY chat
+// request. Reading + writing the entire config.json on each request blocked
+// the event loop and killed throughput. Instead we keep the live stats object
+// in memory, mutate it directly, and flush to disk on a debounce.
+//
+// The flush merges our in-memory counter fields onto a FRESHLY-loaded config
+// so we never clobber concurrent management-route edits to non-counter fields
+// (providers, keys, stats.hiddenBefore, ...).
+
+const STATS_FLUSH_INTERVAL_MS = 3000;
+const STATS_HISTORY_PATH = path.join(__dirname, '..', 'stats-history.json');
+
+let statsCache = null;        // live in-memory copy of config.stats
+let statsDirty = false;
+let statsFlushTimer = null;
+let statsHistory = [];
+let statsHistoryDirty = false;
+let statsHistoryTimer = null;
+
+// Fields that are pure runtime counters owned by this buffer. Everything else
+// on config.stats (e.g. hiddenBefore) is preserved from disk on flush.
+const RUNTIME_COUNTER_FIELDS = [
+  'totalRequests', 'successfulRequests', 'failedRequests',
+  'tokensSaved', 'approximateCostSaved', 'latency'
+];
+
+function loadStatsIntoCache() {
   const config = loadConfig();
-  if (!config.stats.latency) {
-    config.stats.latency = {};
+  statsCache = { ...(config.stats || {}) };
+  if (!statsCache.latency) statsCache.latency = {};
+  return statsCache;
+}
+
+export function getStats() {
+  if (statsCache === null) {
+    loadStatsIntoCache();
   }
+  return statsCache;
+}
+
+export function scheduleStatsFlush() {
+  statsDirty = true;
+  if (statsFlushTimer) return;
+  statsFlushTimer = setTimeout(flushStats, STATS_FLUSH_INTERVAL_MS);
+  statsFlushTimer.unref?.();
+}
+
+function pickCounterFields(source) {
+  const out = {};
+  for (const f of RUNTIME_COUNTER_FIELDS) {
+    if (source[f] !== undefined) out[f] = source[f];
+  }
+  return out;
+}
+
+export function flushStats() {
+  if (statsFlushTimer) {
+    clearTimeout(statsFlushTimer);
+    statsFlushTimer = null;
+  }
+  flushStatsHistory();
+  if (!statsDirty || statsCache === null) return;
+  statsDirty = false;
+  try {
+    // Read a FRESH config from disk so we don't clobber concurrent edits to
+    // non-counter fields (providers, keys, stats.hiddenBefore, ...).
+    const diskConfig = loadConfig();
+    diskConfig.stats = { ...(diskConfig.stats || {}), ...pickCounterFields(statsCache) };
+    saveConfig(diskConfig);
+  } catch (err) {
+    console.error('Error flushing stats:', err);
+    statsDirty = true; // retry on next cycle
+  }
+}
+
+// --- Latency ---------------------------------------------------------------
+// Latency EMA is kept in memory only; the latency-strategy pool reordering is
+// now performed per-request in router.js via getLatency() (no disk I/O).
+
+export function recordLatency(providerId, modelId, latencyMs) {
+  const stats = getStats();
+  if (!stats.latency) stats.latency = {};
   const key = `${providerId}:${modelId}`;
-  const currentAvg = config.stats.latency[key];
+  const currentAvg = stats.latency[key];
   if (!currentAvg) {
-    config.stats.latency[key] = latencyMs;
+    stats.latency[key] = latencyMs;
   } else {
     // Exponential moving average: 20% new, 80% old history
-    config.stats.latency[key] = Math.round((currentAvg * 0.8) + (latencyMs * 0.2));
+    stats.latency[key] = Math.round((currentAvg * 0.8) + (latencyMs * 0.2));
   }
-  
-  // Physically reorder targets in pools that use 'latency' strategy so UI updates immediately
-  if (config.virtualModels) {
-    config.virtualModels.forEach(vm => {
-      if (vm.strategy === 'latency') {
-        vm.targets.sort((a, b) => {
-          const latA = config.stats.latency[`${a.providerId}:${a.modelId}`] || 1000;
-          const latB = config.stats.latency[`${b.providerId}:${b.modelId}`] || 1000;
-          return latA - latB;
-        });
-      }
-    });
-  }
-  
-  saveConfig(config);
+  scheduleStatsFlush();
 }
 
 export function getLatency(providerId, modelId) {
-  const config = loadConfig();
-  if (!config.stats || !config.stats.latency) return 1000;
+  const stats = getStats();
+  if (!stats || !stats.latency) return 1000;
   const key = `${providerId}:${modelId}`;
-  return config.stats.latency[key] || 1000;
+  return stats.latency[key] || 1000;
 }
 
-const STATS_HISTORY_PATH = path.join(__dirname, '..', 'stats-history.json');
-let statsHistory = [];
+// --- Stats history (in-memory array, debounced disk flush) -----------------
 
 export function loadStatsHistory() {
   try {
@@ -4087,22 +4152,41 @@ export function loadStatsHistory() {
     console.error('Error loading stats history:', err);
     statsHistory = [];
   }
-  
-  const config = loadConfig();
-  if (config.stats && config.stats.hiddenBefore) {
-    const hiddenTime = new Date(config.stats.hiddenBefore).getTime();
+
+  const stats = getStats();
+  if (stats.hiddenBefore) {
+    const hiddenTime = new Date(stats.hiddenBefore).getTime();
     return statsHistory.filter(entry => new Date(entry.timestamp).getTime() >= hiddenTime);
   }
-  
+
   return statsHistory;
 }
 
-export function saveStatsHistory() {
+function scheduleStatsHistoryFlush() {
+  statsHistoryDirty = true;
+  if (statsHistoryTimer) return;
+  statsHistoryTimer = setTimeout(flushStatsHistory, STATS_FLUSH_INTERVAL_MS);
+  statsHistoryTimer.unref?.();
+}
+
+export function flushStatsHistory() {
+  if (statsHistoryTimer) {
+    clearTimeout(statsHistoryTimer);
+    statsHistoryTimer = null;
+  }
+  if (!statsHistoryDirty) return;
+  statsHistoryDirty = false;
   try {
     fs.writeFileSync(STATS_HISTORY_PATH, JSON.stringify(statsHistory, null, 2), 'utf8');
   } catch (err) {
     console.error('Error saving stats history:', err);
+    statsHistoryDirty = true;
   }
+}
+
+// Kept for backward compatibility — now triggers a debounced flush.
+export function saveStatsHistory() {
+  scheduleStatsHistoryFlush();
 }
 
 export function addStatsHistoryEntry(entry) {
@@ -4117,11 +4201,16 @@ export function addStatsHistoryEntry(entry) {
   if (statsHistory.length > 3000) {
     statsHistory = statsHistory.slice(0, 3000);
   }
-  saveStatsHistory();
+  scheduleStatsHistoryFlush();
 }
 
 export function clearStatsHistory() {
   statsHistory = [];
+  statsHistoryDirty = false;
+  if (statsHistoryTimer) {
+    clearTimeout(statsHistoryTimer);
+    statsHistoryTimer = null;
+  }
   try {
     if (fs.existsSync(STATS_HISTORY_PATH)) {
       fs.unlinkSync(STATS_HISTORY_PATH);
