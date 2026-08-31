@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { loadConfig, saveConfig, addLog, recordLatency, getLatency, addStatsHistoryEntry } from './db.js';
 import { resolveProxyAgent } from './proxy.js';
-import { checkRateLimit, recordRequestStart, recordRequestEnd, setProviderCooldown, getProviderCooldownTime, setModelCooldown, getModelCooldownTime, checkPoolRateLimit, recordPoolUsage } from './rateLimiter.js';
+import { checkRateLimit, recordRequestStart, recordRequestEnd, setProviderCooldown, getProviderCooldownTime, setModelCooldown, getModelCooldownTime, checkPoolRateLimit, recordPoolUsage, tryReserve, tryReservePool, releasePoolReservation } from './rateLimiter.js';
 import { getSemanticCachedResponse, addSemanticCache } from './cache.js';
 
 // Simple model cost database (approximate price per 1M tokens in USD)
@@ -97,23 +97,26 @@ function formatAnthropicResponse(anthropicData) {
 }
 
 /**
- * Handle routing for a request.
- * @param {object} reqPayload - OpenAI style request payload.
- * @param {object} res - Express response object.
- * @param {function} onRoutingEvent - Optional callback for real-time dashboard events.
+ * Atomically selects and reserves an API key for a provider+model.
+ * Uses tryReserve() to eliminate TOCTOU between rate-limit check and slot claim.
+ * @param {object} provider  - Provider config object.
+ * @param {object} modelObj  - Model config object.
+ * @param {number} estimatedTokens - Estimated prompt tokens for live tracking.
+ * @returns {{ key, virtualProvider, entry, limited, reason, retryAfterMs }}
  */
-function resolveLoadBalancedKey(provider, modelObj) {
+function resolveLoadBalancedKey(provider, modelObj, estimatedTokens = 0) {
   const enabledKeys = provider.apiKeys ? provider.apiKeys.filter(k => k.enabled && k.key) : [];
   
   if (enabledKeys.length === 0) {
-    // Fall back to legacy single key
-    const legacyCheck = checkRateLimit(provider, modelObj);
+    // Fall back to legacy single key — try to atomically reserve
+    const reservation = tryReserve(provider, modelObj, estimatedTokens);
     return {
       key: { id: 'default', key: provider.apiKey, weight: 1, enabled: true },
       virtualProvider: provider,
-      limited: legacyCheck.limited,
-      reason: legacyCheck.reason,
-      retryAfterMs: legacyCheck.retryAfterMs
+      entry: reservation.entry || null,
+      limited: !reservation.reserved,
+      reason: reservation.reason || '',
+      retryAfterMs: reservation.retryAfterMs || 0,
     };
   }
 
@@ -127,11 +130,12 @@ function resolveLoadBalancedKey(provider, modelObj) {
       apiKey: key.key
     };
     
+    // checkRateLimit is a pure read — safe to loop without side effects.
     const limitCheck = checkRateLimit(virtualProvider, modelObj);
     if (!limitCheck.limited) {
-      eligibleKeys.push({ key, virtualProvider });
+      eligibleKeys.push({ key, virtualProvider, limitCheck });
     } else {
-      limitedKeys.push({ key, limitCheck });
+      limitedKeys.push({ key, virtualProvider, limitCheck });
     }
   }
 
@@ -139,39 +143,55 @@ function resolveLoadBalancedKey(provider, modelObj) {
     const totalWeight = eligibleKeys.reduce((sum, item) => sum + (item.key.weight || 1), 0);
     let rand = Math.random() * totalWeight;
     
+    // Pick winner then atomically reserve — loop through candidates in case
+    // the winner was just taken by a concurrent request between our check and tryReserve.
+    const orderedCandidates = [];
     for (const item of eligibleKeys) {
       const weight = item.key.weight || 1;
       if (rand <= weight) {
+        orderedCandidates.unshift(item); // preferred first
+        break;
+      }
+      rand -= weight;
+      orderedCandidates.push(item);
+    }
+    // Ensure remaining eligible keys are tried if the preferred one got grabbed
+    for (const item of eligibleKeys) {
+      if (!orderedCandidates.includes(item)) orderedCandidates.push(item);
+    }
+
+    for (const item of orderedCandidates) {
+      const reservation = tryReserve(item.virtualProvider, modelObj, estimatedTokens);
+      if (reservation.reserved) {
         return {
           key: item.key,
           virtualProvider: item.virtualProvider,
-          limited: false
+          entry: reservation.entry,
+          limited: false,
         };
       }
-      rand -= weight;
     }
-    return {
-      key: eligibleKeys[0].key,
-      virtualProvider: eligibleKeys[0].virtualProvider,
-      limited: false
-    };
-  } else {
-    limitedKeys.sort((a, b) => a.limitCheck.retryAfterMs - b.limitCheck.retryAfterMs);
-    const bestCandidate = limitedKeys[0];
-    const virtualProvider = {
-      ...provider,
-      id: `${provider.id}:${bestCandidate.key.id}`,
-      apiKey: bestCandidate.key.key
-    };
-    return {
-      key: bestCandidate.key,
-      virtualProvider,
-      limited: true,
-      reason: bestCandidate.limitCheck.reason,
-      retryAfterMs: bestCandidate.limitCheck.retryAfterMs
-    };
+    // All candidates got grabbed between check and reserve — treat as limited
   }
+
+  // All keys are limited
+  limitedKeys.sort((a, b) => a.limitCheck.retryAfterMs - b.limitCheck.retryAfterMs);
+  const bestCandidate = limitedKeys[0];
+  const virtualProvider = {
+    ...provider,
+    id: `${provider.id}:${bestCandidate.key.id}`,
+    apiKey: bestCandidate.key.key
+  };
+  return {
+    key: bestCandidate.key,
+    virtualProvider,
+    entry: null,
+    limited: true,
+    reason: bestCandidate.limitCheck.reason,
+    retryAfterMs: bestCandidate.limitCheck.retryAfterMs,
+  };
 }
+
 
 /**
  * Handle routing for a request.
@@ -300,11 +320,14 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
     
     if (virtualModel) {
       if (virtualModel.limits) {
-        const poolCheck = checkPoolRateLimit(virtualModel.id, virtualModel.limits);
-        if (poolCheck.limited) {
-          eventLog(`Virtual pool "${virtualModel.id}" rate limited globally: ${poolCheck.reason}`);
-          return res.status(429).json({ error: { message: `Rate limit exceeded for pool "${virtualModel.id}": ${poolCheck.reason}`, type: 'pool_rate_limit_exceeded', retry_after: Math.ceil(poolCheck.retryAfterMs / 1000) } });
+        const poolReservation = tryReservePool(virtualModel.id, virtualModel.limits);
+        if (!poolReservation.reserved) {
+          eventLog(`Virtual pool "${virtualModel.id}" rate limited globally: ${poolReservation.reason}`);
+          return res.status(429).json({ error: { message: `Rate limit exceeded for pool "${virtualModel.id}": ${poolReservation.reason}`, type: 'pool_rate_limit_exceeded', retry_after: Math.ceil(poolReservation.retryAfterMs / 1000) } });
         }
+        // Store for release on completion/failure
+        reqPayload._poolReservation = poolReservation.entry;
+        reqPayload._poolId = virtualModel.id;
       }
       targets = [...virtualModel.targets].filter(t => t.enabled !== false);
       if (targets.length === 0) {
@@ -373,8 +396,9 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
     const baseModelObj = provider.models.find(m => m.id === target.modelId) || { id: target.modelId };
     const modelObj = target.limits ? { ...baseModelObj, limits: { ...(baseModelObj.limits || {}), ...target.limits } } : baseModelObj;
     
-    // Resolve load-balanced key
-    const keyResolution = resolveLoadBalancedKey(provider, modelObj);
+    // Resolve load-balanced key — atomically checks limits and reserves the slot
+    const promptTokensEst = estimateTokens(JSON.stringify(reqPayload.messages || []));
+    const keyResolution = resolveLoadBalancedKey(provider, modelObj, promptTokensEst);
 
     if (keyResolution.limited) {
       eventLog(`Target ${provider.id}/${target.modelId} rate-limited (all keys): ${keyResolution.reason}.`);
@@ -390,9 +414,11 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
     chosenTarget = { 
       target, 
       provider: keyResolution.virtualProvider, 
-      modelObj 
+      modelObj,
+      reqReservation: keyResolution.entry,  // slot already claimed atomically
     };
     break;
+
   }
 
   // 3. Fallback queue wait logic if all are limited
@@ -437,18 +463,21 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
           
           const baseModelObj = provider.models.find(m => m.id === target.modelId) || { id: target.modelId };
           const modelObj = target.limits ? { ...baseModelObj, limits: { ...(baseModelObj.limits || {}), ...target.limits } } : baseModelObj;
-          const keyResolution = resolveLoadBalancedKey(provider, modelObj);
+          const promptTokensEst = estimateTokens(JSON.stringify(reqPayload.messages || []));
+          const keyResolution = resolveLoadBalancedKey(provider, modelObj, promptTokensEst);
           
           if (!keyResolution.limited) {
             chosenTarget = {
               target,
               provider: keyResolution.virtualProvider,
-              modelObj
+              modelObj,
+              reqReservation: keyResolution.entry,  // slot already claimed atomically
             };
             eventLog(`Queue wait successful: endpoint ${provider.id}/${target.modelId} is now available after ${Math.ceil((Date.now() - startTime) / 1000)}s.`);
             break;
           }
         }
+
         
         if (chosenTarget) break;
       }
@@ -466,12 +495,14 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
       );
       if (anyActiveProvider) {
         const fallbackModel = anyActiveProvider.models[0];
-        const fbResolution = resolveLoadBalancedKey(anyActiveProvider, fallbackModel);
+        const promptTokensEst = estimateTokens(JSON.stringify(reqPayload.messages || []));
+        const fbResolution = resolveLoadBalancedKey(anyActiveProvider, fallbackModel, promptTokensEst);
         if (!fbResolution.limited) {
           chosenTarget = {
             target: { providerId: anyActiveProvider.id, modelId: fallbackModel.id },
             provider: fbResolution.virtualProvider,
-            modelObj: fallbackModel
+            modelObj: fallbackModel,
+            reqReservation: fbResolution.entry,  // slot already claimed atomically
           };
           eventLog(`EMERGENCY FALLBACK: Virtual pool limited. Using active provider ${anyActiveProvider.name} (${fallbackModel.id}) as fallback.`);
         }
@@ -489,13 +520,13 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
     });
   }
 
-  const { target, provider, modelObj } = chosenTarget;
+  const { target, provider, modelObj, reqReservation } = chosenTarget;
   eventLog(`Selected backend target: ${provider.name} (model: ${target.modelId})`);
   
-  // Register pre-flight request start and increment concurrency counter
+  // NOTE: The slot was already atomically claimed inside resolveLoadBalancedKey via tryReserve.
+  // reqReservation is the history entry reference to pass to recordRequestEnd on completion.
   const promptTokens = estimateTokens(JSON.stringify(reqPayload.messages || []));
-  const reqReservation = recordRequestStart(provider.id, target.modelId, promptTokens);
-  
+
   const providerType = provider.id.split(':')[0];
 
   // 4. Dispatch the call
@@ -697,7 +728,12 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
           const totalTokens = promptTokens + completionTokens;
 
           recordRequestEnd(provider.id, target.modelId, reqReservation, totalTokens);
-          if (virtualModel) recordPoolUsage(virtualModel.id, totalTokens);
+          // Finalize pool reservation: update token count and decrement pool in-flight counter.
+          if (virtualModel && reqPayload._poolId) {
+            releasePoolReservation(reqPayload._poolId, reqPayload._poolReservation || null, totalTokens);
+          } else if (virtualModel) {
+            recordPoolUsage(virtualModel.id, totalTokens); // legacy path (no pool limits configured)
+          }
           if (provider.limits && provider.limits.cooldownMs) {
             setProviderCooldown(provider.id, Number(provider.limits.cooldownMs), true);
           }
@@ -741,6 +777,9 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
             reject(err);
           } else {
             recordRequestEnd(provider.id, target.modelId, reqReservation, 0);
+            if (virtualModel && reqPayload._poolId) {
+              releasePoolReservation(reqPayload._poolId, reqPayload._poolReservation || null, 0);
+            }
             eventLog(`STREAM ERROR MID-STREAM (${provider.name}):`, err.message);
             res.end();
           }
@@ -764,7 +803,12 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
       const totalTokens = promptTokens + completionTokens;
 
       recordRequestEnd(provider.id, target.modelId, reqReservation, totalTokens);
-      if (virtualModel) recordPoolUsage(virtualModel.id, totalTokens);
+      // Finalize pool reservation: update token count and decrement pool in-flight counter.
+      if (virtualModel && reqPayload._poolId) {
+        releasePoolReservation(reqPayload._poolId, reqPayload._poolReservation || null, totalTokens);
+      } else if (virtualModel) {
+        recordPoolUsage(virtualModel.id, totalTokens); // legacy path (no pool limits configured)
+      }
       if (provider.limits && provider.limits.cooldownMs) {
         setProviderCooldown(provider.id, Number(provider.limits.cooldownMs), true);
       }
@@ -787,6 +831,11 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
     }
   } catch (err) {
     recordRequestEnd(provider.id, target.modelId, reqReservation, 0);
+    // Release pool reservation on error (0 tokens consumed)
+    if (virtualModel && reqPayload._poolId) {
+      releasePoolReservation(reqPayload._poolId, reqPayload._poolReservation || null, 0);
+    }
+
     let errorMsg = err.response?.data?.error?.message || err.response?.data?.message || err.message;
     if (err.code === 'ENOTFOUND') {
       errorMsg += ` (DNS resolution failed for ${err.hostname || err.host}. This may indicate a network block or missing Proxy configuration for ${provider.name}.)`;

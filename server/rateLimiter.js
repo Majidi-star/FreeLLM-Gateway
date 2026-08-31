@@ -153,8 +153,21 @@ export function getConcurrency(key) {
 
 /**
  * Checks if a virtual pool has exceeded configured rate limits.
+ * Also checks pool-level concurrency (in-flight requests).
  */
 export function checkPoolRateLimit(poolId, limits = {}) {
+  // Check pool-level concurrency (in-flight requests)
+  if (limits.concurrent) {
+    const currentPoolConc = activeConcurrency[poolId] || 0;
+    if (currentPoolConc >= limits.concurrent) {
+      return {
+        limited: true,
+        reason: `Exceeded Pool Concurrency Limit (${currentPoolConc}/${limits.concurrent} active)`,
+        retryAfterMs: 1500,
+      };
+    }
+  }
+
   const limitsToCheck = [];
   if (limits.rpm) limitsToCheck.push({ name: `Pool RPM (${limits.rpm})`, val: limits.rpm, window: 60 * 1000, token: false, key: poolId });
   if (limits.rph) limitsToCheck.push({ name: `Pool RPH (${limits.rph})`, val: limits.rph, window: 60 * 60 * 1000, token: false, key: poolId });
@@ -449,8 +462,78 @@ export function getRateLimitMetrics(config) {
   return metrics;
 }
 
+/**
+ * Legacy helper — records a completed pool usage entry (no pre-flight).
+ * Prefer tryReservePool / releasePoolReservation for new call sites.
+ */
 export function recordPoolUsage(poolId, totalTokens = 0) {
   const now = Date.now();
   if (!history.requests[poolId]) history.requests[poolId] = [];
   history.requests[poolId].push({ timestamp: now, tokens: totalTokens });
 }
+
+// ---------------------------------------------------------------------------
+// Atomic reserve helpers — eliminate TOCTOU races for multi-user concurrency
+// ---------------------------------------------------------------------------
+
+/**
+ * Atomically checks rate limits for a provider+model and, if allowed, claims
+ * the slot immediately (increments concurrency + pushes a sliding-window entry).
+ *
+ * Because JavaScript is single-threaded and this function contains no `await`,
+ * nothing can interleave between the check and the reservation — TOCTOU is
+ * eliminated.
+ *
+ * @param {object} provider - Provider config object.
+ * @param {object} model    - Model config object.
+ * @param {number} estimatedTokens - Optional prompt token estimate for live view.
+ * @returns {{ reserved: boolean, entry?: object, reason?: string, retryAfterMs?: number }}
+ */
+export function tryReserve(provider, model, estimatedTokens = 0) {
+  const result = checkRateLimit(provider, model);
+  if (result.limited) {
+    return { reserved: false, reason: result.reason, retryAfterMs: result.retryAfterMs };
+  }
+  // Claim the slot synchronously — safe because no await between check and increment.
+  const entry = recordRequestStart(provider.id, model.id, estimatedTokens);
+  return { reserved: true, entry };
+}
+
+/**
+ * Atomically checks pool-level rate limits and, if allowed, claims a pool slot
+ * (increments pool concurrency + pushes a pre-flight sliding-window entry).
+ *
+ * @param {string} poolId  - Virtual pool / virtualModel id.
+ * @param {object} limits  - Pool limits config (rpm, rpd, tpm, concurrent, …).
+ * @returns {{ reserved: boolean, entry?: object, reason?: string, retryAfterMs?: number }}
+ */
+export function tryReservePool(poolId, limits = {}) {
+  const result = checkPoolRateLimit(poolId, limits);
+  if (result.limited) {
+    return { reserved: false, reason: result.reason, retryAfterMs: result.retryAfterMs };
+  }
+  // Claim pool slot synchronously.
+  if (!history.requests[poolId]) history.requests[poolId] = [];
+  const entry = { timestamp: Date.now(), tokens: 0 };
+  history.requests[poolId].push(entry);
+  activeConcurrency[poolId] = (activeConcurrency[poolId] || 0) + 1;
+  return { reserved: true, entry };
+}
+
+/**
+ * Finalises a pool reservation made by tryReservePool.
+ * Updates the token count on the pre-flight entry and decrements pool concurrency.
+ *
+ * @param {string} poolId    - Virtual pool id.
+ * @param {object|null} entry - The entry reference returned by tryReservePool.
+ * @param {number} tokens    - Actual tokens consumed (0 on failure/abort).
+ */
+export function releasePoolReservation(poolId, entry, tokens = 0) {
+  if (entry) {
+    entry.tokens = tokens;
+  }
+  if ((activeConcurrency[poolId] || 0) > 0) {
+    activeConcurrency[poolId]--;
+  }
+}
+
