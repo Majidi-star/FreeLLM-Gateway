@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import type { GatewayConfig, VirtualModel, VirtualModelTarget } from '../utils/api';
 import { getCacheStats, clearCacheDatabase, getStats, overrideRateLimit } from '../utils/api';
 
@@ -37,6 +37,15 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
   // Search/filter state for the existing targets list per pool
   const [targetSearchQueries, setTargetSearchQueries] = useState<{ [vmId: string]: string }>({});
   const [targetFilters, setTargetFilters] = useState<{ [vmId: string]: 'all' | 'active' | 'inactive' }>({});
+  // Multi-select state: vmId -> Set of original indices
+  const [selectedTargets, setSelectedTargets] = useState<{ [vmId: string]: Set<number> }>({});
+
+  // Undo/redo history for ALL user-initiated pool/config mutations.
+  const HISTORY_LIMIT = 50;
+  const COALESCE_MS = 450; // merge rapid keystrokes into a single undo entry
+  const [undoStack, setUndoStack] = useState<GatewayConfig[]>([]);
+  const [redoStack, setRedoStack] = useState<GatewayConfig[]>([]);
+  const lastCommitRef = useRef(0);
 
   // Collapsible configuration panels state
   const [expandedConfigVmId, setExpandedConfigVmId] = useState<string | null>(null);
@@ -93,7 +102,7 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
       ...currentAliases,
       [newAliasRequestName.trim()]: newAliasTargetModel
     };
-    setLocalConfig({
+    commitConfig({
       ...localConfig,
       aliases: updatedAliases
     });
@@ -103,7 +112,7 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
   const handleRemoveAlias = (requestName: string) => {
     const currentAliases = { ...(localConfig.aliases || {}) };
     delete currentAliases[requestName];
-    setLocalConfig({
+    commitConfig({
       ...localConfig,
       aliases: currentAliases
     });
@@ -138,7 +147,7 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
     );
 
     const newConfig = { ...localConfig, virtualModels: updatedVms };
-    setLocalConfig(newConfig);
+    commitConfig(newConfig);
     onSave(newConfig); // Instant apply to backend
   };
 
@@ -159,7 +168,7 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
       }
       return vm;
     });
-    setLocalConfig({ ...localConfig, virtualModels: updatedVms });
+    commitConfig({ ...localConfig, virtualModels: updatedVms });
   };
 
   const handleTargetCooldownChange = (vmId: string, index: number, value: string) => {
@@ -178,7 +187,7 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
       }
       return vm;
     });
-    setLocalConfig({ ...localConfig, virtualModels: updatedVms });
+    commitConfig({ ...localConfig, virtualModels: updatedVms });
   };
 
   const handleTargetLimitChange = (vmId: string, index: number, field: string, value: string) => {
@@ -205,7 +214,7 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
       }
       return vm;
     });
-    setLocalConfig({ ...localConfig, virtualModels: updatedVms });
+    commitConfig({ ...localConfig, virtualModels: updatedVms });
   };
 
   const handleRemoveTarget = (vmId: string, index: number) => {
@@ -217,7 +226,7 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
       vm.id === vmId ? { ...vm, targets } : vm
     );
 
-    setLocalConfig({ ...localConfig, virtualModels: updatedVms });
+    commitConfig({ ...localConfig, virtualModels: updatedVms });
   };
 
   const handleAddTarget = (vmId: string) => {
@@ -241,7 +250,7 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
       vm.id === vmId ? { ...vm, targets } : vm
     );
 
-    setLocalConfig({ ...localConfig, virtualModels: updatedVms });
+    commitConfig({ ...localConfig, virtualModels: updatedVms });
 
     // Reset selector state for this pool
     setNewTargets({
@@ -264,7 +273,7 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
       }
       return vm;
     });
-    setLocalConfig({ ...localConfig, virtualModels: updatedVms });
+    commitConfig({ ...localConfig, virtualModels: updatedVms });
   };
 
   const renderPoolLimitUsage = (vmId: string, limits: any, label: string, field: 'rpm'|'rph'|'rpd'|'rpmo'|'tpm'|'tph'|'tpd'|'tpmo') => {
@@ -346,7 +355,7 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
       targets: []
     };
 
-    setLocalConfig({
+    commitConfig({
       ...localConfig,
       virtualModels: [...localConfig.virtualModels, newVm]
     });
@@ -359,7 +368,7 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
   const handleDeleteVirtualModel = (vmId: string) => {
     if (!confirm('Are you sure you want to delete this routing pool?')) return;
     const updated = localConfig.virtualModels.filter(vm => vm.id !== vmId);
-    setLocalConfig({ ...localConfig, virtualModels: updated });
+    commitConfig({ ...localConfig, virtualModels: updated });
   };
 
   const handleTargetSelectorChange = (vmId: string, field: 'providerId' | 'modelId', value: string) => {
@@ -419,6 +428,136 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
       .filter((x): x is { target: VirtualModelTarget; originalIndex: number } => x !== null);
   };
 
+  // ── Multi-select helpers ──────────────────────────────────────────────
+  const toggleTargetSelection = (vmId: string, index: number) => {
+    setSelectedTargets(prev => {
+      const next = new Set(prev[vmId] || new Set<number>());
+      if (next.has(index)) next.delete(index);
+      else next.add(index);
+      return { ...prev, [vmId]: next };
+    });
+  };
+
+  const clearSelection = (vmId: string) => {
+    setSelectedTargets(prev => {
+      const next = { ...prev };
+      delete next[vmId];
+      return next;
+    });
+  };
+
+  const selectAllVisible = (vmId: string, filtered: { target: VirtualModelTarget; originalIndex: number }[]) => {
+    const indices = filtered.map(f => f.originalIndex);
+    const current = selectedTargets[vmId] || new Set<number>();
+    const allSelected = indices.length > 0 && indices.every(i => current.has(i));
+    setSelectedTargets(prev => {
+      const next = new Set(prev[vmId] || new Set<number>());
+      if (allSelected) {
+        indices.forEach(i => next.delete(i));
+      } else {
+        indices.forEach(i => next.add(i));
+      }
+      return { ...prev, [vmId]: next };
+    });
+  };
+
+  // ── History helpers ───────────────────────────────────────────────────
+  // commitConfig: the single entry point for ALL user-initiated mutations.
+  // Replaces setLocalConfig in every handler so that every change is
+  // checkpointed for undo/redo. Time-based coalescing (COALESCE_MS) merges
+  // a burst of rapid edits (e.g. typing in a text/number field) into a
+  // single undo entry to avoid stack flooding.
+  //
+  // NOTE: The config-sync effect and handleUndo/handleRedo deliberately use
+  // raw setLocalConfig (NOT commitConfig) — syncing remote/external changes
+  // or restoring snapshots must not push new history entries.
+  const commitConfig = (next: GatewayConfig) => {
+    if (next === localConfig) return; // no-op guard
+    const now = Date.now();
+    if (now - lastCommitRef.current > COALESCE_MS) {
+      // Enough time elapsed → push a new checkpoint of the *pre-change* state
+      setUndoStack(prev => {
+        const stack = [...prev, localConfig];
+        return stack.length > HISTORY_LIMIT ? stack.slice(stack.length - HISTORY_LIMIT) : stack;
+      });
+      setRedoStack([]); // a new action forks the timeline
+      console.log('[History] checkpoint captured', { undoDepth: undoStack.length + 1 });
+    }
+    // else: within coalesce window → merge into the current top checkpoint
+    lastCommitRef.current = now;
+    setLocalConfig(next); // existing 300ms debounced auto-save persists it
+  };
+
+  const handleUndo = () => {
+    if (undoStack.length === 0) {
+      console.log('[Undo] No history to undo — undoStack is empty.');
+      return;
+    }
+    const snapshot = undoStack[undoStack.length - 1];
+    console.log('[Undo] Restoring previous config snapshot.', {
+      undoStackSizeBefore: undoStack.length,
+      redoStackSizeBefore: redoStack.length,
+    });
+    lastCommitRef.current = 0; // next user edit starts a fresh checkpoint
+    setRedoStack(prev => [...prev, localConfig]);
+    setUndoStack(prev => prev.slice(0, -1));
+    setLocalConfig(snapshot); // raw setLocalConfig — bypasses commitConfig
+  };
+
+  const handleRedo = () => {
+    if (redoStack.length === 0) {
+      console.log('[Redo] No history to redo — redoStack is empty.');
+      return;
+    }
+    const snapshot = redoStack[redoStack.length - 1];
+    console.log('[Redo] Restoring next config snapshot.', {
+      undoStackSizeBefore: undoStack.length,
+      redoStackSizeBefore: redoStack.length,
+    });
+    lastCommitRef.current = 0; // next user edit starts a fresh checkpoint
+    setUndoStack(prev => [...prev, localConfig]);
+    setRedoStack(prev => prev.slice(0, -1));
+    setLocalConfig(snapshot); // raw setLocalConfig — bypasses commitConfig
+  };
+
+  // Keyboard shortcuts: Ctrl+Z undo, Ctrl+Y / Ctrl+Shift+Z redo
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey)) return;
+      const key = e.key.toLowerCase();
+      if (key === 'z' && !e.shiftKey) { e.preventDefault(); handleUndo(); }
+      else if (key === 'y' || (key === 'z' && e.shiftKey)) { e.preventDefault(); handleRedo(); }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  });
+
+  // ── Bulk operation handlers ───────────────────────────────────────────
+  const handleBulkRemoveTargets = (vmId: string, indices: number[]) => {
+    if (indices.length === 0) return;
+    const idxSet = new Set(indices);
+    const updatedVms = localConfig.virtualModels.map(vm => {
+      if (vm.id !== vmId) return vm;
+      return { ...vm, targets: vm.targets.filter((_, i) => !idxSet.has(i)) };
+    });
+    commitConfig({ ...localConfig, virtualModels: updatedVms });
+    clearSelection(vmId);
+  };
+
+  const handleBulkSetEnabled = (vmId: string, indices: number[], enabled: boolean) => {
+    if (indices.length === 0) return;
+    const idxSet = new Set(indices);
+    const updatedVms = localConfig.virtualModels.map(vm => {
+      if (vm.id !== vmId) return vm;
+      return {
+        ...vm,
+        targets: vm.targets.map((t, i) => idxSet.has(i) ? { ...t, enabled } : t)
+      };
+    });
+    commitConfig({ ...localConfig, virtualModels: updatedVms });
+    clearSelection(vmId);
+  };
+
   const handleImportAllMatches = (vmId: string, matchedTargets: { providerId: string; modelId: string }[]) => {
     const virtualModel = localConfig.virtualModels.find(vm => vm.id === vmId);
     if (!virtualModel) return;
@@ -437,7 +576,7 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
       vm.id === vmId ? { ...vm, targets } : vm
     );
 
-    setLocalConfig({ ...localConfig, virtualModels: updatedVms });
+    commitConfig({ ...localConfig, virtualModels: updatedVms });
     setSearchQueries({ ...searchQueries, [vmId]: '' });
   };
 
@@ -451,7 +590,7 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
       }
       return vm;
     });
-    setLocalConfig({ ...localConfig, virtualModels: updatedVms });
+    commitConfig({ ...localConfig, virtualModels: updatedVms });
   };
 
   const handleAddSingleTarget = (vmId: string, providerId: string, modelId: string) => {
@@ -472,14 +611,14 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
       vm.id === vmId ? { ...vm, targets } : vm
     );
 
-    setLocalConfig({ ...localConfig, virtualModels: updatedVms });
+    commitConfig({ ...localConfig, virtualModels: updatedVms });
   };
 
   const handleStrategyChange = (vmId: string, strategy: string) => {
     const updatedVms = localConfig.virtualModels.map(vm => 
       vm.id === vmId ? { ...vm, strategy } : vm
     );
-    setLocalConfig({ ...localConfig, virtualModels: updatedVms });
+    commitConfig({ ...localConfig, virtualModels: updatedVms });
   };
 
   const handleStrategyConfigChange = (vmId: string, key: string, value: any) => {
@@ -499,7 +638,7 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
       }
       return vm;
     });
-    setLocalConfig({ ...localConfig, virtualModels: updatedVms });
+    commitConfig({ ...localConfig, virtualModels: updatedVms });
   };
 
 
@@ -515,9 +654,11 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
             Map a virtual pool model (e.g. <code>strong-reasoning</code>) to a priority order of synced backends.
           </p>
         </div>
-        <button type="button" className="primary" onClick={() => setShowAddVm(!showAddVm)}>
-          {showAddVm ? 'Cancel' : 'Create Custom Pool'}
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <button type="button" className="primary" onClick={() => setShowAddVm(!showAddVm)}>
+            {showAddVm ? 'Cancel' : 'Create Custom Pool'}
+          </button>
+        </div>
       </div>
 
       {/* Config parameters */}
@@ -527,7 +668,7 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
             type="checkbox" 
             id="rateLimitQueueEnabled" 
             checked={localConfig.rateLimitQueueEnabled !== false}
-            onChange={(e) => setLocalConfig({ ...localConfig, rateLimitQueueEnabled: e.target.checked })}
+            onChange={(e) => commitConfig({ ...localConfig, rateLimitQueueEnabled: e.target.checked })}
           />
           <label htmlFor="rateLimitQueueEnabled" style={{ fontWeight: 600, cursor: 'pointer' }}>
             Enable Queue retry (Wait before returning failure if rate-limited)
@@ -541,7 +682,7 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
               min={1}
               max={300}
               value={((localConfig.rateLimitQueueTimeoutMs ?? 30000) / 1000)}
-              onChange={(e) => setLocalConfig({ ...localConfig, rateLimitQueueTimeoutMs: (parseInt(e.target.value) || 30) * 1000 })}
+              onChange={(e) => commitConfig({ ...localConfig, rateLimitQueueTimeoutMs: (parseInt(e.target.value) || 30) * 1000 })}
               style={{ width: '80px', padding: '0.2rem 0.5rem', background: '#0a0a0f', color: '#c5c9db', border: '1px solid var(--border)', borderRadius: '4px' }}
             />
           </div>
@@ -601,7 +742,7 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
                         const updatedVms = localConfig.virtualModels.map(model => 
                           model.id === vm.id ? { ...model, name: e.target.value } : model
                         );
-                        setLocalConfig({ ...localConfig, virtualModels: updatedVms });
+                        commitConfig({ ...localConfig, virtualModels: updatedVms });
                       }}
                       style={{ 
                         margin: 0, 
@@ -637,7 +778,7 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
                           const updatedVms = localConfig.virtualModels.map(model => 
                             model.id === vm.id ? { ...model, id: newId } : model
                           );
-                          setLocalConfig({ ...localConfig, virtualModels: updatedVms, aliases: newAliases });
+                          commitConfig({ ...localConfig, virtualModels: updatedVms, aliases: newAliases });
                         }}
                         style={{ 
                           fontSize: '0.8rem', 
@@ -799,7 +940,65 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
                     <option value="active">✅ Active Only</option>
                     <option value="inactive">❌ Inactive Only</option>
                   </select>
+                  {vm.targets.length > 0 && (
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.85rem', color: 'var(--text-muted)', cursor: 'pointer', userSelect: 'none', marginLeft: 'auto' }}>
+                      <input
+                        type="checkbox"
+                        checked={(() => {
+                          const filtered = getFilteredTargets(vm.id);
+                          const sel = selectedTargets[vm.id] || new Set<number>();
+                          return filtered.length > 0 && filtered.every(f => sel.has(f.originalIndex));
+                        })()}
+                        onChange={() => selectAllVisible(vm.id, getFilteredTargets(vm.id))}
+                        style={{ cursor: 'pointer' }}
+                      />
+                      Select All
+                    </label>
+                  )}
                 </div>
+                
+                {/* Bulk Action Toolbar — shown only when targets are selected */}
+                {vm.targets.length > 0 && (selectedTargets[vm.id]?.size ?? 0) > 0 && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 0.75rem', background: 'var(--accent-glow, rgba(120, 130, 255, 0.08))', border: '1px solid var(--accent)', borderRadius: '6px', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--accent)', fontWeight: 600, marginRight: '0.25rem' }}>
+                      {selectedTargets[vm.id]!.size} selected
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleBulkSetEnabled(vm.id, [...selectedTargets[vm.id]!], true)}
+                      style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', background: 'var(--success-glow)', color: 'var(--success)', border: '1px solid var(--success)', borderRadius: '4px', cursor: 'pointer' }}
+                    >
+                      ✅ Activate
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleBulkSetEnabled(vm.id, [...selectedTargets[vm.id]!], false)}
+                      style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', background: 'var(--warning-glow, rgba(255, 180, 0, 0.1))', color: 'var(--warning, #f0a020)', border: '1px solid var(--warning, #f0a020)', borderRadius: '4px', cursor: 'pointer' }}
+                    >
+                      ⏸️ Deactivate
+                    </button>
+                    <button
+                      type="button"
+                      className="danger"
+                      onClick={() => {
+                        const count = selectedTargets[vm.id]!.size;
+                        if (confirm(`Remove ${count} target(s) from this pool? (Undo available via Ctrl+Z)`)) {
+                          handleBulkRemoveTargets(vm.id, [...selectedTargets[vm.id]!]);
+                        }
+                      }}
+                      style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}
+                    >
+                      🗑️ Remove
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => clearSelection(vm.id)}
+                      style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)', borderRadius: '4px', cursor: 'pointer', marginLeft: 'auto' }}
+                    >
+                      Clear Selection
+                    </button>
+                  </div>
+                )}
                 
                 {vm.targets.length === 0 ? (
                   <div style={{ padding: '1.5rem', border: '1px dashed var(--border)', borderRadius: '8px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
@@ -841,6 +1040,14 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
                         }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
                             <span style={{ cursor: 'grab', fontSize: '1.2rem', color: 'var(--text-muted)' }}>☰</span>
+                            <input
+                              type="checkbox"
+                              checked={selectedTargets[vm.id]?.has(index) || false}
+                              onChange={() => toggleTargetSelection(vm.id, index)}
+                              onClick={(e) => e.stopPropagation()}
+                              title="Select for bulk actions"
+                              style={{ cursor: 'pointer', width: '1rem', height: '1rem', flexShrink: 0 }}
+                            />
                             <span style={{ fontWeight: 800, color: 'var(--accent)', fontSize: '1.1rem' }}>Priority #{index + 1}</span>
                             <div style={{ display: 'flex', flexDirection: 'column' }}>
                               <span style={{ fontWeight: 600, color: isMissing ? 'var(--error)' : 'inherit' }}>
@@ -1246,7 +1453,7 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
               type="checkbox" 
               id="semanticCacheEnabled" 
               checked={localConfig.semanticCacheEnabled === true}
-              onChange={(e) => setLocalConfig({ ...localConfig, semanticCacheEnabled: e.target.checked })}
+              onChange={(e) => commitConfig({ ...localConfig, semanticCacheEnabled: e.target.checked })}
               style={{ cursor: 'pointer' }}
             />
             <label htmlFor="semanticCacheEnabled" style={{ fontWeight: 600, cursor: 'pointer' }}>
@@ -1268,7 +1475,7 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
                 max="0.99" 
                 step="0.01" 
                 value={localConfig.semanticCacheThreshold || 0.92}
-                onChange={(e) => setLocalConfig({ ...localConfig, semanticCacheThreshold: parseFloat(e.target.value) })}
+                onChange={(e) => commitConfig({ ...localConfig, semanticCacheThreshold: parseFloat(e.target.value) })}
                 style={{ width: '100%', cursor: 'pointer', margin: 0 }}
               />
               <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
