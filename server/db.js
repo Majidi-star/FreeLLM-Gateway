@@ -4049,6 +4049,20 @@ export function recordLatency(providerId, modelId, latencyMs) {
     // Exponential moving average: 20% new, 80% old history
     config.stats.latency[key] = Math.round((currentAvg * 0.8) + (latencyMs * 0.2));
   }
+  
+  // Physically reorder targets in pools that use 'latency' strategy so UI updates immediately
+  if (config.virtualModels) {
+    config.virtualModels.forEach(vm => {
+      if (vm.strategy === 'latency') {
+        vm.targets.sort((a, b) => {
+          const latA = config.stats.latency[`${a.providerId}:${a.modelId}`] || 1000;
+          const latB = config.stats.latency[`${b.providerId}:${b.modelId}`] || 1000;
+          return latA - latB;
+        });
+      }
+    });
+  }
+  
   saveConfig(config);
 }
 

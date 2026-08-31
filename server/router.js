@@ -366,14 +366,20 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
 
   // Implement Load-Balancing / Random target selection if specified in pool
   let evaluatedTargets = [...targets];
-  if (virtualModel && (!reqPayload._failedBackends || reqPayload._failedBackends.size === 0)) {
+  if (virtualModel) {
     if (virtualModel.strategy === 'random') {
-      // Shuffle the targets to load balance randomly
-      evaluatedTargets.sort(() => Math.random() - 0.5);
-    } else if (virtualModel.strategy === 'latency') {
-      // Sort by historical latency (fastest first)
-      evaluatedTargets.sort((a, b) => getLatency(a.providerId, a.modelId) - getLatency(b.providerId, b.modelId));
+      // Shuffle targets consistently across failovers using a seeded/saved order
+      if (!reqPayload._randomOrder) {
+        evaluatedTargets.sort(() => Math.random() - 0.5);
+        reqPayload._randomOrder = evaluatedTargets.map(t => `${t.providerId}:${t.modelId}`);
+      } else {
+        evaluatedTargets.sort((a, b) => 
+          reqPayload._randomOrder.indexOf(`${a.providerId}:${a.modelId}`) - 
+          reqPayload._randomOrder.indexOf(`${b.providerId}:${b.modelId}`)
+        );
+      }
     }
+    // Latency strategy is now handled by physically reordering the pool targets in db.js
   }
 
   for (const target of evaluatedTargets) {
@@ -446,9 +452,14 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
         if (currentVirtualModel) {
           currentEvaluatedTargets = [...currentVirtualModel.targets].filter(t => t.enabled !== false);
           if (currentVirtualModel.strategy === 'random') {
-            currentEvaluatedTargets.sort(() => Math.random() - 0.5);
-          } else if (currentVirtualModel.strategy === 'latency') {
-            currentEvaluatedTargets.sort((a, b) => getLatency(a.providerId, a.modelId) - getLatency(b.providerId, b.modelId));
+            if (reqPayload._randomOrder) {
+              currentEvaluatedTargets.sort((a, b) => 
+                reqPayload._randomOrder.indexOf(`${a.providerId}:${a.modelId}`) - 
+                reqPayload._randomOrder.indexOf(`${b.providerId}:${b.modelId}`)
+              );
+            } else {
+              currentEvaluatedTargets.sort(() => Math.random() - 0.5);
+            }
           }
         } else if (targetedProviderId) {
            currentEvaluatedTargets = [{ providerId: targetedProviderId, modelId: targetedModelId }];
