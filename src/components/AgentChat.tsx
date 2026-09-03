@@ -168,8 +168,11 @@ function lsSet(key: string, value: any) {
 
 export const AgentChat: React.FC<AgentChatProps> = ({ config, onConfigChange, sidebarWidth: _, onResizeStart }) => {
   const [selectedModel, setSelectedModel] = useState('');
-  const [proxyEnabled, setProxyEnabled] = useState(false);
-  const [proxyUrl, setProxyUrl] = useState('');
+  const [proxyEnabled, setProxyEnabled] = useState(() => lsGet('chat_proxy_enabled', false));
+  const [proxyUrl, setProxyUrl] = useState(() => lsGet('chat_proxy_url', ''));
+
+  useEffect(() => { lsSet('chat_proxy_enabled', proxyEnabled); }, [proxyEnabled]);
+  useEffect(() => { lsSet('chat_proxy_url', proxyUrl); }, [proxyUrl]);
 
   // Sessions
   const [sessions, setSessions] = useState<ChatSession[]>([]);

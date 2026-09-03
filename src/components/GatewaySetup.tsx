@@ -455,13 +455,17 @@ export const GatewaySetup: React.FC<GatewaySetupProps> = ({ config, onSave }) =>
               type="checkbox" 
               id="globalProxyEnabled" 
               checked={localConfig.globalProxyEnabled}
-              onChange={(e) => setLocalConfig({ ...localConfig, globalProxyEnabled: e.target.checked })}
+              onChange={(e) => {
+                const newConf = { ...localConfig, globalProxyEnabled: e.target.checked };
+                setLocalConfig(newConf);
+                onSave(newConf);
+              }}
             />
             <label htmlFor="globalProxyEnabled" style={{ fontWeight: 600, cursor: 'pointer' }}>Enable Global Proxy</label>
           </div>
           
-          {localConfig.globalProxyEnabled && (
-            <div style={{ display: 'flex', gap: '0.75rem' }}>
+          <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
+            {localConfig.globalProxyEnabled && (
               <input 
                 type="text" 
                 placeholder="e.g. socks5://127.0.0.1:1080 or http://proxy:8080" 
@@ -469,9 +473,16 @@ export const GatewaySetup: React.FC<GatewaySetupProps> = ({ config, onSave }) =>
                 onChange={(e) => setLocalConfig({ ...localConfig, globalProxy: e.target.value })}
                 style={{ flex: 1 }}
               />
-              <button type="button" className="primary" onClick={handleGlobalProxySave}>Save Proxy</button>
-            </div>
-          )}
+            )}
+            <button 
+              type="button" 
+              className="primary" 
+              onClick={handleGlobalProxySave}
+              style={{ marginLeft: localConfig.globalProxyEnabled ? '0' : 'auto' }}
+            >
+              Save Proxy Settings
+            </button>
+          </div>
         </div>
       </div>
 
@@ -929,7 +940,14 @@ export const GatewaySetup: React.FC<GatewaySetupProps> = ({ config, onSave }) =>
                                 type="checkbox" 
                                 id={`custom-proxy-${provider.id}`}
                                 checked={provider.proxyEnabled}
-                                onChange={(e) => handleProviderChange(provider.id, 'proxyEnabled', e.target.checked)}
+                                onChange={(e) => {
+                                  const updated = localConfig.providers.map((p) => 
+                                    p.id === provider.id ? { ...p, proxyEnabled: e.target.checked } : p
+                                  );
+                                  const newConf = { ...localConfig, providers: updated };
+                                  setLocalConfig(newConf);
+                                  onSave(newConf);
+                                }}
                               />
                               <label htmlFor={`custom-proxy-${provider.id}`} style={{ fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}>
                                 Override Proxy for this Provider

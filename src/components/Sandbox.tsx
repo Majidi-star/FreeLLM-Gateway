@@ -17,8 +17,15 @@ export const Sandbox: React.FC<SandboxProps> = ({ config, onConfigChange }) => {
   const [selectedModel, setSelectedModel] = useState('');
   
   // Custom Chat Proxy State
-  const [proxyEnabled, setProxyEnabled] = useState(false);
-  const [proxyUrl, setProxyUrl] = useState('');
+  const [proxyEnabled, setProxyEnabled] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('sandbox_proxy_enabled') || 'false'); } catch { return false; }
+  });
+  const [proxyUrl, setProxyUrl] = useState(() => {
+    try { return localStorage.getItem('sandbox_proxy_url') || ''; } catch { return ''; }
+  });
+
+  useEffect(() => { try { localStorage.setItem('sandbox_proxy_enabled', JSON.stringify(proxyEnabled)); } catch {} }, [proxyEnabled]);
+  useEffect(() => { try { localStorage.setItem('sandbox_proxy_url', proxyUrl); } catch {} }, [proxyUrl]);
 
   // Messages History
   const [messages, setMessages] = useState<Message[]>([
