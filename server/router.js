@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { loadConfig, saveConfig, addLog, recordLatency, getLatency, getStats, scheduleStatsFlush, addStatsHistoryEntry } from './db.js';
+import { loadConfig, saveConfig, addLog, recordLatency, getLatency, getStats, scheduleStatsFlush, addStatsHistoryEntry, resolveProviderModelId } from './db.js';
 import { resolveProxyAgent } from './proxy.js';
 import { checkRateLimit, recordRequestStart, recordRequestEnd, setProviderCooldown, getProviderCooldownTime, setModelCooldown, getModelCooldownTime, checkPoolRateLimit, recordPoolUsage, tryReserve, tryReservePool, releasePoolReservation } from './rateLimiter.js';
 import { getSemanticCachedResponse, addSemanticCache } from './cache.js';
@@ -21,6 +21,42 @@ const MODEL_PRICING = {
 function estimateTokens(text) {
   if (!text) return 0;
   return Math.ceil(text.length / 4);
+}
+
+const STANDARD_PAYLOAD_KEYS = new Set([
+  'model', 'messages', 'temperature', 'top_p', 'max_tokens',
+  'max_completion_tokens', 'stream', 'tools', 'tool_choice',
+  'response_format', 'frequency_penalty', 'presence_penalty',
+  'stop', 'n', 'seed', 'user', 'logprobs', 'top_logprobs'
+]);
+
+export function sanitizeProviderPayload(payload, providerId, modelId) {
+  const providerType = providerId.split(':')[0].toLowerCase();
+  const supportsOSeriesReasoning = providerType === 'openai' && /^o[134](?:-|$)/i.test(modelId);
+  const sanitized = Object.fromEntries(
+    Object.entries(payload).filter(([key]) => STANDARD_PAYLOAD_KEYS.has(key))
+  );
+
+  if (supportsOSeriesReasoning && payload.reasoning_effort !== undefined) {
+    sanitized.reasoning_effort = payload.reasoning_effort;
+  }
+
+  return sanitized;
+}
+
+function sanitizeProviderHeaders(provider, apiKey) {
+  const providerType = provider.id.split(':')[0].toLowerCase();
+  if (providerType === 'anthropic') {
+    return {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01'
+    };
+  }
+  return {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${apiKey}`
+  };
 }
 
 /**
@@ -337,9 +373,9 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
     } else {
       // If not a virtual model, look if any provider offers this exact model ID
       config.providers.forEach(p => {
-        const match = p.models.find(m => m.id === requestedModel);
-        if (match) {
-          targets.push({ providerId: p.id, modelId: requestedModel });
+        const nativeModelId = resolveProviderModelId(p, requestedModel);
+        if (nativeModelId) {
+          targets.push({ providerId: p.id, modelId: requestedModel, upstreamModelId: nativeModelId });
         }
       });
       
@@ -397,6 +433,12 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
     if (!provider || !provider.enabled) {
       continue;
     }
+    const nativeModelId = resolveProviderModelId(provider, target.modelId, target.upstreamModelId);
+    if (!nativeModelId) {
+      eventLog(`Skipping incompatible target ${target.providerId}/${target.modelId}; no native model mapping exists.`);
+      continue;
+    }
+    const resolvedTarget = { ...target, modelId: nativeModelId };
     
     const hasKeys = provider.apiKeys && provider.apiKeys.some(k => k.enabled && k.key);
     if (!provider.apiKey && !hasKeys && provider.id !== 'cloudflare') {
@@ -404,7 +446,7 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
       continue;
     }
 
-    const baseModelObj = provider.models.find(m => m.id === target.modelId) || { id: target.modelId };
+    const baseModelObj = provider.models.find(m => m.id === nativeModelId) || { id: nativeModelId };
     const modelObj = target.limits ? { ...baseModelObj, limits: { ...(baseModelObj.limits || {}), ...target.limits } } : baseModelObj;
     
     // Resolve load-balanced key — atomically checks limits and reserves the slot
@@ -414,7 +456,7 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
     if (keyResolution.limited) {
       eventLog(`Target ${provider.id}/${target.modelId} rate-limited (all keys): ${keyResolution.reason}.`);
       rateLimitedTargets.push({ 
-        target, 
+        target: resolvedTarget,
         provider: keyResolution.virtualProvider || provider, 
         modelObj, 
         retryAfterMs: keyResolution.retryAfterMs 
@@ -423,7 +465,7 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
     }
 
     chosenTarget = { 
-      target, 
+      target: resolvedTarget,
       provider: keyResolution.virtualProvider, 
       modelObj,
       reqReservation: keyResolution.entry,  // slot already claimed atomically
@@ -476,15 +518,20 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
           }
           const provider = currentConfig.providers.find(p => p.id === target.providerId);
           if (!provider || !provider.enabled) continue;
-          
-          const baseModelObj = provider.models.find(m => m.id === target.modelId) || { id: target.modelId };
+          const nativeModelId = resolveProviderModelId(provider, target.modelId, target.upstreamModelId);
+          if (!nativeModelId) {
+            eventLog(`Queue skipping incompatible target ${target.providerId}/${target.modelId}; no native model mapping exists.`);
+            continue;
+          }
+          const resolvedTarget = { ...target, modelId: nativeModelId };
+          const baseModelObj = provider.models.find(m => m.id === nativeModelId) || { id: nativeModelId };
           const modelObj = target.limits ? { ...baseModelObj, limits: { ...(baseModelObj.limits || {}), ...target.limits } } : baseModelObj;
           const promptTokensEst = estimateTokens(JSON.stringify(reqPayload.messages || []));
           const keyResolution = resolveLoadBalancedKey(provider, modelObj, promptTokensEst);
           
           if (!keyResolution.limited) {
             chosenTarget = {
-              target,
+              target: resolvedTarget,
               provider: keyResolution.virtualProvider,
               modelObj,
               reqReservation: keyResolution.entry,  // slot already claimed atomically
@@ -553,20 +600,15 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
   
   // Construct provider request options
   let targetUrl = `${provider.baseUrl}/chat/completions`;
-  let headers = {
-    'Content-Type': 'application/json'
-  };
+  let headers = sanitizeProviderHeaders(provider, provider.apiKey);
 
   // Add API Key header based on provider format
   if (providerType === 'anthropic') {
     targetUrl = `${provider.baseUrl}/messages`;
-    headers['x-api-key'] = provider.apiKey;
-    headers['anthropic-version'] = '2023-06-01';
   } else if (providerType === 'cloudflare') {
     // Replace placeholder with actual account ID
     const accountIdMatch = provider.baseUrl.match(/accounts\/([^/]+)/);
     const accountId = accountIdMatch ? accountIdMatch[1] : '';
-    headers['Authorization'] = `Bearer ${provider.apiKey}`;
   } else if (providerType === 'gemini') {
     // Gemini OpenAI compatibility endpoint:
     let base = provider.baseUrl;
@@ -579,13 +621,14 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
     } else {
       targetUrl = `${base}/openai/chat/completions`;
     }
-    headers['Authorization'] = `Bearer ${provider.apiKey}`;
-  } else {
-    headers['Authorization'] = `Bearer ${provider.apiKey}`;
   }
 
   // Adjust model ID in payload and remove all internal tracking fields (starting with _)
-  const apiPayload = { ...reqPayload, model: target.modelId };
+  const apiPayload = sanitizeProviderPayload(
+    { ...reqPayload, model: target.modelId },
+    provider.id,
+    target.modelId
+  );
   for (const key of Object.keys(apiPayload)) {
     if (key.startsWith('_')) {
       delete apiPayload[key];

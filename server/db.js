@@ -7,6 +7,35 @@ const __dirname = path.dirname(__filename);
 const CONFIG_PATH = path.join(__dirname, '..', 'config.json');
 const SESSIONS_PATH = path.join(__dirname, '..', 'chat-sessions.json');
 
+// Explicit aliases are only used when the destination provider advertises the
+// translated model (or has not synced a model list yet).
+export const PROVIDER_MODEL_ALIASES = {
+  openrouter: {
+    'deepseek-chat': 'deepseek/deepseek-chat',
+    'deepseek-reasoner': 'deepseek/deepseek-r1:free'
+  }
+};
+
+const PROVIDER_MODEL_BLOCKLISTS = {
+  reka: [/deepseek/i, /^glm(?:\d|[-.]|$)/i, /gemini/i, /claude/i, /llama/i]
+};
+
+export function resolveProviderModelId(provider, modelId, explicitModelId = null) {
+  const candidate = explicitModelId || modelId;
+  const providerType = provider.id.split(':')[0];
+  const aliases = PROVIDER_MODEL_ALIASES[providerType] || {};
+  const translated = aliases[candidate] || candidate;
+  const nativeIds = (provider.models || []).map(model => model.id);
+
+  if ((PROVIDER_MODEL_BLOCKLISTS[providerType] || []).some(pattern => pattern.test(translated))) {
+    return null;
+  }
+  if (nativeIds.length === 0) return translated;
+  if (nativeIds.includes(candidate)) return candidate;
+  if (nativeIds.includes(translated)) return translated;
+  return null;
+}
+
 const DEFAULT_PROVIDERS = [
   {
     id: "openrouter",
@@ -3780,7 +3809,7 @@ const DEFAULT_VIRTUAL_MODELS = [
       },
       {
         "providerId": "gemini",
-        "modelId": "gemini-3.5-pro"
+        "modelId": "gemini-2.5-flash"
       },
       {
         "providerId": "openrouter",

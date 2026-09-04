@@ -203,6 +203,11 @@ export function searchModelsInDb(query: string): ModelSearchResult[] {
           };
         }
 
+        const alreadyListed = resultMap[groupKey].providers.some(
+          (provider) => provider.providerId === prov.id && provider.modelId === mod.id
+        );
+        if (alreadyListed) return;
+
         resultMap[groupKey].providers.push({
           providerId: prov.id,
           providerName: prov.name,
