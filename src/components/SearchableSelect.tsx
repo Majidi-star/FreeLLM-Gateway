@@ -147,9 +147,9 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
                     {group}
                   </div>
                 )}
-                {groupedOptions[group].map(opt => (
+                {groupedOptions[group].map((opt, index) => (
                   <div
-                    key={opt.id}
+                    key={`${group || 'ungrouped'}-${opt.id}-${index}`}
                     onClick={() => handleSelect(opt.id)}
                     style={{
                       padding: '8px 12px',

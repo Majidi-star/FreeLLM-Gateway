@@ -52,7 +52,10 @@ export const Playground: React.FC<PlaygroundProps> = ({ config }) => {
   (config.providers || []).forEach(p => {
     if (p.enabled && p.models && p.models.length > 0) {
       providerGroups[p.name] = true;
+      const seenModelIds = new Set<string>();
       p.models.forEach(m => {
+        if (seenModelIds.has(m.id)) return;
+        seenModelIds.add(m.id);
         providerModels.push({ id: m.id, label: m.id, group: `📡 ${p.name}` });
       });
     }

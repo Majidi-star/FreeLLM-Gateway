@@ -4055,6 +4055,7 @@ let statsCache = null;        // live in-memory copy of config.stats
 let statsDirty = false;
 let statsFlushTimer = null;
 let statsHistory = [];
+let statsHistoryLoaded = false;
 let statsHistoryDirty = false;
 let statsHistoryTimer = null;
 
@@ -4142,15 +4143,18 @@ export function getLatency(providerId, modelId) {
 // --- Stats history (in-memory array, debounced disk flush) -----------------
 
 export function loadStatsHistory() {
-  try {
-    if (fs.existsSync(STATS_HISTORY_PATH)) {
-      statsHistory = JSON.parse(fs.readFileSync(STATS_HISTORY_PATH, 'utf8'));
-    } else {
+  if (!statsHistoryLoaded) {
+    try {
+      if (fs.existsSync(STATS_HISTORY_PATH)) {
+        statsHistory = JSON.parse(fs.readFileSync(STATS_HISTORY_PATH, 'utf8'));
+      } else {
+        statsHistory = [];
+      }
+    } catch (err) {
+      console.error('Error loading stats history:', err);
       statsHistory = [];
     }
-  } catch (err) {
-    console.error('Error loading stats history:', err);
-    statsHistory = [];
+    statsHistoryLoaded = true;
   }
 
   const stats = getStats();
@@ -4190,7 +4194,7 @@ export function saveStatsHistory() {
 }
 
 export function addStatsHistoryEntry(entry) {
-  if (statsHistory.length === 0 && fs.existsSync(STATS_HISTORY_PATH)) {
+  if (!statsHistoryLoaded) {
     loadStatsHistory();
   }
   const fullEntry = {
@@ -4206,6 +4210,7 @@ export function addStatsHistoryEntry(entry) {
 
 export function clearStatsHistory() {
   statsHistory = [];
+  statsHistoryLoaded = true;
   statsHistoryDirty = false;
   if (statsHistoryTimer) {
     clearTimeout(statsHistoryTimer);
@@ -4219,4 +4224,3 @@ export function clearStatsHistory() {
     console.error('Error deleting stats history file:', err);
   }
 }
-

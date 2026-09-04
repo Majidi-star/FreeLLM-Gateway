@@ -58,7 +58,10 @@ Examples:
   const providerModels: { id: string; label: string; group: string; providerId: string }[] = [];
   (config.providers || []).forEach(p => {
     if (p.enabled && p.models && p.models.length > 0) {
+      const seenModelIds = new Set<string>();
       p.models.forEach(m => {
+        if (seenModelIds.has(m.id)) return;
+        seenModelIds.add(m.id);
         providerModels.push({
           id: m.id,
           label: m.id,
@@ -200,8 +203,8 @@ Examples:
             )}
             {Object.keys(providerGroups).map(groupName => (
               <optgroup key={groupName} label={`📡 ${groupName}`}>
-                {providerGroups[groupName].map(m => (
-                  <option key={`${groupName}-${m.id}`} value={m.id}>{m.label}</option>
+                {providerGroups[groupName].map((m, index) => (
+                  <option key={`${groupName}-${m.id}-${index}`} value={m.id}>{m.label}</option>
                 ))}
               </optgroup>
             ))}
