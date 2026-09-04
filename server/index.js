@@ -149,6 +149,52 @@ app.get('/v1/models', (req, res) => {
   });
 });
 
+// GET /v1/models/:modelId - OpenAI "Retrieve Model" endpoint.
+// Clients such as Cline, Aider and Continue validate a configured model by
+// retrieving it individually; a plain-text 404 here makes them report
+// "model does not exist" even though pool routing would work fine.
+app.get('/v1/models/:modelId', (req, res) => {
+  const config = loadConfig();
+  const requestedId = req.params.modelId;
+  // Mirror the router's normalization: lowercase, kebab-case, strip "-pool" suffix
+  const cleanId = requestedId.toLowerCase().trim().replace(/\s+/g, '-').replace(/-pool$/, '');
+
+  // 1. Virtual pools
+  const vm = config.virtualModels.find(m => m.id === requestedId || m.id === cleanId);
+  if (vm) {
+    return res.json({
+      id: vm.id,
+      object: 'model',
+      created: 1686935002,
+      owned_by: 'pool-gateway',
+      type: 'virtual'
+    });
+  }
+
+  // 2. Enabled provider models
+  const owningProvider = config.providers.find(p => p.enabled && (p.models || []).some(m => m.id === requestedId));
+  if (owningProvider) {
+    return res.json({
+      id: requestedId,
+      object: 'model',
+      created: 1686935002,
+      owned_by: owningProvider.id,
+      type: 'direct'
+    });
+  }
+
+  // 3. OpenAI-canonical not-found error
+  const availablePools = (config.virtualModels || []).map(m => m.id).join(', ') || 'none';
+  res.status(404).json({
+    error: {
+      message: `The model '${requestedId}' does not exist on this gateway. Available virtual pools: ${availablePools}.`,
+      type: 'model_not_found',
+      param: 'model',
+      code: 'model_not_found'
+    }
+  });
+});
+
 // POST /v1/chat/completions - Route completions with fallback support
 app.post('/v1/chat/completions', async (req, res) => {
   try {
@@ -1401,11 +1447,22 @@ app.use(express.static(clientDistPath));
 
 // Fallback for single-page application routing
 app.get('*', (req, res) => {
-  if (!req.path.startsWith('/v1') && !req.path.startsWith('/api')) {
-    res.sendFile(path.join(clientDistPath, 'index.html'));
-  } else {
-    res.status(404).json({ error: 'Endpoint not found.' });
+  // API-shaped requests must NEVER receive HTML: OpenAI-compatible clients
+  // (Cline, Aider, etc.) parse the response as JSON, and an HTML-with-200
+  // response surfaces as a confusing "model does not exist" error instead of
+  // an actionable hint about the base URL.
+  const apiShaped = /^\/(v1|api)(\/|$)/.test(req.path) ||
+    /\/(models|chat\/completions|completions|embeddings|responses|moderations)$/.test(req.path);
+  if (apiShaped) {
+    return res.status(404).json({
+      error: {
+        message: `Unknown API route: ${req.method} ${req.path}. Hint: the OpenAI-compatible base URL is http://localhost:${PORT}/v1`,
+        type: 'invalid_request_error',
+        code: 'not_found'
+      }
+    });
   }
+  res.sendFile(path.join(clientDistPath, 'index.html'));
 });
 
 // Write runtime config for local CLI / MCP authentication & port discoverability
