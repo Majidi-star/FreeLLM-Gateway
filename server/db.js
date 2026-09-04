@@ -7,6 +7,31 @@ const __dirname = path.dirname(__filename);
 const CONFIG_PATH = path.join(__dirname, '..', 'config.json');
 const SESSIONS_PATH = path.join(__dirname, '..', 'chat-sessions.json');
 
+// Explicit aliases are only used when the destination provider advertises the
+// translated model (or has not synced a model list yet).
+export const PROVIDER_MODEL_ALIASES = {
+  openrouter: {
+    'deepseek-chat': 'deepseek/deepseek-chat',
+    'deepseek-reasoner': 'deepseek/deepseek-r1:free'
+  }
+};
+
+// Compatibility gate for "does this provider serve this model id" is handled
+// by providerSupportsModel() in server/router.js, driven by the optional
+// provider.blockedModels config field (data-driven, no hardcoded blocklists).
+export function resolveProviderModelId(provider, modelId, explicitModelId = null) {
+  const candidate = explicitModelId || modelId;
+  const providerType = provider.id.split(':')[0];
+  const aliases = PROVIDER_MODEL_ALIASES[providerType] || {};
+  const translated = aliases[candidate] || candidate;
+  const nativeIds = (provider.models || []).map(model => model.id);
+
+  if (nativeIds.length === 0) return translated;
+  if (nativeIds.includes(candidate)) return candidate;
+  if (nativeIds.includes(translated)) return translated;
+  return null;
+}
+
 const DEFAULT_PROVIDERS = [
   {
     id: "openrouter",
@@ -3780,7 +3805,7 @@ const DEFAULT_VIRTUAL_MODELS = [
       },
       {
         "providerId": "gemini",
-        "modelId": "gemini-3.5-pro"
+        "modelId": "gemini-2.5-flash"
       },
       {
         "providerId": "openrouter",
@@ -3963,6 +3988,17 @@ export function loadConfig() {
           merged.providers.push({ ...defaultProv, apiKeys: [] });
         }
       });
+
+      // Migrate stale pool entries once at load time. This prevents old
+      // provider/model combinations from being reconsidered on every request.
+      merged.virtualModels = merged.virtualModels.map(vm => ({
+        ...vm,
+        targets: (vm.targets || []).filter(target => {
+          const provider = merged.providers.find(p => p.id === target.providerId);
+          if (!provider) return false;
+          return resolveProviderModelId(provider, target.modelId, target.upstreamModelId) !== null;
+        })
+      }));
 
       merged.providers.forEach(p => {
         if (!p.apiKeys) {

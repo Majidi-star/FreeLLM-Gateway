@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { loadConfig, saveConfig, addLog, recordLatency, getLatency, getStats, scheduleStatsFlush, addStatsHistoryEntry } from './db.js';
+import { loadConfig, saveConfig, addLog, recordLatency, getLatency, getStats, scheduleStatsFlush, addStatsHistoryEntry, resolveProviderModelId } from './db.js';
 import { resolveProxyAgent } from './proxy.js';
 import { checkRateLimit, recordRequestStart, recordRequestEnd, setProviderCooldown, getProviderCooldownTime, setModelCooldown, getModelCooldownTime, checkPoolRateLimit, recordPoolUsage, tryReserve, tryReservePool, releasePoolReservation } from './rateLimiter.js';
 import { getSemanticCachedResponse, addSemanticCache } from './cache.js';
@@ -119,6 +119,21 @@ export function providerSupportsModel(provider, modelId) {
     });
   }
   return true;
+}
+
+function sanitizeProviderHeaders(provider, apiKey) {
+  const providerType = provider.id.split(':')[0].toLowerCase();
+  if (providerType === 'anthropic') {
+    return {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01'
+    };
+  }
+  return {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${apiKey}`
+  };
 }
 
 /**
@@ -457,9 +472,9 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
     } else {
       // If not a virtual model, look if any provider offers this exact model ID
       config.providers.forEach(p => {
-        const match = p.models.find(m => m.id === requestedModel);
-        if (match && providerSupportsModel(p, requestedModel)) {
-          targets.push({ providerId: p.id, modelId: requestedModel });
+        const nativeModelId = resolveProviderModelId(p, requestedModel);
+        if (nativeModelId && providerSupportsModel(p, requestedModel)) {
+          targets.push({ providerId: p.id, modelId: requestedModel, upstreamModelId: nativeModelId });
         }
       });
       
@@ -521,6 +536,12 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
       eventLog(`Skipping incompatible target ${provider.id}/${target.modelId}; provider/model mapping is invalid.`);
       continue;
     }
+    const nativeModelId = resolveProviderModelId(provider, target.modelId, target.upstreamModelId);
+    if (!nativeModelId) {
+      eventLog(`Skipping incompatible target ${target.providerId}/${target.modelId}; no native model mapping exists.`);
+      continue;
+    }
+    const resolvedTarget = { ...target, modelId: nativeModelId };
     
     const hasKeys = provider.apiKeys && provider.apiKeys.some(k => k.enabled && k.key);
     if (!provider.apiKey && !hasKeys && provider.id !== 'cloudflare') {
@@ -528,7 +549,7 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
       continue;
     }
 
-    const baseModelObj = provider.models.find(m => m.id === target.modelId);
+    const baseModelObj = provider.models.find(m => m.id === nativeModelId);
     if (!baseModelObj) {
       eventLog(`Skipping unavailable target ${provider.id}/${target.modelId}; model is not registered by the provider.`);
       continue;
@@ -542,7 +563,7 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
     if (keyResolution.limited) {
       eventLog(`Target ${provider.id}/${target.modelId} rate-limited (all keys): ${keyResolution.reason}.`);
       rateLimitedTargets.push({ 
-        target, 
+        target: resolvedTarget,
         provider: keyResolution.virtualProvider || provider, 
         modelObj, 
         retryAfterMs: keyResolution.retryAfterMs 
@@ -551,7 +572,7 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
     }
 
     chosenTarget = { 
-      target, 
+      target: resolvedTarget,
       provider: keyResolution.virtualProvider, 
       modelObj,
       reqReservation: keyResolution.entry,  // slot already claimed atomically
@@ -608,8 +629,13 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
             eventLog(`Skipping incompatible target ${provider.id}/${target.modelId} during queue recheck.`);
             continue;
           }
-          
-          const baseModelObj = provider.models.find(m => m.id === target.modelId);
+          const nativeModelId = resolveProviderModelId(provider, target.modelId, target.upstreamModelId);
+          if (!nativeModelId) {
+            eventLog(`Queue skipping incompatible target ${target.providerId}/${target.modelId}; no native model mapping exists.`);
+            continue;
+          }
+          const resolvedTarget = { ...target, modelId: nativeModelId };
+          const baseModelObj = provider.models.find(m => m.id === nativeModelId);
           if (!baseModelObj) {
             eventLog(`Skipping unavailable target ${provider.id}/${target.modelId} during queue recheck.`);
             continue;
@@ -620,7 +646,7 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
           
           if (!keyResolution.limited) {
             chosenTarget = {
-              target,
+              target: resolvedTarget,
               provider: keyResolution.virtualProvider,
               modelObj,
               reqReservation: keyResolution.entry,  // slot already claimed atomically
@@ -637,21 +663,22 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
   }
 
   if (!chosenTarget) {
-    // Attempt emergency system-wide fallback if all pool models are limited
+    // A pool may contain stale targets after provider model IDs change. Keep
+    // the gateway usable by trying current enabled providers instead of
+    // treating skipped configuration entries as rate limiting.
     if (!reqPayload._systemFallbackTried) {
       reqPayload._systemFallbackTried = true;
-      const anyActiveProvider = config.providers.find(p => 
+      const activeProviders = config.providers.filter(p =>
         p.enabled && 
         (p.apiKey || p.apiKeys?.some(k => k.enabled && k.key)) && 
         p.models?.length > 0
       );
-      if (anyActiveProvider) {
-        const fallbackModel = anyActiveProvider.models.find(model => providerSupportsModel(anyActiveProvider, model.id));
-        if (!fallbackModel) {
-          return res.status(503).json({
-            error: { message: 'No compatible emergency fallback model is available.' }
-          });
-        }
+      for (const anyActiveProvider of activeProviders) {
+        const fallbackModel = anyActiveProvider.models.find(model =>
+          providerSupportsModel(anyActiveProvider, model.id) &&
+          resolveProviderModelId(anyActiveProvider, model.id)
+        );
+        if (!fallbackModel) continue;
         const promptTokensEst = estimateTokens(JSON.stringify(reqPayload.messages || []));
         const fbResolution = resolveLoadBalancedKey(anyActiveProvider, fallbackModel, promptTokensEst);
         if (!fbResolution.limited) {
@@ -662,18 +689,22 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
             reqReservation: fbResolution.entry,  // slot already claimed atomically
           };
           eventLog(`EMERGENCY FALLBACK: Virtual pool limited. Using active provider ${anyActiveProvider.name} (${fallbackModel.id}) as fallback.`);
+          break;
         }
       }
     }
   }
 
   if (!chosenTarget) {
-    eventLog(`FAIL: All endpoints rate limited and queue timeout reached. Failing request.`);
+    const hasRateLimitedTargets = rateLimitedTargets.length > 0;
+    eventLog(`FAIL: No compatible enabled backend is available for request.`);
     updateStats(false, requestedModel, 0, 0, {
       providerId: 'gateway',
       modelId: 'unknown',
       latencyMs: 0,
-      error: 'All eligible providers are currently rate-limited or in cooldown.',
+      error: hasRateLimitedTargets
+        ? 'All eligible providers are currently rate-limited or in cooldown.'
+        : 'No compatible enabled provider/model targets are available.',
       diagnostics: {
         gateway: {
           requestedModel,
@@ -686,9 +717,11 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
         }
       }
     });
-    return res.status(429).json({
+    return res.status(hasRateLimitedTargets ? 429 : 503).json({
       error: {
-        message: 'All eligible providers are currently rate-limited or in cooldown.',
+        message: hasRateLimitedTargets
+          ? 'All eligible providers are currently rate-limited or in cooldown.'
+          : 'The requested pool has no compatible enabled provider/model targets.',
         details: rateLimitedTargets.map(t => `${t.provider.id}: ${t.retryAfterMs}ms`).join(', ')
       }
     });
@@ -711,20 +744,15 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
   
   // Construct provider request options
   let targetUrl = `${provider.baseUrl}/chat/completions`;
-  let headers = {
-    'Content-Type': 'application/json'
-  };
+  let headers = sanitizeProviderHeaders(provider, provider.apiKey);
 
   // Add API Key header based on provider format
   if (providerType === 'anthropic') {
     targetUrl = `${provider.baseUrl}/messages`;
-    headers['x-api-key'] = provider.apiKey;
-    headers['anthropic-version'] = '2023-06-01';
   } else if (providerType === 'cloudflare') {
     // Replace placeholder with actual account ID
     const accountIdMatch = provider.baseUrl.match(/accounts\/([^/]+)/);
     const accountId = accountIdMatch ? accountIdMatch[1] : '';
-    headers['Authorization'] = `Bearer ${provider.apiKey}`;
   } else if (providerType === 'gemini') {
     // Gemini OpenAI compatibility endpoint:
     let base = provider.baseUrl;
@@ -737,9 +765,6 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
     } else {
       targetUrl = `${base}/openai/chat/completions`;
     }
-    headers['Authorization'] = `Bearer ${provider.apiKey}`;
-  } else {
-    headers['Authorization'] = `Bearer ${provider.apiKey}`;
   }
 
   // Adjust model ID in payload and remove all internal tracking fields (starting with _)

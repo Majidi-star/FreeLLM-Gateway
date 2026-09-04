@@ -1,5 +1,6 @@
 import assert from 'node:assert';
 import { providerSupportsModel, sanitizeProviderPayload } from './server/router.js';
+import { resolveProviderModelId } from './server/db.js';
 
 const reka = { id: 'reka' };
 
@@ -41,5 +42,29 @@ const p3 = sanitizeProviderPayload(
 );
 assert.strictEqual(p3.reasoning_effort, 'high');
 assert.strictEqual(p3.max_completion_tokens, 512);
+
+// 7. Native model mapping: registered model ids resolve to themselves
+const rekaProvider = { id: 'reka', models: [{ id: 'glm5.3' }, { id: 'reka-flash-3' }] };
+assert.strictEqual(resolveProviderModelId(rekaProvider, 'glm5.3'), 'glm5.3');
+
+// 8. Native model mapping: unregistered model with empty synced list resolves through
+assert.strictEqual(resolveProviderModelId({ id: 'reka', models: [] }, 'deepseek4-flash'), 'deepseek4-flash');
+
+// 9. Native model mapping: OpenRouter aliases translate to namespaced native ids
+const openrouter = { id: 'openrouter', models: [{ id: 'deepseek/deepseek-chat' }] };
+assert.strictEqual(resolveProviderModelId(openrouter, 'deepseek-chat'), 'deepseek/deepseek-chat');
+
+// 10. Native model mapping: unknown model on fully synced provider resolves to null
+assert.strictEqual(resolveProviderModelId(openrouter, 'totally-unknown'), null);
+
+// 11. Native model mapping: explicit upstreamModelId wins over the pool's model id
+assert.strictEqual(resolveProviderModelId(openrouter, 'deepseek-chat', 'deepseek/deepseek-chat'), 'deepseek/deepseek-chat');
+
+// 12. No hardcoded blocklist regression: reka resolves glm/deepseek (bug class re-introduced in branch must stay fixed)
+assert.strictEqual(resolveProviderModelId(rekaProvider, 'deepseek4-flash'), null,
+  'unregistered model on synced provider must be null (but NOT because of a hardcoded blocklist)');
+const rekaSynced = { id: 'reka', models: [{ id: 'glm5.3' }, { id: 'deepseek4-flash' }] };
+assert.strictEqual(resolveProviderModelId(rekaSynced, 'deepseek4-flash'), 'deepseek4-flash',
+  'registered deepseek on reka must resolve — hardcoded reka blocklist was removed');
 
 console.log('ALL SMOKE TESTS PASSED');

@@ -51,6 +51,7 @@ export interface Provider {
 export interface VirtualModelTarget {
   providerId: string;
   modelId: string;
+  upstreamModelId?: string;
   enabled?: boolean;
   timeoutMs?: number;
   cooldownMs?: number;
