@@ -44,3 +44,7 @@ benchmarks/
 *.pem
 *.p12
 *.pfx
+
+# Architecture : Backend logic 
+benchmarks/
+docs/BACKEND_ARCHITECTURE.md
