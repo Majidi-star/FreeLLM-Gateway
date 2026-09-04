@@ -201,8 +201,14 @@ export const AgentChat: React.FC<AgentChatProps> = ({ config, onConfigChange, si
   const poolModels = (config.virtualModels || []).map(vm => ({ id: vm.id, label: vm.name || vm.id, group: 'pools' }));
   const providerModels: { id: string; label: string; group: string }[] = [];
   (config.providers || []).forEach(p => {
-    if (p.enabled && p.models?.length > 0)
-      p.models.forEach(m => providerModels.push({ id: m.id, label: m.id, group: p.name }));
+    if (p.enabled && p.models?.length > 0) {
+      const seenModelIds = new Set<string>();
+      p.models.forEach(m => {
+        if (seenModelIds.has(m.id)) return;
+        seenModelIds.add(m.id);
+        providerModels.push({ id: m.id, label: m.id, group: p.name });
+      });
+    }
   });
   const providerGroups: Record<string, { id: string; label: string }[]> = {};
   providerModels.forEach(m => {
@@ -556,7 +562,7 @@ export const AgentChat: React.FC<AgentChatProps> = ({ config, onConfigChange, si
             )}
             {Object.keys(providerGroups).map(g => (
               <optgroup key={g} label={`📡 ${g}`}>
-                {providerGroups[g].map(m => <option key={`${g}-${m.id}`} value={m.id}>{m.label}</option>)}
+                {providerGroups[g].map((m, index) => <option key={`${g}-${m.id}-${index}`} value={m.id}>{m.label}</option>)}
               </optgroup>
             ))}
           </select>

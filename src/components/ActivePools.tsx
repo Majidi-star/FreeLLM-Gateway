@@ -385,12 +385,16 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
   const getSearchResultsForPool = (query: string) => {
     if (!query.trim()) return [];
     const results: { providerId: string; providerName: string; modelId: string; modelName: string }[] = [];
+    const seenTargets = new Set<string>();
     localConfig.providers.forEach(p => {
       if (p.enabled) {
         p.models.forEach(m => {
           const matchesId = m.id.toLowerCase().includes(query.toLowerCase());
           const matchesName = (m.name || '').toLowerCase().includes(query.toLowerCase());
           if (matchesId || matchesName) {
+            const targetKey = `${p.id}/${m.id}`;
+            if (seenTargets.has(targetKey)) return;
+            seenTargets.add(targetKey);
             results.push({
               providerId: p.id,
               providerName: p.name,
@@ -1309,10 +1313,10 @@ export const ActivePools: React.FC<ActivePoolsProps> = ({ config, onSave }) => {
                       </div>
                       
                       <div style={{ maxHeight: '150px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.35rem', paddingRight: '0.25rem' }}>
-                        {results.map((r, idx) => {
+                        {results.map(r => {
                           const isAdded = vm.targets.some(t => t.providerId === r.providerId && t.modelId === r.modelId);
                           return (
-                            <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.35rem 0.5rem', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '4px' }}>
+                            <div key={`${r.providerId}/${r.modelId}`} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.35rem 0.5rem', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '4px' }}>
                               <div style={{ display: 'flex', flexDirection: 'column' }}>
                                 <span style={{ fontSize: '0.8rem', fontWeight: 600, color: isAdded ? 'var(--text-muted)' : '#c5c9db' }}>{r.modelName}</span>
                                 <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>ID: <code>{r.modelId}</code> | Provider: {r.providerName}</span>
