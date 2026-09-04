@@ -48,3 +48,4 @@ benchmarks/
 # Architecture : Backend logic 
 benchmarks/
 docs/BACKEND_ARCHITECTURE.md
+Plan/GATEWAY_V2_REDESIGN.md
