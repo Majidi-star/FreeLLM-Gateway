@@ -72,17 +72,26 @@ function buildRequestDiagnostics({ reqPayload, targetUrl, headers, payloadToSend
   };
 }
 
-export function sanitizeProviderPayload(payload, providerId, modelId) {
+export function sanitizeProviderPayload(payload, provider, modelId) {
   const standardKeys = new Set([
     'model', 'messages', 'temperature', 'top_p', 'stream', 'max_tokens',
     'tools', 'tool_choice', 'response_format', 'frequency_penalty',
     'presence_penalty', 'stop', 'n', 'seed', 'user', 'logprobs',
     'top_logprobs'
   ]);
+  // Per-provider extension: config.json may declare extra request fields the
+  // upstream API accepts via provider.allowedExtraFields (string array).
+  // Everything outside the standard set + that list is stripped before send,
+  // so upstream-specific 400s are fixed with data, never hardcoded logic.
+  if (Array.isArray(provider?.allowedExtraFields)) {
+    for (const key of provider.allowedExtraFields) {
+      if (typeof key === 'string' && key) standardKeys.add(key);
+    }
+  }
   const sanitized = Object.fromEntries(
     Object.entries(payload).filter(([key]) => standardKeys.has(key))
   );
-  const providerType = providerId.split(':')[0].toLowerCase();
+  const providerType = (provider?.id || '').split(':')[0].toLowerCase();
   const supportsOSeries = providerType === 'openai' && /^o[134](?:-|$)/i.test(modelId);
 
   if (supportsOSeries && payload.max_completion_tokens !== undefined) {
@@ -96,9 +105,18 @@ export function sanitizeProviderPayload(payload, providerId, modelId) {
 }
 
 export function providerSupportsModel(provider, modelId) {
-  const providerType = provider.id.split(':')[0].toLowerCase();
-  if (providerType === 'reka' && /^(?:glm|deepseek)/i.test(modelId)) {
-    return false;
+  // Config-driven, per-provider model blocklist (config.json: provider.blockedModels).
+  // Accepts regex-source strings; a plain string falls back to exact match if it
+  // is not a valid regex. No providers are blocked by default.
+  const blockedModels = provider?.blockedModels;
+  if (Array.isArray(blockedModels) && blockedModels.length > 0) {
+    return !blockedModels.some(pattern => {
+      try {
+        return new RegExp(pattern, 'i').test(modelId);
+      } catch {
+        return String(pattern).toLowerCase() === modelId.toLowerCase();
+      }
+    });
   }
   return true;
 }
@@ -409,18 +427,31 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
         reqPayload._poolReservation = poolReservation.entry;
         reqPayload._poolId = virtualModel.id;
       }
+      const skippedPoolTargets = [];
       targets = [...virtualModel.targets].filter(t => {
         if (t.enabled === false) return false;
         const provider = config.providers.find(p => p.id === t.providerId);
         const compatible = provider && providerSupportsModel(provider, t.modelId) &&
           provider.models.some(model => model.id === t.modelId);
         if (!compatible) {
-          eventLog(`Ignoring invalid pool target ${t.providerId}/${t.modelId}; provider/model mapping is incompatible or unavailable.`);
+          const reason = !provider
+            ? 'provider does not exist or is not configured'
+            : !providerSupportsModel(provider, t.modelId)
+              ? 'model is blocked for this provider (provider.blockedModels)'
+              : 'model is not registered by the provider';
+          eventLog(`Ignoring invalid pool target ${t.providerId}/${t.modelId}; ${reason}.`);
+          skippedPoolTargets.push({ providerId: t.providerId, modelId: t.modelId, reason });
         }
         return compatible;
       });
       if (targets.length === 0) {
-        return res.status(503).json({ error: { message: `Virtual pool "${requestedModel}" has no active/enabled models available.`, type: 'pool_empty' } });
+        return res.status(503).json({
+          error: {
+            message: `Virtual pool "${requestedModel}" has no active/enabled models available.`,
+            type: 'pool_empty',
+            skippedTargets: skippedPoolTargets
+          }
+        });
       }
       eventLog(`Resolved virtual model "${requestedModel}" to ${targets.length} priority targets.`);
     } else {
@@ -435,11 +466,6 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
       if (targets.length > 0) {
         eventLog(`Model "${requestedModel}" found directly in providers. Fallback available.`);
       } else {
-        if (/^(?:glm|deepseek)/i.test(requestedModel)) {
-          return res.status(400).json({
-            error: { message: `No compatible provider is configured for model "${requestedModel}".` }
-          });
-        }
         // Fallback: use the first enabled provider's first model
         const activeProvider = config.providers.find(p => p.enabled && p.apiKey);
         if (activeProvider && activeProvider.models.length > 0) {
@@ -717,7 +743,7 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
   }
 
   // Adjust model ID in payload and remove all internal tracking fields (starting with _)
-  const apiPayload = sanitizeProviderPayload({ ...reqPayload, model: target.modelId }, provider.id, target.modelId);
+  const apiPayload = sanitizeProviderPayload({ ...reqPayload, model: target.modelId }, provider, target.modelId);
   for (const key of Object.keys(apiPayload)) {
     if (key.startsWith('_')) {
       delete apiPayload[key];
