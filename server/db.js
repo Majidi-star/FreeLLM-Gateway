@@ -3993,6 +3993,17 @@ export function loadConfig() {
         }
       });
 
+      // Migrate stale pool entries once at load time. This prevents old
+      // provider/model combinations from being reconsidered on every request.
+      merged.virtualModels = merged.virtualModels.map(vm => ({
+        ...vm,
+        targets: (vm.targets || []).filter(target => {
+          const provider = merged.providers.find(p => p.id === target.providerId);
+          if (!provider) return false;
+          return resolveProviderModelId(provider, target.modelId, target.upstreamModelId) !== null;
+        })
+      }));
+
       merged.providers.forEach(p => {
         if (!p.apiKeys) {
           p.apiKeys = [];
