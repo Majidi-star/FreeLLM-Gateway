@@ -10,16 +10,26 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "start": "node server/index.js"
+    "start": "node server/index.js",
+    "typecheck": "tsc -p server/tsconfig.json",
+    "test": "vitest run",
+    "migrate:v1": "tsx scripts/migrate-v1.ts"
   },
   "dependencies": {
+    "@libsql/client": "^0.18.0",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
     "axios": "^1.7.9",
     "cors": "^2.8.5",
+    "drizzle-orm": "^0.38.4",
     "express": "^4.21.2",
     "https-proxy-agent": "^7.0.6",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "socks-proxy-agent": "^8.0.5"
+    "socks-proxy-agent": "^8.0.5",
+    "tsx": "^4.23.13",
+    "vitest": "^5.0.0",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",

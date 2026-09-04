@@ -29,6 +29,12 @@ config.json.*
 chat-sessions.json
 server/cache.json
 stats-history.json
+
+# v2 SQLite database + AES master key (never commit secrets)
+data/
+*.db
+*.db-shm
+*.db-wal
 *.local
 .env
 .env.*
