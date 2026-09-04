@@ -268,6 +268,10 @@ export async function deleteSession(id: string): Promise<{ success: boolean }> {
   return fetchJson(`${API_BASE}/api/chat-sessions/${id}`, { method: 'DELETE' });
 }
 
+export async function getModelDetail(modelId: string): Promise<any> {
+  return fetchJson(`${API_BASE}/v1/models/${modelId}`);
+}
+
 export async function getSessionMessages(sessionId: string): Promise<ChatMessage[]> {
   return fetchJson(`${API_BASE}/api/chat-sessions/${sessionId}/messages`);
 }

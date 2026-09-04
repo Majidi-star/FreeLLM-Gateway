@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { 
-  getConfig, 
-  saveConfig, 
-  getStats, 
-  API_BASE 
+import {
+  getConfig,
+  saveConfig,
+  getStats,
+  API_BASE
 } from './utils/api';
 import type { GatewayConfig, Stats } from './utils/api';
 import { Directory } from './components/Directory';
@@ -15,11 +15,11 @@ import { Playground } from './components/Playground';
 import { Statistics } from './components/Statistics';
 import { SystemAlerts } from './components/SystemAlerts';
 
-const MIN_SIDEBAR = 280;
-const MAX_SIDEBAR = 600;
+const MIN_SIDEBAR = 300;
+const MAX_SIDEBAR = 560;
 const DEFAULT_SIDEBAR = 380;
 
-function App() {
+export function App() {
   const [activeTab, setActiveTab] = useState<'directory' | 'setup' | 'pools' | 'playground' | 'integrations' | 'statistics' | 'alerts'>('directory');
   const [showAssistant, setShowAssistant] = useState(true);
   const [config, setConfig] = useState<GatewayConfig | null>(null);
@@ -28,8 +28,8 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [serverOnline, setServerOnline] = useState(false);
 
-  // Drag-resizable sidebar state
-  const [sidebarWidth, setSidebarWidth] = useState(DEFAULT_SIDEBAR);
+  // Drag-resizable assistant panel state
+  const [assistantWidth, setAssistantWidth] = useState(DEFAULT_SIDEBAR);
   const [isResizing, setIsResizing] = useState(false);
   const resizeStartX = useRef(0);
   const resizeStartWidth = useRef(DEFAULT_SIDEBAR);
@@ -41,10 +41,10 @@ function App() {
       setError(null);
       const confData = await getConfig();
       setConfig(confData);
-      
+
       const statsData = await getStats();
       setStats(statsData.stats);
-      
+
       setServerOnline(true);
     } catch (err: any) {
       console.error(err);
@@ -73,22 +73,22 @@ function App() {
     return () => clearInterval(timer);
   }, [serverOnline]);
 
-  // ── Drag-resize handlers ──
+  // ── Drag-resize handlers (assistant panel left-edge handle) ──
   const handleResizeStart = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     setIsResizing(true);
     resizeStartX.current = e.clientX;
-    resizeStartWidth.current = sidebarWidth;
-  }, [sidebarWidth]);
+    resizeStartWidth.current = assistantWidth;
+  }, [assistantWidth]);
 
   useEffect(() => {
     if (!isResizing) return;
 
     const onMove = (e: MouseEvent) => {
-      // Dragging left edge of sidebar → moving mouse left = bigger sidebar
+      // Handle sits on the panel's left edge → moving mouse left = wider panel
       const delta = resizeStartX.current - e.clientX;
       const newWidth = Math.min(MAX_SIDEBAR, Math.max(MIN_SIDEBAR, resizeStartWidth.current + delta));
-      setSidebarWidth(newWidth);
+      setAssistantWidth(newWidth);
     };
 
     const onUp = () => setIsResizing(false);
@@ -101,7 +101,7 @@ function App() {
     };
   }, [isResizing]);
 
-  // Apply no-select + col-resize cursor to body while dragging
+  // No text selection + col-resize cursor while dragging
   useEffect(() => {
     if (isResizing) {
       document.body.style.userSelect = 'none';
@@ -128,276 +128,216 @@ function App() {
 
   if (loading && !config) {
     return (
-      <div style={{
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '100vh',
-        gap: '1rem'
-      }}>
-        <div style={{
-          width: '40px',
-          height: '40px',
-          border: '4px solid var(--border)',
-          borderTopColor: 'var(--accent)',
-          borderRadius: '50%',
-          animation: 'spin 1s linear infinite'
-        }} />
-        <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>Connecting to LLM Pool Gateway...</span>
-        <style>{`
-          @keyframes spin { to { transform: rotate(360deg); } }
-        `}</style>
+      <div className="flex flex-col justify-center items-center h-screen gap-4 bg-background text-on-surface">
+        <div className="w-10 h-10 border-4 border-white/10 border-t-primary rounded-full animate-spin" />
+        <span className="text-on-surface-variant font-semibold text-sm">
+          Connecting to LLM Pool Gateway...
+        </span>
       </div>
     );
   }
 
+  const navItems: Array<{ id: typeof activeTab; label: string; icon: string; badge?: number }> = [
+    { id: 'directory', label: 'Directory', icon: 'explore' },
+    { id: 'setup', label: 'Gateway & Providers', icon: 'cell_tower' },
+    { id: 'pools', label: 'Routing Pools', icon: 'alt_route' },
+    { id: 'playground', label: 'Playground', icon: 'terminal' },
+    { id: 'integrations', label: 'Tool Connectors', icon: 'extension' },
+    { id: 'statistics', label: 'Usage & Telemetry', icon: 'monitoring' },
+    {
+      id: 'alerts',
+      label: 'Alerts & Failover',
+      icon: 'crisis_alert',
+      badge: (config as any)?.alerts?.length || 0,
+    },
+  ];
+
   return (
-    <div style={{
-      maxWidth: '1400px',
-      margin: '0 auto',
-      padding: '2rem 1.5rem',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '1.5rem',
-      minHeight: '100vh'
-    }}>
-      
-      {/* Header Bar */}
-      <header className="glass-panel" style={{
-        padding: '1.25rem 2rem',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        flexWrap: 'wrap',
-        gap: '1rem'
-      }}>
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <h1 style={{ fontSize: '1.4rem', margin: 0, fontWeight: 900, background: 'linear-gradient(to right, var(--text), var(--accent))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-            LLM Free Pool Gateway
-          </h1>
-          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Local failover router & API credentials portal</span>
+    <div className="flex h-screen overflow-hidden bg-background text-on-surface font-body antialiased">
+      {/* ── Left Navigation Sidebar ─────────────────────────────────────── */}
+      <aside className="w-[260px] shrink-0 h-full bg-background border-r border-white/[0.07] flex flex-col">
+        {/* Brand header */}
+        <div className="h-20 px-5 flex items-center justify-between border-b border-white/[0.06] shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-primary/15 border border-primary/30 flex items-center justify-center text-primary-soft">
+              <span className="material-symbols-outlined text-[20px]">hub</span>
+            </div>
+            <div className="flex flex-col">
+              <span className="font-headline font-bold text-sm text-white tracking-tight leading-none">
+                PoolGateway
+              </span>
+              <span className="text-[11px] text-on-surface-variant mt-1">Edge AI Orchestrator</span>
+            </div>
+          </div>
         </div>
 
-        {/* Server Status and Stats Strip */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap' }}>
+        {/* Navigation links */}
+        <nav className="flex-1 overflow-y-auto p-3 space-y-1">
+          {navItems.map((item) => {
+            const isActive = activeTab === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => setActiveTab(item.id)}
+                className={`w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl text-xs cursor-pointer transition-colors ${
+                  isActive
+                    ? 'text-white bg-surface-container border border-primary/35 font-semibold'
+                    : 'text-on-surface-variant hover:text-white hover:bg-surface-low border border-transparent'
+                }`}
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <span
+                    className={`material-symbols-outlined text-[18px] ${
+                      isActive ? 'text-primary-soft' : 'text-on-surface-variant'
+                    }`}
+                  >
+                    {item.icon}
+                  </span>
+                  <span className="truncate">{item.label}</span>
+                </div>
+                {item.badge ? (
+                  <span className="px-1.5 py-0.5 text-[10px] font-mono font-bold rounded-full bg-coral/15 text-coral border border-coral/30">
+                    {item.badge}
+                  </span>
+                ) : isActive ? (
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_8px_#8b5cf6]" />
+                ) : null}
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* Sidebar footer — live status */}
+        <div className="p-4 border-t border-white/[0.06] space-y-3 shrink-0">
+          <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-surface-low border border-white/[0.06]">
+            <div className="flex items-center gap-2">
+              <span className="relative flex h-2 w-2">
+                <span
+                  className={`absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                    serverOnline ? 'bg-mint animate-ping' : 'bg-coral'
+                  }`}
+                />
+                <span
+                  className={`relative inline-flex h-2 w-2 rounded-full ${
+                    serverOnline ? 'bg-mint' : 'bg-coral'
+                  }`}
+                />
+              </span>
+              <span className="label-mono text-on-surface">
+                {serverOnline ? 'Online' : 'Offline'}
+              </span>
+            </div>
+            <span className="text-[10px] font-mono text-on-surface-variant">99.9%</span>
+          </div>
+          <div className="flex items-center justify-between text-[11px] font-mono text-on-surface-variant px-1">
+            <span>Port {config?.metadata?.port || 3000}</span>
+            <button
+              type="button"
+              onClick={() => setShowAssistant((v) => !v)}
+              className={`btn-ghost p-1.5 cursor-pointer ${
+                showAssistant ? 'text-primary-soft' : ''
+              }`}
+              title={showAssistant ? 'Hide agent panel' : 'Show agent panel'}
+            >
+              <span className="material-symbols-outlined text-[18px]">smart_toy</span>
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      {/* ── Main Content View ──────────────────────────────────────────── */}
+      <main className="flex-1 h-full overflow-y-auto flex flex-col">
+        <div className="flex-1 p-6 lg:p-8 max-w-7xl w-full mx-auto space-y-6">
+          {error && (
+            <div className="flex items-center gap-2.5 p-4 rounded-xl bg-coral/10 border border-coral/25 text-coral text-xs font-semibold">
+              <span className="material-symbols-outlined text-[18px]">error</span>
+              {error}
+            </div>
+          )}
+
+          {/* Live gateway stats strip */}
           {stats && (
-            <div style={{ display: 'flex', gap: '1.5rem', fontSize: '0.85rem', background: 'oklch(20% 0.018 255.4 / 0.4)', padding: '0.4rem 1rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
-              <div>
-                <span style={{ color: 'var(--text-muted)' }}>Cost Saved: </span>
-                <strong style={{ color: 'var(--success)' }}>${stats.approximateCostSaved.toFixed(2)}</strong>
+            <div className="flex flex-wrap items-stretch gap-3">
+              <div className="card px-4 py-3 flex items-center gap-2.5">
+                <span className="material-symbols-outlined text-[18px] text-mint">savings</span>
+                <div className="flex flex-col">
+                  <span className="label-mono text-muted">Cost Saved</span>
+                  <span className="font-mono text-sm font-bold text-mint">
+                    ${stats.approximateCostSaved.toFixed(2)}
+                  </span>
+                </div>
               </div>
-              <div style={{ borderLeft: '1px solid var(--border)', paddingLeft: '1.5rem' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Tokens Pooled: </span>
-                <strong>{stats.tokensSaved.toLocaleString()}</strong>
+              <div className="card px-4 py-3 flex items-center gap-2.5">
+                <span className="material-symbols-outlined text-[18px] text-primary-soft">stacks</span>
+                <div className="flex flex-col">
+                  <span className="label-mono text-muted">Tokens Pooled</span>
+                  <span className="font-mono text-sm font-bold text-on-surface">
+                    {stats.tokensSaved.toLocaleString()}
+                  </span>
+                </div>
               </div>
-              <div style={{ borderLeft: '1px solid var(--border)', paddingLeft: '1.5rem' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Requests: </span>
-                <strong>{stats.totalRequests}</strong>
+              <div className="card px-4 py-3 flex items-center gap-2.5">
+                <span className="material-symbols-outlined text-[18px] text-sky">verified</span>
+                <div className="flex flex-col">
+                  <span className="label-mono text-muted">Success Rate</span>
+                  <span className="font-mono text-sm font-bold text-mint">
+                    {stats.totalRequests > 0
+                      ? `${((stats.successfulRequests / stats.totalRequests) * 100).toFixed(1)}%`
+                      : '100%'}
+                  </span>
+                </div>
               </div>
             </div>
           )}
 
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            padding: '0.4rem 0.8rem',
-            borderRadius: '20px',
-            background: serverOnline ? 'var(--success-glow)' : 'var(--error-glow)',
-            border: `1px solid ${serverOnline ? 'var(--success)' : 'var(--error)'}`,
-            color: serverOnline ? 'var(--success)' : 'var(--error)',
-            fontSize: '0.8rem',
-            fontWeight: 700
-          }}>
-            <div style={{
-              width: '8px',
-              height: '8px',
-              borderRadius: '50%',
-              background: serverOnline ? 'var(--success)' : 'var(--error)'
-            }} />
-            Gateway: {serverOnline ? 'Online' : 'Offline'}
-          </div>
-
-          <button
-            type="button"
-            onClick={() => setShowAssistant(!showAssistant)}
-            style={{
-              padding: '0.4rem 0.8rem',
-              borderRadius: '20px',
-              border: '1px solid var(--border)',
-              background: showAssistant ? 'var(--accent-glow)' : 'transparent',
-              borderColor: showAssistant ? 'var(--accent)' : 'var(--border)',
-              color: showAssistant ? 'var(--text)' : 'var(--text-muted)',
-              fontSize: '0.8rem',
-              fontWeight: 700,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.4rem'
-            }}
-          >
-            <span>🤖</span> {showAssistant ? 'Hide Agent' : 'Show Agent'}
-          </button>
-        </div>
-      </header>
-
-      {/* Connectivity Error Bar */}
-      {error && (
-        <div className="glass-panel" style={{
-          padding: '1.25rem 1.5rem',
-          borderLeft: '4px solid var(--error)',
-          color: 'var(--error)',
-          background: 'var(--error-glow)',
-          fontSize: '0.9rem',
-          fontWeight: 600
-        }}>
-          {error}
-        </div>
-      )}
-
-      {/* Main Layout Content Area & Sticky Sidebar */}
-      {config && (
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: showAssistant ? `1fr ${sidebarWidth}px` : '1fr',
-          gap: '1.5rem',
-          alignItems: 'start',
-          flex: 1,
-          // Disable transition during active drag to eliminate cursor stutter
-          transition: isResizing ? 'none' : 'grid-template-columns 0.2s ease',
-        }}>
-          {/* Left Column: Navigation Tabs and Current View Content */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', overflow: 'hidden', minWidth: 0 }}>
-            <nav style={{
-              display: 'flex',
-              gap: '0.75rem',
-              borderBottom: '1px solid var(--border)',
-              paddingBottom: '0.5rem',
-              overflowX: 'auto'
-            }}>
-              {[
-                { id: 'directory', label: '1. Free API Directory' },
-                { id: 'setup', label: '2. Gateway Setup' },
-                { id: 'pools', label: '3. Active Pools' },
-                { id: 'playground', label: '4. Playground' },
-                { id: 'integrations', label: '5. Connect Tools' },
-                { id: 'statistics', label: '6. Usage Statistics' },
-                { 
-                  id: 'alerts', 
-                  label: `7. Alerts & Errors ${(config as any).alerts?.length > 0 ? `(${(config as any).alerts.length})` : ''}`
-                }
-              ].map((tab) => {
-                const isActive = activeTab === tab.id;
-                const hasAlerts = tab.id === 'alerts' && ((config as any).alerts?.length > 0);
-                
-                return (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => setActiveTab(tab.id as any)}
-                    style={{
-                      background: isActive 
-                        ? (hasAlerts ? 'rgba(255, 68, 68, 0.15)' : 'var(--accent-glow)') 
-                        : 'transparent',
-                      borderColor: isActive 
-                        ? (hasAlerts ? 'var(--error)' : 'var(--accent)') 
-                        : 'transparent',
-                      color: isActive 
-                        ? (hasAlerts ? 'var(--error)' : 'var(--text)') 
-                        : (hasAlerts ? 'var(--error)' : 'var(--text-muted)'),
-                      borderRadius: '8px',
-                      padding: '0.6rem 1.2rem',
-                      fontWeight: 600,
-                      whiteSpace: 'nowrap'
-                    }}
-                  >
-                    {tab.label}
-                  </button>
-                );
-              })}
-            </nav>
-
-            <main style={{ minHeight: '400px' }}>
-              <div style={{ display: activeTab === 'directory' ? 'block' : 'none' }}>
-                <Directory providers={config.providers} />
-              </div>
-              
-              <div style={{ display: activeTab === 'setup' ? 'block' : 'none' }}>
-                <GatewaySetup 
-                  config={config} 
-                  onSave={handleSaveConfig} 
-                />
-              </div>
-              
-              <div style={{ display: activeTab === 'pools' ? 'block' : 'none' }}>
-                <ActivePools 
-                  config={config} 
-                  onSave={handleSaveConfig} 
-                />
-              </div>
-
-              <div style={{ display: activeTab === 'playground' ? 'block' : 'none' }}>
-                <Playground config={config} />
-              </div>
-              
-              <div style={{ display: activeTab === 'integrations' ? 'block' : 'none' }}>
-                <IntegrationHub config={config} />
-              </div>
-
-              <div style={{ display: activeTab === 'statistics' ? 'block' : 'none' }}>
-                <Statistics config={config} />
-              </div>
-
-              <div style={{ display: activeTab === 'alerts' ? 'block' : 'none' }}>
+          {config && (
+            <>
+              {activeTab === 'directory' && <Directory providers={config.providers} />}
+              {activeTab === 'setup' && <GatewaySetup config={config} onSave={handleSaveConfig} />}
+              {activeTab === 'pools' && <ActivePools config={config} onSave={handleSaveConfig} />}
+              {activeTab === 'playground' && <Playground config={config} />}
+              {activeTab === 'integrations' && <IntegrationHub config={config} />}
+              {activeTab === 'statistics' && <Statistics config={config} />}
+              {activeTab === 'alerts' && (
                 <SystemAlerts config={config} onSave={handleSaveConfig} activeTab={activeTab} />
-              </div>
-            </main>
-          </div>
-
-          {/* Right Column: Drag-Resizable Sticky Agent Chat */}
-          {showAssistant && (
-            <aside
-              className="glass-panel animate-fade-in"
-              style={{
-                height: 'calc(100vh - 220px)',
-                minHeight: '500px',
-                position: 'sticky',
-                top: '20px',
-                overflow: 'hidden',
-                padding: 0,
-                // No transition during drag
-                transition: isResizing ? 'none' : undefined,
-              }}
-            >
-              <AgentChat
-                config={config}
-                onConfigChange={fetchInitialData}
-                sidebarWidth={sidebarWidth}
-                onResizeStart={handleResizeStart}
-              />
-            </aside>
+              )}
+            </>
           )}
         </div>
-      )}
 
-      {/* Footer */}
-      <footer style={{
-        marginTop: 'auto',
-        textAlign: 'center',
-        padding: '2rem 0 0.5rem',
-        fontSize: '0.8rem',
-        color: 'var(--text-muted)',
-        borderTop: '1px solid var(--border)',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center'
-      }}>
-        <span>LLM Free Pool Gateway &copy; 2026</span>
-        <span>Point your API endpoints to: <code>{`${window.location.protocol}//${window.location.hostname}:${config?.metadata?.port || 3000}/v1`}</code></span>
-      </footer>
+        {/* Footer */}
+        <footer className="px-8 py-4 border-t border-white/[0.06] text-xs text-on-surface-variant flex flex-col sm:flex-row items-center justify-between gap-2 shrink-0">
+          <span>LLM Free Pool Gateway &copy; 2026 — Local failover router &amp; API credentials portal</span>
+          <span className="font-mono text-[11px]">
+            Endpoint:{' '}
+            <code className="text-primary-soft">
+              {`${window.location.protocol}//${window.location.hostname}:${config?.metadata?.port || 3000}/v1`}
+            </code>
+          </span>
+        </footer>
+      </main>
+
+      {/* ── Agent Assistant Panel (drag-resizable, toggleable) ─────────── */}
+      {showAssistant && config && (
+        <aside
+          className="shrink-0 h-full bg-surface border-l border-white/[0.07] overflow-hidden"
+          style={{
+            width: assistantWidth,
+            transition: isResizing ? 'none' : 'width 0.2s ease',
+          }}
+        >
+          <AgentChat
+            config={config}
+            onConfigChange={fetchInitialData}
+            sidebarWidth={assistantWidth}
+            onResizeStart={handleResizeStart}
+          />
+        </aside>
+      )}
     </div>
   );
 }
 
 export default App;
+

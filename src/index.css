@@ -1,251 +1,200 @@
-:root {
-  font-family: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+@import "tailwindcss";
 
-  color-scheme: dark;
-  
-  /* Color Palette (OKLCH color space) */
-  --bg: oklch(10.5% 0.012 255.4);
-  --surface: oklch(17.8% 0.018 255.4 / 0.65);
-  --surface-solid: oklch(18.5% 0.018 255.4);
-  --border: oklch(28.4% 0.02 255.4 / 0.5);
-  --border-focus: oklch(62% 0.17 264.4 / 0.8);
-  --text: oklch(96% 0.005 255.4);
-  --text-muted: oklch(72% 0.01 255.4);
-  
-  /* Accent Colors */
-  --accent: oklch(62% 0.21 264.4);
-  --accent-glow: oklch(62% 0.21 264.4 / 0.15);
-  --success: oklch(72% 0.18 142.2);
-  --success-glow: oklch(72% 0.18 142.2 / 0.15);
-  --warning: oklch(78% 0.18 78.5);
-  --error: oklch(62% 0.21 24.3);
-  --error-glow: oklch(62% 0.21 24.3 / 0.15);
+/* ============================================================================
+   OBSIDIAN SLATE — Design System Theme (Tailwind v4)
+   Single source of truth for all design tokens. See docs/DESIGN_RULES.md.
+   Do NOT hardcode hex values in components — use these tokens.
+   ========================================================================= */
 
-  /* Obsidian Slate Chat Theme */
-  --slate-deepest: #05070f;
-  --slate-base: #0b0f19;
-  --slate-card: #131b2e;
-  --slate-border: rgba(255, 255, 255, 0.06);
-  --slate-accent: #7c8dff;
-  --slate-accent-glow: rgba(124, 141, 255, 0.15);
-  --slate-text: #e4e8f5;
-  --slate-muted: #6b7280;
+@theme {
+  /* ── Surface elevation ladder ─────────────────────────────────────────── */
+  --color-background: #0d0e13;          /* app background / sidebar */
+  --color-surface: #121318;             /* base surface */
+  --color-surface-dim: #0a0b0f;         /* inset code blocks */
+  --color-surface-low: #16171e;         /* cards */
+  --color-surface-container: #1c1d25;   /* controls, chips, inputs */
+  --color-surface-high: #23242f;        /* hover / raised controls */
+  --color-surface-highest: #2e2f3c;     /* strongest raised state */
 
-  background-color: var(--bg);
-  color: var(--text);
+  /* ── Accent palette ──────────────────────────────────────────────────── */
+  --color-primary: #8b5cf6;             /* violet — primary actions */
+  --color-primary-hover: #7c3aed;
+  --color-primary-container: #6d28d9;
+  --color-primary-soft: #a78bfa;        /* violet text on dark */
+  --color-azure: #3b82f6;               /* electric blue */
+  --color-sky: #38bdf8;                 /* latency / info */
+  --color-mint: #10b981;                /* success / online */
+  --color-mint-bright: #34d399;
+  --color-amber: #fbbf24;               /* warnings / queue */
+  --color-coral: #fb7185;               /* errors / failover */
 
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
+  /* ── Foreground & border ─────────────────────────────────────────────── */
+  --color-on-surface: #f8fafc;          /* primary text */
+  --color-on-surface-variant: #94a3b8;  /* secondary text */
+  --color-muted: #958ea0;               /* tertiary / mono labels */
+  --color-outline: #475569;             /* strong border */
+
+  /* ── Typography ──────────────────────────────────────────────────────── */
+  --font-headline: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", monospace;
+
+  /* ── Radii (Rounded Level 2) ─────────────────────────────────────────── */
+  --radius-card: 1rem;                  /* 16px — cards */
+  --radius-ctl: 0.5rem;                 /* 8px — buttons, inputs */
+}
+
+/* ============================================================================
+   Base
+   ========================================================================= */
+
+@layer base {
+  html,
+  body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-on-surface);
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+    overscroll-behavior: none;
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--color-primary) 30%, transparent);
+    color: #d8b4fe;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.16);
+  }
+}
+
+/* ============================================================================
+   Material Symbols (icon font — ligature based)
+   ========================================================================= */
+
+.material-symbols-outlined {
+  font-family: "Material Symbols Outlined";
+  font-weight: normal;
+  font-style: normal;
+  font-size: 20px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-feature-settings: "liga";
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-body {
-  margin: 0;
-  min-height: 100vh;
-  background-color: var(--bg);
-  background-image: 
-    radial-gradient(at 0% 0%, oklch(50% 0.15 264.4 / 0.08) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, oklch(60% 0.18 310.2 / 0.08) 0px, transparent 50%);
-  background-attachment: fixed;
-}
-
-/* Custom Scrollbar Styles */
-* {
-  box-sizing: border-box;
-  scrollbar-width: thin;
-  scrollbar-color: var(--border) transparent;
-}
-
-*::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-*::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-*::-webkit-scrollbar-thumb {
-  background-color: var(--border);
-  border-radius: 9px;
-}
-
-*::-webkit-scrollbar-thumb:hover {
-  background-color: var(--accent);
-}
-
-/* Typography & Layout Utility classes */
-h1, h2, h3, h4, h5, h6 {
-  margin-top: 0;
-  font-weight: 700;
-  letter-spacing: -0.025em;
-  color: var(--text);
-}
-
-a {
-  color: var(--accent);
-  text-decoration: none;
-  transition: opacity 0.2s ease;
-}
-
-a:hover {
-  opacity: 0.8;
-}
-
-/* Premium Frosted Glass Layout Element */
-.glass-panel {
-  background: var(--surface);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
-  transition: border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-.glass-panel:hover {
-  border-color: oklch(28.4% 0.02 255.4 / 0.8);
-}
-
-.glass-panel.interactive {
-  cursor: pointer;
-}
-
-.glass-panel.interactive:hover {
-  border-color: var(--accent);
-  box-shadow: 0 8px 32px 0 var(--accent-glow);
-}
-
-/* Buttons and Inputs */
-button {
-  font-family: inherit;
-  font-size: 0.9rem;
-  font-weight: 600;
-  padding: 0.6em 1.2em;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  background: oklch(20% 0.018 255.4 / 0.5);
-  color: var(--text);
-  cursor: pointer;
-  backdrop-filter: blur(4px);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-button:hover:not(:disabled) {
-  border-color: var(--accent);
-  background: var(--accent-glow);
-  transform: translateY(-1px);
-}
-
-button:active:not(:disabled) {
-  transform: translateY(0);
-}
-
-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-button.primary {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: oklch(100% 0 0);
-}
-
-button.primary:hover:not(:disabled) {
-  background: oklch(68% 0.22 264.4);
-  border-color: oklch(68% 0.22 264.4);
-  box-shadow: 0 0 16px 0 var(--accent-glow);
-}
-
-button.danger {
-  border-color: var(--error);
-  background: var(--error-glow);
-}
-
-button.danger:hover:not(:disabled) {
-  background: var(--error);
-  color: var(--text);
-}
-
-input, select, textarea {
-  font-family: inherit;
-  font-size: 0.95rem;
-  padding: 0.6em 0.8em;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  background: oklch(12% 0.012 255.4 / 0.8);
-  color: var(--text);
-  width: 100%;
-  outline: none;
-  transition: all 0.2s ease;
-}
-
-input:focus, select:focus, textarea:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px var(--accent-glow);
-}
-
-input[type="checkbox"] {
-  width: auto;
-  margin-right: 0.5em;
-  accent-color: var(--accent);
-}
-
-/* Animations */
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.animate-fade-in {
-  animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-}
-
-/* Contrast adaptive support */
-@media (prefers-contrast: more) {
-  :root {
-    --border: oklch(50% 0 0);
-    --border-focus: oklch(100% 0 0);
-    --text-muted: var(--text);
-    --surface: var(--surface-solid);
-  }
-  .glass-panel {
-    backdrop-filter: none;
-    box-shadow: none;
-  }
-}
-
-/* ─── Drag-resize cursor ───────────────────────── */
-.resize-handle {
-  cursor: col-resize;
+  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
   user-select: none;
 }
 
-/* ─── Chat-specific UI ─────────────────────────── */
-.chat-step-item {
-  animation: stepIn 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
+/* ============================================================================
+   Shared component recipes (composed with Tailwind utilities)
+   ========================================================================= */
 
-@keyframes stepIn {
-  from { opacity: 0; transform: translateX(-6px); }
-  to { opacity: 1; transform: translateX(0); }
-}
+@layer components {
+  /* Standard card surface */
+  .card {
+    background-color: var(--color-surface-low);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: var(--radius-card);
+    transition: border-color 150ms ease, background-color 150ms ease;
+  }
+  .card:hover {
+    border-color: rgba(255, 255, 255, 0.12);
+  }
 
-.chat-drawer {
-  animation: drawerSlideIn 0.22s cubic-bezier(0.4, 0, 0.2, 1);
-}
+  /* Mono uppercase micro label (category / metric labels) */
+  .label-mono {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    line-height: 16px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
 
-@keyframes drawerSlideIn {
-  from { opacity: 0; transform: translateY(-10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
+  /* Primary button */
+  .btn-primary {
+    background-color: var(--color-primary);
+    color: #ffffff;
+    border-radius: var(--radius-ctl);
+    font-weight: 600;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    transition: background-color 150ms ease;
+  }
+  .btn-primary:hover {
+    background-color: var(--color-primary-hover);
+  }
+  .btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 
-/* Pulse dot for live agent thinking indicator */
-@keyframes agentPulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.4; transform: scale(0.7); }
+  /* Secondary / slate button */
+  .btn-secondary {
+    background-color: var(--color-surface-container);
+    color: var(--color-on-surface);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: var(--radius-ctl);
+    font-weight: 500;
+    transition: background-color 150ms ease, border-color 150ms ease;
+  }
+  .btn-secondary:hover {
+    background-color: var(--color-surface-high);
+    border-color: rgba(255, 255, 255, 0.14);
+  }
+  .btn-secondary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* Ghost button */
+  .btn-ghost {
+    color: var(--color-on-surface-variant);
+    border-radius: var(--radius-ctl);
+    transition: background-color 150ms ease, color 150ms ease;
+  }
+  .btn-ghost:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+    color: var(--color-on-surface);
+  }
+
+  /* Standard input */
+  .input {
+    background-color: #0f1015;
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: var(--radius-ctl);
+    color: var(--color-on-surface);
+    font-size: 13px;
+    padding: 0.5rem 0.75rem;
+    outline: none;
+    transition: border-color 150ms ease, box-shadow 150ms ease;
+  }
+  .input::placeholder {
+    color: #64748b;
+  }
+  .input:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
+  }
 }
