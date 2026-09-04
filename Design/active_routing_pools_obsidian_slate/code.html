@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>PoolGateway — Routing Pools</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+    @layer base {
+      html, body { margin: 0; padding: 0; height: 100%; }
+      body { overscroll-behavior: none; }
+    }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.08); border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.16); }
+</style>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "background": "#0d0e13",
+            "surface": "#121318",
+            "surface-dim": "#0a0b0f",
+            "surface-container-lowest": "#0d0e13",
+            "surface-container-low": "#16171e",
+            "surface-container": "#1c1d25",
+            "surface-container-high": "#23242f",
+            "surface-container-highest": "#2e2f3c",
+            "primary": "#8b5cf6",
+            "primary-hover": "#7c3aed",
+            "primary-container": "#6d28d9",
+            "azure": "#3b82f6",
+            "on-primary": "#ffffff",
+            "on-surface": "#f8fafc",
+            "on-surface-variant": "#94a3b8",
+            "outline": "#475569",
+            "border-subtle": "rgba(255, 255, 255, 0.07)",
+            "border-subtle-glow": "rgba(139, 92, 246, 0.25)"
+          },
+          fontFamily: {
+            "headline": ["Plus Jakarta Sans", "sans-serif"],
+            "body": ["Plus Jakarta Sans", "sans-serif"],
+            "mono": ["JetBrains Mono", "monospace"]
+          }
+        }
+      }
+    };
+</script>
+</head>
+<body class="bg-[#0d0e13] font-body text-[#f8fafc] antialiased selection:bg-[#8b5cf6]/30 selection:text-[#d8b4fe] flex h-screen overflow-hidden">
+<!-- 1. Sleek Left Navigation Panel (~260px wide, Skymetrics & Dark Matte obsidian styling) -->
+<aside class="w-[260px] shrink-0 h-full bg-[#0d0e13] border-r border-[rgba(255,255,255,0.07)] flex flex-col justify-between z-20">
+<div class="flex flex-col">
+<!-- Brand Header -->
+<div class="h-20 px-5 flex items-center justify-between border-b border-[rgba(255,255,255,0.06)]">
+<div class="flex items-center gap-3">
+<div class="w-9 h-9 rounded-xl bg-gradient-to-br from-[#8b5cf6]/20 to-[#3b82f6]/20 border border-[#8b5cf6]/30 flex items-center justify-center text-[#c4b5fd] shadow-[0_0_18px_rgba(139,92,246,0.22)]">
+<span class="material-symbols-outlined text-[20px]">hub</span>
+</div>
+<div class="flex flex-col">
+<span class="font-headline font-bold text-sm text-white tracking-tight">PoolGateway</span>
+<span class="text-[11px] text-[#94a3b8] -mt-0.5">Edge AI Orchestrator</span>
+</div>
+</div>
+<span class="px-2 py-0.5 text-[10px] font-mono font-semibold rounded-md bg-[#1c1d25] text-[#a78bfa] border border-[#8b5cf6]/30">v2.4</span>
+</div>
+<!-- Navigation Links -->
+<nav class="p-3 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium text-[#94a3b8] hover:text-white hover:bg-[#16171e] transition-all" href="#">
+<span class="material-symbols-outlined text-[18px]">dns</span>
+<span>Free API Directory</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium text-[#94a3b8] hover:text-white hover:bg-[#16171e] transition-all" href="#">
+<span class="material-symbols-outlined text-[18px]">cell_tower</span>
+<span>Gateway &amp; Providers</span>
+</a>
+<!-- ACTIVE item: Routing Pools -->
+<a class="flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold text-white bg-[#1c1d25] border border-[#8b5cf6]/35 shadow-sm shadow-[#8b5cf6]/10" href="#">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-[18px] text-[#a78bfa]">alt_route</span>
+<span>Routing Pools</span>
+</div>
+<span class="w-1.5 h-1.5 rounded-full bg-[#8b5cf6] shadow-[0_0_8px_#8b5cf6]"></span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium text-[#94a3b8] hover:text-white hover:bg-[#16171e] transition-all" href="#">
+<span class="material-symbols-outlined text-[18px]">terminal</span>
+<span>Interactive Playground</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium text-[#94a3b8] hover:text-white hover:bg-[#16171e] transition-all" href="#">
+<span class="material-symbols-outlined text-[18px]">extension</span>
+<span>Tool Connectors</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium text-[#94a3b8] hover:text-white hover:bg-[#16171e] transition-all" href="#">
+<span class="material-symbols-outlined text-[18px]">monitoring</span>
+<span>Usage &amp; Telemetry</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium text-[#94a3b8] hover:text-white hover:bg-[#16171e] transition-all" href="#">
+<span class="material-symbols-outlined text-[18px]">crisis_alert</span>
+<span>Alerts &amp; Failover</span>
+</a>
+</nav>
+</div>
+<!-- Sidebar Footer -->
+<div class="p-4 border-t border-[rgba(255,255,255,0.06)] flex flex-col gap-3">
+<div class="flex items-center justify-between px-3 py-2 rounded-xl bg-[#16171e] border border-[rgba(255,255,255,0.06)]">
+<div class="flex items-center gap-2">
+<span class="relative flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#10b981] opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-[#10b981]"></span>
+</span>
+<span class="text-[11px] font-mono font-medium text-white">Online • 0 Drops</span>
+</div>
+<span class="text-[10px] font-mono text-[#94a3b8]">99.99%</span>
+</div>
+<div class="flex items-center justify-between text-xs text-[#94a3b8] px-1">
+<a class="hover:text-white flex items-center gap-1.5 transition-colors" href="#">
+<span class="material-symbols-outlined text-[16px]">menu_book</span>
+<span>Docs</span>
+</a>
+<a class="hover:text-white flex items-center gap-1.5 transition-colors" href="#">
+<span class="material-symbols-outlined text-[16px]">settings</span>
+<span>Settings</span>
+</a>
+</div>
+</div>
+</aside>
+<!-- 2. Main Content Area -->
+<div class="flex-1 flex flex-col h-full overflow-hidden bg-[#0d0e13]">
+<!-- Top Bar -->
+<header class="h-20 shrink-0 px-8 border-b border-[rgba(255,255,255,0.07)] flex items-center justify-between bg-[#0d0e13]/85 backdrop-blur-md z-10">
+<!-- Breadcrumb -->
+<div class="flex items-center gap-2 text-xs">
+<span class="text-[#94a3b8]">Routing Pools</span>
+<span class="text-[#94a3b8]/40">/</span>
+<span class="text-white font-semibold tracking-wide">Active Orchestration</span>
+</div>
+<!-- Right Header Actions & Indicators -->
+<div class="flex items-center gap-4">
+<!-- Quick Global Status Badges -->
+<div class="hidden xl:flex items-center gap-2">
+<div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#16171e] border border-[rgba(255,255,255,0.06)] text-xs font-mono">
+<span class="w-1.5 h-1.5 rounded-full bg-[#10b981] shadow-[0_0_6px_#10b981]"></span>
+<span class="text-[#94a3b8]">Gateway:</span>
+<span class="text-white font-medium">Optimal</span>
+</div>
+<div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#16171e] border border-[rgba(255,255,255,0.06)] text-xs font-mono">
+<span class="text-[#94a3b8]">Active Pools:</span>
+<span class="text-[#a78bfa] font-semibold">3</span>
+</div>
+<div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#16171e] border border-[rgba(255,255,255,0.06)] text-xs font-mono">
+<span class="text-[#94a3b8]">Total 24h:</span>
+<span class="text-white font-semibold">52.4K reqs</span>
+</div>
+</div>
+<div class="h-6 w-px bg-[rgba(255,255,255,0.08)] hidden xl:block"></div>
+<!-- Create New Pool Action Button -->
+<button class="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-[#7c3aed] to-[#6366f1] hover:from-[#6d28d9] hover:to-[#4f46e5] text-white font-headline font-bold text-xs tracking-tight shadow-[0_2px_16px_rgba(124,58,237,0.35)] transition-all active:scale-95 cursor-pointer">
+<span class="material-symbols-outlined text-[17px] font-bold">add</span>
+<span>Create New Pool</span>
+</button>
+</div>
+</header>
+<!-- Scrollable Workspace -->
+<main class="flex-1 overflow-y-auto px-8 py-6 space-y-6">
+<!-- 3. Global Routing Policy Strip -->
+<section class="bg-[#16171e] rounded-2xl p-5 border border-[rgba(255,255,255,0.07)] flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm">
+<div class="flex items-center gap-3.5">
+<div class="w-10 h-10 rounded-xl bg-[#8b5cf6]/10 border border-[#8b5cf6]/25 flex items-center justify-center text-[#c4b5fd]">
+<span class="material-symbols-outlined text-[20px]">sync_alt</span>
+</div>
+<div>
+<div class="flex items-center gap-2.5">
+<h2 class="font-headline text-sm font-bold text-white tracking-tight">Global Routing Policy &amp; Cascades</h2>
+<span class="px-2 py-0.5 rounded-full text-[10px] font-mono bg-[#10b981]/15 text-[#34d399] border border-[#10b981]/30 font-semibold flex items-center gap-1">
+<span class="w-1 h-1 rounded-full bg-[#10b981]"></span>
+              Healthy
+            </span>
+</div>
+<p class="text-xs text-[#94a3b8] mt-0.5">Automated downstream failover with jitter backoff across all active endpoints</p>
+</div>
+</div>
+<div class="flex items-center gap-5 self-stretch md:self-auto justify-between md:justify-end">
+<!-- Retry Toggle -->
+<div class="flex items-center gap-3">
+<span class="text-xs text-[#94a3b8]">Global Queue &amp; Retry</span>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-9 h-5 bg-[#23242f] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#8b5cf6]"></div>
+</label>
+</div>
+<div class="h-6 w-px bg-[rgba(255,255,255,0.08)]"></div>
+<!-- Circuit Breaker -->
+<div class="flex items-center gap-2 text-xs font-mono text-[#94a3b8]">
+<span>Circuit Breaker:</span>
+<span class="text-[#a78bfa] font-semibold">Armed (10s)</span>
+</div>
+</div>
+</section>
+<!-- 4. Modular Designer Pool Workstation Cards -->
+<div class="space-y-6 pb-12">
+<!-- POOL 1: Strong Reasoning Pool -->
+<article class="bg-[#16171e] rounded-2xl border border-[rgba(255,255,255,0.07)] p-6 flex flex-col gap-6 hover:border-[rgba(255,255,255,0.12)] transition-all shadow-md">
+<!-- Card Header -->
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[rgba(255,255,255,0.06)]">
+<div class="flex items-center gap-3.5">
+<div class="w-10 h-10 rounded-xl bg-[#1c1d25] border border-[rgba(255,255,255,0.08)] flex items-center justify-center text-[#c4b5fd] shadow-inner">
+<span class="material-symbols-outlined text-[21px]">psychology</span>
+</div>
+<div>
+<div class="flex items-center gap-2.5">
+<h3 class="font-headline font-bold text-base text-white tracking-tight">Strong Reasoning Pool</h3>
+<span class="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#10b981]/10 text-[#34d399] border border-[#10b981]/25 text-[10px] font-mono font-medium">
+<span class="w-1.5 h-1.5 rounded-full bg-[#10b981] animate-pulse"></span>
+                  Healthy &amp; Active
+                </span>
+</div>
+<div class="flex items-center gap-2 mt-1 text-xs text-[#94a3b8]">
+<span>Virtual Endpoint:</span>
+<code class="px-2 py-0.5 rounded-md font-mono text-[11px] text-[#c4b5fd] bg-[#0d0e13] border border-[rgba(255,255,255,0.06)]">/v1/models/reasoning</code>
+</div>
+</div>
+</div>
+<!-- Stats & Controls -->
+<div class="flex items-center gap-5">
+<div class="flex items-center gap-4 text-xs font-mono">
+<div>
+<span class="block text-[10px] text-[#94a3b8]">24h Volume</span>
+<span class="font-bold text-white text-xs">14,289 reqs</span>
+</div>
+<div class="h-6 w-px bg-[rgba(255,255,255,0.08)]"></div>
+<div>
+<span class="block text-[10px] text-[#94a3b8]">Avg Latency</span>
+<span class="font-bold text-[#38bdf8] text-xs">420ms</span>
+</div>
+</div>
+<div class="h-6 w-px bg-[rgba(255,255,255,0.08)]"></div>
+<div class="flex items-center gap-2.5">
+<button class="px-3 py-1.5 rounded-lg bg-[#1c1d25] hover:bg-[#23242f] text-xs font-medium text-white transition-colors border border-[rgba(255,255,255,0.08)] cursor-pointer">
+                Edit Pool
+              </button>
+<label class="relative inline-flex items-center cursor-pointer" title="Toggle Pool">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-8 h-4 bg-[#23242f] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[1px] after:left-[1px] after:bg-white after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-[#8b5cf6]"></div>
+</label>
+</div>
+</div>
+</div>
+<!-- Provider Cards Grid: Reference Art Inspired (Violet Waves, Cyan Matrix Dots, Saffron Chevrons) -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+<!-- Node 1: DeepSeek R1 (Violet/Purple Accent + Topographic Wave Graphic) -->
+<div class="relative overflow-hidden rounded-2xl bg-[#0d0e13] border border-[#8b5cf6]/40 p-5 flex flex-col justify-between h-48 hover:border-[#8b5cf6] transition-all duration-300 group shadow-lg">
+<!-- Geometric Accent: Abstract Flowing Waves in Corner (Ref: Apple & MSMI Cards) -->
+<svg class="absolute right-0 bottom-0 w-36 h-36 opacity-35 group-hover:opacity-60 transition-opacity pointer-events-none" fill="none" viewbox="0 0 120 120">
+<path d="M120 40C90 40 85 70 50 75C25 78 10 95 0 120H120V40Z" fill="url(#violet-grad-1)"></path>
+<path d="M120 60C95 60 88 85 60 90C35 94 20 105 10 120H120V60Z" stroke="#8b5cf6" stroke-dasharray="2 3" stroke-width="1.2"></path>
+<path d="M120 80C100 80 95 95 75 100C55 104 40 112 30 120H120V80Z" stroke="#a78bfa" stroke-width="1"></path>
+<path d="M120 95C108 95 102 105 90 108C75 112 60 116 50 120H120V95Z" stroke="#c4b5fd" stroke-dasharray="3 3" stroke-width="0.8"></path>
+<defs>
+<lineargradient gradientunits="userSpaceOnUse" id="violet-grad-1" x1="60" x2="120" y1="40" y2="120">
+<stop stop-color="#8b5cf6" stop-opacity="0.28"></stop>
+<stop offset="1" stop-color="#3b82f6" stop-opacity="0"></stop>
+</lineargradient>
+</defs>
+</svg>
+<!-- Card Top Meta -->
+<div class="relative z-10 flex items-start justify-between">
+<div class="flex items-center gap-2.5">
+<span class="w-6 h-6 rounded-lg bg-[#8b5cf6] text-white text-[11px] font-mono font-bold flex items-center justify-center shadow-sm">1</span>
+<span class="px-2 py-0.5 rounded-full text-[10px] font-mono bg-[#8b5cf6]/15 text-[#c4b5fd] border border-[#8b5cf6]/30 font-semibold tracking-wide">Primary</span>
+</div>
+<span class="text-[10px] font-mono text-[#c4b5fd] bg-[#8b5cf6]/10 px-2 py-0.5 rounded-md border border-[#8b5cf6]/20 font-medium">100% Free</span>
+</div>
+<!-- Center Model & Provider -->
+<div class="relative z-10 my-auto pt-2">
+<h4 class="font-headline font-bold text-base text-white tracking-tight group-hover:text-[#c4b5fd] transition-colors">DeepSeek R1</h4>
+<p class="text-xs text-[#94a3b8] mt-0.5 font-medium flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-[#8b5cf6]"></span>
+                OpenRouter Free API
+              </p>
+</div>
+<!-- Footer Latency & Status -->
+<div class="relative z-10 pt-3 border-t border-[rgba(255,255,255,0.06)] flex items-center justify-between text-xs font-mono">
+<span class="text-[#c4b5fd] font-semibold flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[14px]">speed</span>
+                920ms avg
+              </span>
+<span class="text-[11px] text-[#94a3b8] font-sans">Active Target</span>
+</div>
+</div>
+<!-- Node 2: Qwen 2.5 32B (Cyan / Azure Dot Matrix Grid) -->
+<div class="relative overflow-hidden rounded-2xl bg-[#0d0e13] border border-[rgba(255,255,255,0.08)] p-5 flex flex-col justify-between h-48 hover:border-[#38bdf8]/40 transition-all duration-300 group shadow-lg">
+<!-- Geometric Accent: Circular Dot Matrix Pattern (Ref: Apple Design Award card) -->
+<svg class="absolute right-0 bottom-0 w-36 h-36 opacity-35 group-hover:opacity-55 transition-opacity pointer-events-none" fill="none" viewbox="0 0 120 120">
+<circle cx="110" cy="110" fill="#38bdf8" fill-opacity="0.4" r="4"></circle>
+<circle cx="95" cy="110" fill="#38bdf8" fill-opacity="0.3" r="3"></circle>
+<circle cx="80" cy="110" fill="#38bdf8" fill-opacity="0.2" r="2"></circle>
+<circle cx="110" cy="95" fill="#38bdf8" fill-opacity="0.35" r="3.5"></circle>
+<circle cx="95" cy="95" fill="#0284c7" fill-opacity="0.45" r="4"></circle>
+<circle cx="80" cy="95" fill="#0284c7" fill-opacity="0.3" r="2.5"></circle>
+<circle cx="110" cy="80" fill="#38bdf8" fill-opacity="0.25" r="2"></circle>
+<circle cx="95" cy="80" fill="#0284c7" fill-opacity="0.35" r="3"></circle>
+<circle cx="80" cy="80" fill="#38bdf8" fill-opacity="0.4" r="3.5"></circle>
+<path d="M60 120C75 105 85 95 120 70" opacity="0.4" stroke="#38bdf8" stroke-dasharray="2 3" stroke-width="1.2"></path>
+<path d="M80 120C95 108 105 98 120 85" opacity="0.6" stroke="#38bdf8" stroke-width="1"></path>
+</svg>
+<!-- Card Top Meta -->
+<div class="relative z-10 flex items-start justify-between">
+<div class="flex items-center gap-2.5">
+<span class="w-6 h-6 rounded-lg bg-[#1c1d25] border border-[rgba(255,255,255,0.1)] text-white text-[11px] font-mono font-bold flex items-center justify-center">2</span>
+<span class="px-2 py-0.5 rounded-full text-[10px] font-mono bg-[#23242f] text-[#94a3b8] border border-[rgba(255,255,255,0.06)] font-semibold tracking-wide">Fallback</span>
+</div>
+<span class="text-[10px] font-mono text-[#38bdf8] bg-[#38bdf8]/10 px-2 py-0.5 rounded-md border border-[#38bdf8]/20 font-medium">Hot Standby</span>
+</div>
+<!-- Center Model & Provider -->
+<div class="relative z-10 my-auto pt-2">
+<h4 class="font-headline font-bold text-base text-white tracking-tight group-hover:text-[#38bdf8] transition-colors">Qwen 2.5 32B</h4>
+<p class="text-xs text-[#94a3b8] mt-0.5 font-medium flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-[#38bdf8]"></span>
+                HuggingFace Inference
+              </p>
+</div>
+<!-- Footer Latency & Status -->
+<div class="relative z-10 pt-3 border-t border-[rgba(255,255,255,0.06)] flex items-center justify-between text-xs font-mono">
+<span class="text-[#e2e8f0] font-medium flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[14px] text-[#94a3b8]">speed</span>
+                680ms avg
+              </span>
+<span class="text-[11px] text-[#94a3b8] font-sans">Ready 0s</span>
+</div>
+</div>
+<!-- Node 3: GLM-4 Plus (Saffron Yellow Diagonal Geometric Chevrons) -->
+<div class="relative overflow-hidden rounded-2xl bg-[#0d0e13] border border-[rgba(255,255,255,0.06)] p-5 flex flex-col justify-between h-48 hover:border-[#f59e0b]/40 transition-all duration-300 group shadow-lg">
+<!-- Geometric Accent: Saffron Yellow Chevrons / Parallel Stripes (Ref: Yellow Dot Award card) -->
+<svg class="absolute right-0 bottom-0 w-36 h-36 opacity-35 group-hover:opacity-55 transition-opacity pointer-events-none" fill="none" viewbox="0 0 120 120">
+<path d="M120 50L75 95L85 105L120 70V50Z" fill="#f59e0b" fill-opacity="0.3"></path>
+<path d="M120 75L92 103L100 111L120 91V75Z" fill="#eab308" fill-opacity="0.4"></path>
+<path d="M120 95L108 107L115 114L120 109V95Z" fill="#f59e0b" fill-opacity="0.5"></path>
+<line opacity="0.3" stroke="#f59e0b" stroke-dasharray="3 3" stroke-width="1.2" x1="50" x2="120" y1="120" y2="50"></line>
+</svg>
+<!-- Card Top Meta -->
+<div class="relative z-10 flex items-start justify-between">
+<div class="flex items-center gap-2.5">
+<span class="w-6 h-6 rounded-lg bg-[#1c1d25] border border-[rgba(255,255,255,0.08)] text-[#94a3b8] text-[11px] font-mono font-bold flex items-center justify-center">3</span>
+<span class="px-2 py-0.5 rounded-full text-[10px] font-mono bg-[#23242f] text-[#94a3b8] border border-[rgba(255,255,255,0.06)] font-semibold tracking-wide">Cold Reserve</span>
+</div>
+<span class="text-[10px] font-mono text-[#f59e0b] bg-[#f59e0b]/10 px-2 py-0.5 rounded-md border border-[#f59e0b]/20 font-medium">Safety Net</span>
+</div>
+<!-- Center Model & Provider -->
+<div class="relative z-10 my-auto pt-2">
+<h4 class="font-headline font-bold text-base text-[#f8fafc] tracking-tight group-hover:text-[#f59e0b] transition-colors">GLM-4 Plus</h4>
+<p class="text-xs text-[#94a3b8] mt-0.5 font-medium flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-[#f59e0b]"></span>
+                Community API
+              </p>
+</div>
+<!-- Footer Latency & Status -->
+<div class="relative z-10 pt-3 border-t border-[rgba(255,255,255,0.06)] flex items-center justify-between text-xs font-mono">
+<span class="text-[#94a3b8] font-medium flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[14px]">speed</span>
+                1,240ms avg
+              </span>
+<span class="text-[11px] text-[#94a3b8] font-sans">Reserve</span>
+</div>
+</div>
+</div>
+</article>
+<!-- POOL 2: Fast Coding Pool -->
+<article class="bg-[#16171e] rounded-2xl border border-[rgba(255,255,255,0.07)] p-6 flex flex-col gap-6 hover:border-[rgba(255,255,255,0.12)] transition-all shadow-md">
+<!-- Card Header -->
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[rgba(255,255,255,0.06)]">
+<div class="flex items-center gap-3.5">
+<div class="w-10 h-10 rounded-xl bg-[#1c1d25] border border-[rgba(255,255,255,0.08)] flex items-center justify-center text-[#38bdf8] shadow-inner">
+<span class="material-symbols-outlined text-[21px]">code</span>
+</div>
+<div>
+<div class="flex items-center gap-2.5">
+<h3 class="font-headline font-bold text-base text-white tracking-tight">Fast Coding Pool</h3>
+<span class="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#10b981]/10 text-[#34d399] border border-[#10b981]/25 text-[10px] font-mono font-medium">
+<span class="w-1.5 h-1.5 rounded-full bg-[#10b981] animate-pulse"></span>
+                  Healthy &amp; Active
+                </span>
+</div>
+<div class="flex items-center gap-2 mt-1 text-xs text-[#94a3b8]">
+<span>Virtual Endpoint:</span>
+<code class="px-2 py-0.5 rounded-md font-mono text-[11px] text-[#38bdf8] bg-[#0d0e13] border border-[rgba(255,255,255,0.06)]">/v1/models/coding</code>
+</div>
+</div>
+</div>
+<!-- Stats & Controls -->
+<div class="flex items-center gap-5">
+<div class="flex items-center gap-4 text-xs font-mono">
+<div>
+<span class="block text-[10px] text-[#94a3b8]">24h Volume</span>
+<span class="font-bold text-white text-xs">38,182 reqs</span>
+</div>
+<div class="h-6 w-px bg-[rgba(255,255,255,0.08)]"></div>
+<div>
+<span class="block text-[10px] text-[#94a3b8]">Avg Latency</span>
+<span class="font-bold text-[#34d399] text-xs">195ms</span>
+</div>
+</div>
+<div class="h-6 w-px bg-[rgba(255,255,255,0.08)]"></div>
+<div class="flex items-center gap-2.5">
+<button class="px-3 py-1.5 rounded-lg bg-[#1c1d25] hover:bg-[#23242f] text-xs font-medium text-white transition-colors border border-[rgba(255,255,255,0.08)] cursor-pointer">
+                Edit Pool
+              </button>
+<label class="relative inline-flex items-center cursor-pointer" title="Toggle Pool">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-8 h-4 bg-[#23242f] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[1px] after:left-[1px] after:bg-white after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-[#8b5cf6]"></div>
+</label>
+</div>
+</div>
+</div>
+<!-- Provider Cards Grid -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+<!-- Node 1: Gemini 2.0 Flash (Electric Azure / Blue Wave Pattern) -->
+<div class="relative overflow-hidden rounded-2xl bg-[#0d0e13] border border-[#3b82f6]/40 p-5 flex flex-col justify-between h-48 hover:border-[#3b82f6] transition-all duration-300 group shadow-lg">
+<!-- Geometric Accent: Radiant Azure Burst & Waves -->
+<svg class="absolute right-0 bottom-0 w-36 h-36 opacity-35 group-hover:opacity-60 transition-opacity pointer-events-none" fill="none" viewbox="0 0 120 120">
+<path d="M120 35C90 40 80 75 45 80C20 84 10 105 0 120H120V35Z" fill="url(#azure-grad)"></path>
+<path d="M120 60C95 65 85 92 55 98C35 102 20 112 10 120H120V60Z" stroke="#3b82f6" stroke-dasharray="2 3" stroke-width="1.2"></path>
+<path d="M120 85C100 88 90 105 70 110C55 113 45 118 35 120H120V85Z" stroke="#60a5fa" stroke-width="1"></path>
+<defs>
+<lineargradient gradientunits="userSpaceOnUse" id="azure-grad" x1="60" x2="120" y1="35" y2="120">
+<stop stop-color="#3b82f6" stop-opacity="0.3"></stop>
+<stop offset="1" stop-color="#60a5fa" stop-opacity="0"></stop>
+</lineargradient>
+</defs>
+</svg>
+<!-- Card Top Meta -->
+<div class="relative z-10 flex items-start justify-between">
+<div class="flex items-center gap-2.5">
+<span class="w-6 h-6 rounded-lg bg-[#3b82f6] text-white text-[11px] font-mono font-bold flex items-center justify-center shadow-sm">1</span>
+<span class="px-2 py-0.5 rounded-full text-[10px] font-mono bg-[#3b82f6]/15 text-[#93c5fd] border border-[#3b82f6]/30 font-semibold tracking-wide">Primary</span>
+</div>
+<span class="text-[10px] font-mono text-[#93c5fd] bg-[#3b82f6]/10 px-2 py-0.5 rounded-md border border-[#3b82f6]/20 font-medium">Active Fast Tier</span>
+</div>
+<!-- Center Model & Provider -->
+<div class="relative z-10 my-auto pt-2">
+<h4 class="font-headline font-bold text-base text-white tracking-tight group-hover:text-[#93c5fd] transition-colors">Gemini 2.0 Flash</h4>
+<p class="text-xs text-[#94a3b8] mt-0.5 font-medium flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-[#3b82f6]"></span>
+                Google AI Studio
+              </p>
+</div>
+<!-- Footer Latency & Status -->
+<div class="relative z-10 pt-3 border-t border-[rgba(255,255,255,0.06)] flex items-center justify-between text-xs font-mono">
+<span class="text-[#93c5fd] font-semibold flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[14px]">bolt</span>
+                182ms avg
+              </span>
+<span class="text-[11px] text-[#94a3b8] font-sans">0.00s coldstart</span>
+</div>
+</div>
+<!-- Node 2: Codestral 2501 (Purple Contour Lines) -->
+<div class="relative overflow-hidden rounded-2xl bg-[#0d0e13] border border-[rgba(255,255,255,0.08)] p-5 flex flex-col justify-between h-48 hover:border-[#a855f7]/40 transition-all duration-300 group shadow-lg">
+<!-- Geometric Accent: Soft Flowing Topo Contours -->
+<svg class="absolute right-0 bottom-0 w-36 h-36 opacity-30 group-hover:opacity-50 transition-opacity pointer-events-none" fill="none" viewbox="0 0 120 120">
+<path d="M120 50C100 50 90 80 60 85C40 88 20 105 10 120H120V50Z" fill="#a855f7" fill-opacity="0.18"></path>
+<path d="M120 70C105 70 95 90 75 95C55 100 40 110 30 120H120V70Z" stroke="#c084fc" stroke-dasharray="3 3" stroke-width="1.2"></path>
+<path d="M120 90C110 90 105 102 90 105C80 108 70 115 60 120H120V90Z" opacity="0.6" stroke="#e9d5ff" stroke-width="1"></path>
+</svg>
+<!-- Card Top Meta -->
+<div class="relative z-10 flex items-start justify-between">
+<div class="flex items-center gap-2.5">
+<span class="w-6 h-6 rounded-lg bg-[#1c1d25] border border-[rgba(255,255,255,0.1)] text-white text-[11px] font-mono font-bold flex items-center justify-center">2</span>
+<span class="px-2 py-0.5 rounded-full text-[10px] font-mono bg-[#23242f] text-[#94a3b8] border border-[rgba(255,255,255,0.06)] font-semibold tracking-wide">Fallback</span>
+</div>
+<span class="text-[10px] font-mono text-[#c084fc] bg-[#a855f7]/10 px-2 py-0.5 rounded-md border border-[#a855f7]/20 font-medium">FIM Specialist</span>
+</div>
+<!-- Center Model & Provider -->
+<div class="relative z-10 my-auto pt-2">
+<h4 class="font-headline font-bold text-base text-white tracking-tight group-hover:text-[#c084fc] transition-colors">Codestral 2501</h4>
+<p class="text-xs text-[#94a3b8] mt-0.5 font-medium flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-[#a855f7]"></span>
+                Mistral Platform
+              </p>
+</div>
+<!-- Footer Latency & Status -->
+<div class="relative z-10 pt-3 border-t border-[rgba(255,255,255,0.06)] flex items-center justify-between text-xs font-mono">
+<span class="text-[#e2e8f0] font-medium flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[14px] text-[#94a3b8]">speed</span>
+                320ms avg
+              </span>
+<span class="text-[11px] text-[#94a3b8] font-sans">Ready</span>
+</div>
+</div>
+<!-- Node 3: Llama 3.3 70B (Cyan Concentric Arc Segments) -->
+<div class="relative overflow-hidden rounded-2xl bg-[#0d0e13] border border-[rgba(255,255,255,0.06)] p-5 flex flex-col justify-between h-48 hover:border-[#06b6d4]/40 transition-all duration-300 group shadow-lg">
+<!-- Geometric Accent: Concentric Arc Segments -->
+<svg class="absolute right-0 bottom-0 w-36 h-36 opacity-30 group-hover:opacity-50 transition-opacity pointer-events-none" fill="none" viewbox="0 0 120 120">
+<circle cx="120" cy="120" r="75" stroke="#06b6d4" stroke-dasharray="4 4" stroke-width="1.2"></circle>
+<circle cx="120" cy="120" r="52" stroke="#22d3ee" stroke-width="1.5"></circle>
+<circle cx="120" cy="120" fill="#06b6d4" fill-opacity="0.25" r="30"></circle>
+</svg>
+<!-- Card Top Meta -->
+<div class="relative z-10 flex items-start justify-between">
+<div class="flex items-center gap-2.5">
+<span class="w-6 h-6 rounded-lg bg-[#1c1d25] border border-[rgba(255,255,255,0.08)] text-[#94a3b8] text-[11px] font-mono font-bold flex items-center justify-center">3</span>
+<span class="px-2 py-0.5 rounded-full text-[10px] font-mono bg-[#23242f] text-[#94a3b8] border border-[rgba(255,255,255,0.06)] font-semibold tracking-wide">Reserve</span>
+</div>
+<span class="text-[10px] font-mono text-[#22d3ee] bg-[#06b6d4]/10 px-2 py-0.5 rounded-md border border-[#06b6d4]/20 font-medium">Cold Compute</span>
+</div>
+<!-- Center Model & Provider -->
+<div class="relative z-10 my-auto pt-2">
+<h4 class="font-headline font-bold text-base text-[#f8fafc] tracking-tight group-hover:text-[#22d3ee] transition-colors">Llama 3.3 70B</h4>
+<p class="text-xs text-[#94a3b8] mt-0.5 font-medium flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-[#06b6d4]"></span>
+                NVIDIA NIM Compute
+              </p>
+</div>
+<!-- Footer Latency & Status -->
+<div class="relative z-10 pt-3 border-t border-[rgba(255,255,255,0.06)] flex items-center justify-between text-xs font-mono">
+<span class="text-[#94a3b8] font-medium flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[14px]">speed</span>
+                410ms avg
+              </span>
+<span class="text-[11px] text-[#94a3b8] font-sans">Cold Backup</span>
+</div>
+</div>
+</div>
+</article>
+<!-- POOL 3: General Conversational Pool -->
+<article class="bg-[#16171e] rounded-2xl border border-[rgba(255,255,255,0.07)] p-6 flex flex-col gap-6 hover:border-[rgba(255,255,255,0.12)] transition-all shadow-md">
+<!-- Card Header -->
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[rgba(255,255,255,0.06)]">
+<div class="flex items-center gap-3.5">
+<div class="w-10 h-10 rounded-xl bg-[#1c1d25] border border-[rgba(255,255,255,0.08)] flex items-center justify-center text-[#f43f5e] shadow-inner">
+<span class="material-symbols-outlined text-[21px]">chat_bubble</span>
+</div>
+<div>
+<div class="flex items-center gap-2.5">
+<h3 class="font-headline font-bold text-base text-white tracking-tight">General Conversational Pool</h3>
+<span class="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#10b981]/10 text-[#34d399] border border-[#10b981]/25 text-[10px] font-mono font-medium">
+<span class="w-1.5 h-1.5 rounded-full bg-[#10b981] animate-pulse"></span>
+                  Healthy &amp; Active
+                </span>
+</div>
+<div class="flex items-center gap-2 mt-1 text-xs text-[#94a3b8]">
+<span>Virtual Endpoint:</span>
+<code class="px-2 py-0.5 rounded-md font-mono text-[11px] text-[#f43f5e] bg-[#0d0e13] border border-[rgba(255,255,255,0.06)]">/v1/models/chat</code>
+</div>
+</div>
+</div>
+<!-- Stats & Controls -->
+<div class="flex items-center gap-5">
+<div class="flex items-center gap-4 text-xs font-mono">
+<div>
+<span class="block text-[10px] text-[#94a3b8]">24h Volume</span>
+<span class="font-bold text-white text-xs">22,410 reqs</span>
+</div>
+<div class="h-6 w-px bg-[rgba(255,255,255,0.08)]"></div>
+<div>
+<span class="block text-[10px] text-[#94a3b8]">Avg Latency</span>
+<span class="font-bold text-[#f43f5e] text-xs">140ms</span>
+</div>
+</div>
+<div class="h-6 w-px bg-[rgba(255,255,255,0.08)]"></div>
+<div class="flex items-center gap-2.5">
+<button class="px-3 py-1.5 rounded-lg bg-[#1c1d25] hover:bg-[#23242f] text-xs font-medium text-white transition-colors border border-[rgba(255,255,255,0.08)] cursor-pointer">
+                Edit Pool
+              </button>
+<label class="relative inline-flex items-center cursor-pointer" title="Toggle Pool">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-8 h-4 bg-[#23242f] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[1px] after:left-[1px] after:bg-white after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-[#8b5cf6]"></div>
+</label>
+</div>
+</div>
+</div>
+<!-- Provider Cards Grid: 2 Columns with Generous Aspect Ratio (Ref: TikTok & Music Album Red Coral Cards) -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<!-- Node 1: Llama 3.2 3B (Coral Red / Rose Waves Graphic) -->
+<div class="relative overflow-hidden rounded-2xl bg-[#0d0e13] border border-[#f43f5e]/40 p-5 flex flex-col justify-between h-48 hover:border-[#f43f5e] transition-all duration-300 group shadow-lg">
+<!-- Geometric Accent: Abstract Topographic Waves in Coral Rose (Ref: Best Music Album card) -->
+<svg class="absolute right-0 bottom-0 w-44 h-44 opacity-35 group-hover:opacity-55 transition-opacity pointer-events-none" fill="none" viewbox="0 0 140 140">
+<path d="M140 30C100 35 90 75 50 80C25 83 10 110 0 140H140V30Z" fill="url(#coral-grad)"></path>
+<path d="M140 55C110 60 95 95 65 100C40 105 25 125 15 140H140V55Z" stroke="#f43f5e" stroke-dasharray="2 3" stroke-width="1.2"></path>
+<path d="M140 80C120 85 105 110 80 115C60 120 45 130 35 140H140V80Z" stroke="#fb7185" stroke-width="1"></path>
+<defs>
+<lineargradient gradientunits="userSpaceOnUse" id="coral-grad" x1="70" x2="140" y1="30" y2="140">
+<stop stop-color="#f43f5e" stop-opacity="0.25"></stop>
+<stop offset="1" stop-color="#f43f5e" stop-opacity="0"></stop>
+</lineargradient>
+</defs>
+</svg>
+<!-- Card Top Meta -->
+<div class="relative z-10 flex items-start justify-between">
+<div class="flex items-center gap-2.5">
+<span class="w-6 h-6 rounded-lg bg-[#f43f5e] text-white text-[11px] font-mono font-bold flex items-center justify-center shadow-sm">1</span>
+<span class="px-2 py-0.5 rounded-full text-[10px] font-mono bg-[#f43f5e]/15 text-[#fda4af] border border-[#f43f5e]/30 font-semibold tracking-wide">Primary</span>
+</div>
+<span class="text-[10px] font-mono text-[#fda4af] bg-[#f43f5e]/10 px-2 py-0.5 rounded-md border border-[#f43f5e]/20 font-medium">Edge Distributed</span>
+</div>
+<!-- Center Model & Provider -->
+<div class="relative z-10 my-auto pt-2">
+<h4 class="font-headline font-bold text-base text-white tracking-tight group-hover:text-[#fda4af] transition-colors">Llama 3.2 3B</h4>
+<p class="text-xs text-[#94a3b8] mt-0.5 font-medium flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-[#f43f5e]"></span>
+                Cloudflare Workers AI
+              </p>
+</div>
+<!-- Footer Latency & Status -->
+<div class="relative z-10 pt-3 border-t border-[rgba(255,255,255,0.06)] flex items-center justify-between text-xs font-mono">
+<span class="text-[#fda4af] font-semibold flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[14px]">bolt</span>
+                140ms avg
+              </span>
+<span class="text-[11px] text-[#94a3b8] font-sans">300+ PoPs worldwide</span>
+</div>
+</div>
+<!-- Node 2: Cerebras Llama 3.1 8B (Amber Slanted Chevron Rays) -->
+<div class="relative overflow-hidden rounded-2xl bg-[#0d0e13] border border-[rgba(255,255,255,0.08)] p-5 flex flex-col justify-between h-48 hover:border-[#f59e0b]/40 transition-all duration-300 group shadow-lg">
+<!-- Geometric Accent: Slanted Parallel Chevron Rays (Ref: UMO UX India card) -->
+<svg class="absolute right-0 bottom-0 w-44 h-44 opacity-30 group-hover:opacity-50 transition-opacity pointer-events-none" fill="none" viewbox="0 0 140 140">
+<path d="M140 40L60 140H80L140 65V40Z" fill="#f59e0b" fill-opacity="0.3"></path>
+<path d="M140 75L85 140H105L140 95V75Z" fill="#eab308" fill-opacity="0.38"></path>
+<path d="M140 105L110 140H130L140 125V105Z" fill="#f59e0b" fill-opacity="0.45"></path>
+</svg>
+<!-- Card Top Meta -->
+<div class="relative z-10 flex items-start justify-between">
+<div class="flex items-center gap-2.5">
+<span class="w-6 h-6 rounded-lg bg-[#1c1d25] border border-[rgba(255,255,255,0.1)] text-white text-[11px] font-mono font-bold flex items-center justify-center">2</span>
+<span class="px-2 py-0.5 rounded-full text-[10px] font-mono bg-[#23242f] text-[#94a3b8] border border-[rgba(255,255,255,0.06)] font-semibold tracking-wide">Fallback</span>
+</div>
+<span class="text-[10px] font-mono text-[#f59e0b] bg-[#f59e0b]/10 px-2 py-0.5 rounded-md border border-[#f59e0b]/20 font-medium">Ultra-Low Latency</span>
+</div>
+<!-- Center Model & Provider -->
+<div class="relative z-10 my-auto pt-2">
+<h4 class="font-headline font-bold text-base text-white tracking-tight group-hover:text-[#fde047] transition-colors">Cerebras Llama 3.1 8B</h4>
+<p class="text-xs text-[#94a3b8] mt-0.5 font-medium flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-[#f59e0b]"></span>
+                Wafer-Scale Engine
+              </p>
+</div>
+<!-- Footer Latency & Status -->
+<div class="relative z-10 pt-3 border-t border-[rgba(255,255,255,0.06)] flex items-center justify-between text-xs font-mono">
+<span class="text-[#fde047] font-semibold flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[14px]">electric_bolt</span>
+                54ms avg
+              </span>
+<span class="text-[11px] text-[#94a3b8] font-sans">Supercomputer Tier</span>
+</div>
+</div>
+</div>
+</article>
+</div>
+</main>
+</div>
+</body></html>

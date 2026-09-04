@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>PoolGateway — Usage &amp; Telemetry</title>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<style>
+    @layer base {
+      html, body { margin: 0; padding: 0; }
+      body { overscroll-behavior: none; }
+    }
+    ::-webkit-scrollbar { display: none; }
+</style>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "background": "#0d0e13",
+            "surface": "#121318",
+            "surface-card": "#16171d",
+            "surface-card-alt": "#1a1b21",
+            "primary": "#d0bcff",
+            "primary-container": "#a078ff",
+            "electric-blue": "#38bdf8",
+            "emerald-glow": "#34d399",
+            "amber-accent": "#fbbf24",
+            "outline-border": "rgba(255, 255, 255, 0.07)",
+            "outline-border-subtle": "rgba(255, 255, 255, 0.04)"
+          },
+          fontFamily: {
+            headline: ["Plus Jakarta Sans", "sans-serif"],
+            body: ["Plus Jakarta Sans", "sans-serif"],
+            mono: ["JetBrains Mono", "monospace"]
+          }
+        }
+      }
+    };
+</script>
+</head>
+<body class="bg-[#0d0e13] font-body text-[#e3e1e9] antialiased selection:bg-[#a078ff] selection:text-white min-h-screen flex flex-col justify-between">
+<div class="min-h-screen bg-[#0d0e13] text-[#e3e1e9] font-body flex flex-col lg:flex-row antialiased selection:bg-[#a078ff] selection:text-white">
+<!-- Sidebar Panel (Obsidian Slate Standard Matching SCREEN_7 & SCREEN_8) -->
+<aside class="w-full lg:w-64 bg-[#121318] border-r border-white/[0.07] flex flex-col justify-between shrink-0 lg:min-h-screen z-30">
+<div>
+<!-- Brand Header -->
+<div class="p-5 border-b border-white/[0.07] flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#7c3aed] to-[#38bdf8] flex items-center justify-center shadow-lg shadow-purple-500/20">
+<span class="material-symbols-outlined text-white text-[20px]">hub</span>
+</div>
+<div class="flex flex-col">
+<div class="flex items-center gap-2">
+<span class="font-headline text-sm font-bold text-white tracking-tight">PoolGateway</span>
+<span class="font-mono text-[10px] px-1.5 py-0.5 rounded-full bg-[#a078ff]/15 text-[#d0bcff] font-semibold border border-[#a078ff]/30">v2.4</span>
+</div>
+<span class="text-[11px] text-[#958ea0] font-medium">Edge AI Orchestrator</span>
+</div>
+</div>
+</div>
+<!-- Navigation Links -->
+<nav class="p-3 flex flex-col gap-1 text-xs font-medium">
+<a class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-[#958ea0] hover:text-white hover:bg-white/[0.04] transition-all" href="#">
+<span class="material-symbols-outlined text-[18px]">explore</span>
+<span>Free API Directory</span>
+</a>
+<a class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-[#958ea0] hover:text-white hover:bg-white/[0.04] transition-all" href="#">
+<span class="material-symbols-outlined text-[18px]">dns</span>
+<span>Gateway &amp; Providers</span>
+</a>
+<a class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-[#958ea0] hover:text-white hover:bg-white/[0.04] transition-all" href="#">
+<span class="material-symbols-outlined text-[18px]">alt_route</span>
+<span>Routing Pools</span>
+</a>
+<a class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-[#958ea0] hover:text-white hover:bg-white/[0.04] transition-all" href="#">
+<span class="material-symbols-outlined text-[18px]">terminal</span>
+<span>Interactive Playground</span>
+</a>
+<a class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-[#958ea0] hover:text-white hover:bg-white/[0.04] transition-all" href="#">
+<span class="material-symbols-outlined text-[18px]">extension</span>
+<span>Tool Connectors</span>
+</a>
+<!-- Active Navigation Item -->
+<a class="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-[#201d33] text-[#d0bcff] font-semibold border border-[#a078ff]/30 shadow-sm relative overflow-hidden group" href="#">
+<div class="flex items-center gap-3 relative z-10">
+<span class="material-symbols-outlined text-[18px] text-[#a078ff]">analytics</span>
+<span class="font-semibold text-white">Usage &amp; Telemetry</span>
+</div>
+<span class="w-1.5 h-1.5 rounded-full bg-[#a078ff] shadow-[0_0_8px_#a078ff] relative z-10"></span>
+<div class="absolute inset-y-0 left-0 w-1 bg-[#a078ff]"></div>
+</a>
+<a class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-[#958ea0] hover:text-white hover:bg-white/[0.04] transition-all" href="#">
+<span class="material-symbols-outlined text-[18px]">notifications_active</span>
+<span>Alerts &amp; Failover</span>
+</a>
+</nav>
+</div>
+<!-- Bottom Sidebar Status & Controls -->
+<div class="p-4 border-t border-white/[0.07] flex flex-col gap-3">
+<div class="p-3 rounded-xl bg-[#16171d] border border-white/[0.06] flex flex-col gap-1.5">
+<div class="flex items-center justify-between text-[11px]">
+<span class="text-[#958ea0]">Core Status</span>
+<span class="flex items-center gap-1.5 text-emerald-400 font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Online
+          </span>
+</div>
+<div class="flex items-center justify-between text-[10px] font-mono text-[#958ea0]">
+<span>0 Drops (24h)</span>
+<span class="text-white font-medium">99.99%</span>
+</div>
+</div>
+<div class="flex items-center justify-between text-xs text-[#958ea0] px-1 font-medium">
+<a class="hover:text-white transition-colors flex items-center gap-1.5" href="#">
+<span class="material-symbols-outlined text-[16px]">description</span> Docs
+        </a>
+<a class="hover:text-white transition-colors flex items-center gap-1.5" href="#">
+<span class="material-symbols-outlined text-[16px]">settings</span> Settings
+        </a>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<div class="flex-1 flex flex-col min-w-0 bg-[#0d0e13]">
+<!-- Top Breadcrumb & Status Bar -->
+<header class="sticky top-0 z-20 bg-[#121318]/90 backdrop-blur-md border-b border-white/[0.07] px-6 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+<div class="flex items-center gap-2 text-xs">
+<span class="text-[#958ea0]">PoolGateway</span>
+<span class="text-white/30">/</span>
+<span class="text-[#958ea0]">Usage &amp; Telemetry</span>
+<span class="text-white/30">/</span>
+<span class="text-[#d0bcff] font-semibold">Live Metrics</span>
+</div>
+<div class="flex items-center flex-wrap gap-2.5">
+<!-- Status Indicator: Gateway -->
+<div class="hidden md:flex items-center gap-2 bg-[#1a1b21] px-3 py-1.5 rounded-lg border border-white/[0.06] text-xs">
+<span class="text-[#958ea0]">Gateway:</span>
+<span class="text-emerald-400 font-semibold flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Optimal
+          </span>
+</div>
+<!-- Status Indicator: Active Keys -->
+<div class="hidden md:flex items-center gap-2 bg-[#1a1b21] px-3 py-1.5 rounded-lg border border-white/[0.06] text-xs font-mono">
+<span class="text-[#958ea0]">Active Keys:</span>
+<span class="text-white font-semibold">9/9 Valid</span>
+</div>
+<!-- Status Indicator: Free Quota -->
+<div class="hidden lg:flex items-center gap-2 bg-[#1a1b21] px-3 py-1.5 rounded-lg border border-white/[0.06] text-xs font-mono">
+<span class="text-[#958ea0]">Free Quota:</span>
+<span class="text-[#38bdf8] font-semibold">48.2M</span>
+</div>
+<!-- Timeframe Switcher -->
+<div class="inline-flex items-center bg-[#16171d] p-1 rounded-lg border border-white/[0.08] text-xs">
+<button class="px-2.5 py-1 rounded text-[#958ea0] hover:text-white font-medium transition-colors" type="button">1h</button>
+<button class="px-2.5 py-1 rounded bg-[#7c3aed] text-white font-bold shadow-sm" type="button">24h</button>
+<button class="px-2.5 py-1 rounded text-[#958ea0] hover:text-white font-medium transition-colors" type="button">7d</button>
+<button class="px-2.5 py-1 rounded text-[#958ea0] hover:text-white font-medium transition-colors" type="button">30d</button>
+</div>
+<!-- Export Action Button -->
+<button class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1a1b21] hover:bg-[#20222b] text-white text-xs font-semibold border border-white/[0.08] transition-colors shadow-sm">
+<span class="material-symbols-outlined text-[15px] text-[#38bdf8]">download</span>
+<span class="hidden sm:inline">Export CSV</span>
+</button>
+</div>
+</header>
+<!-- Main Body Container -->
+<main class="p-6 lg:p-8 flex flex-col gap-6 max-w-[1400px] w-full mx-auto">
+<!-- Header Title Banner -->
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+<div>
+<div class="flex items-center gap-2 mb-1">
+<span class="w-1.5 h-1.5 rounded-full bg-[#a078ff] shadow-[0_0_8px_#a078ff]"></span>
+<span class="font-mono text-[10px] uppercase tracking-wider text-[#d0bcff] font-bold">Telemetry Engine</span>
+</div>
+<h1 class="font-headline text-2xl sm:text-3xl font-extrabold text-white tracking-tight">Usage &amp; Telemetry</h1>
+<p class="text-xs sm:text-sm text-[#958ea0] mt-0.5">High-level routing throughput, token savings, and failover reliability across pool endpoints</p>
+</div>
+<div class="flex items-center gap-2 self-start sm:self-auto">
+<span class="font-mono text-xs text-[#958ea0] bg-[#16171d] px-3 py-1.5 rounded-lg border border-white/[0.06] flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Live Sync: <strong class="text-white font-normal">Just now</strong>
+</span>
+</div>
+</div>
+<!-- Top 4 Metric KPI Cards (Obsidian Slate Style with vector micro-flourishes) -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+<!-- Card 1: Total Requests -->
+<div class="bg-[#16171d] hover:bg-[#1a1b22] transition-colors rounded-xl p-5 border border-white/[0.07] flex flex-col justify-between relative overflow-hidden group">
+<!-- Subtle contour graphic background -->
+<svg class="absolute right-0 bottom-0 w-32 h-32 opacity-10 pointer-events-none text-[#a078ff] translate-x-4 translate-y-4" fill="none" stroke="currentColor" stroke-width="1.2" viewbox="0 0 100 100">
+<circle cx="90" cy="90" r="70"></circle>
+<circle cx="90" cy="90" r="50"></circle>
+<circle cx="90" cy="90" r="30"></circle>
+<circle cx="90" cy="90" r="10"></circle>
+</svg>
+<div class="flex items-center justify-between mb-3 relative z-10">
+<span class="text-[11px] font-mono uppercase tracking-wider text-[#958ea0] font-semibold">Total Requests</span>
+<div class="w-8 h-8 rounded-lg bg-[#a078ff]/15 text-[#d0bcff] flex items-center justify-center border border-[#a078ff]/20">
+<span class="material-symbols-outlined text-[18px]">query_stats</span>
+</div>
+</div>
+<div class="relative z-10">
+<div class="font-headline text-3xl font-extrabold text-white tracking-tight">28,491</div>
+<div class="flex items-center gap-1.5 mt-2 text-xs">
+<span class="text-emerald-400 font-bold bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20 flex items-center gap-0.5">
+<span class="material-symbols-outlined text-[13px]">trending_up</span> +18.4%
+              </span>
+<span class="text-[#958ea0] font-medium">vs yesterday</span>
+</div>
+</div>
+</div>
+<!-- Card 2: Success Rate -->
+<div class="bg-[#16171d] hover:bg-[#1a1b22] transition-colors rounded-xl p-5 border border-white/[0.07] flex flex-col justify-between relative overflow-hidden group">
+<!-- Subtle contour graphic background -->
+<svg class="absolute right-0 bottom-0 w-32 h-32 opacity-10 pointer-events-none text-emerald-400 translate-x-4 translate-y-4" fill="none" stroke="currentColor" stroke-width="1.2" viewbox="0 0 100 100">
+<polygon points="50,10 90,90 10,90"></polygon>
+<polygon points="50,30 80,85 20,85"></polygon>
+<polygon points="50,50 70,80 30,80"></polygon>
+</svg>
+<div class="flex items-center justify-between mb-3 relative z-10">
+<span class="text-[11px] font-mono uppercase tracking-wider text-[#958ea0] font-semibold">Success Rate</span>
+<div class="w-8 h-8 rounded-lg bg-emerald-500/15 text-emerald-400 flex items-center justify-center border border-emerald-500/20">
+<span class="material-symbols-outlined text-[18px]">verified</span>
+</div>
+</div>
+<div class="relative z-10">
+<div class="font-headline text-3xl font-extrabold text-white tracking-tight">99.4%</div>
+<div class="flex items-center gap-1.5 mt-2 text-xs text-[#958ea0]">
+<span class="text-emerald-400 font-semibold">Auto-failover</span>
+<span>prevented 429s</span>
+</div>
+</div>
+</div>
+<!-- Card 3: Free Tokens Pooled -->
+<div class="bg-[#16171d] hover:bg-[#1a1b22] transition-colors rounded-xl p-5 border border-white/[0.07] flex flex-col justify-between relative overflow-hidden group">
+<!-- Subtle contour graphic background -->
+<svg class="absolute right-0 bottom-0 w-32 h-32 opacity-10 pointer-events-none text-[#38bdf8] translate-x-4 translate-y-4" fill="none" stroke="currentColor" stroke-width="1.2" viewbox="0 0 100 100">
+<path d="M10,20 Q50,5 90,20 Q95,60 50,90 Q5,60 10,20 Z"></path>
+<path d="M25,30 Q50,20 75,30 Q80,55 50,75 Q20,55 25,30 Z"></path>
+</svg>
+<div class="flex items-center justify-between mb-3 relative z-10">
+<span class="text-[11px] font-mono uppercase tracking-wider text-[#958ea0] font-semibold">Free Tokens Pooled</span>
+<div class="w-8 h-8 rounded-lg bg-[#38bdf8]/15 text-[#38bdf8] flex items-center justify-center border border-[#38bdf8]/20">
+<span class="material-symbols-outlined text-[18px]">token</span>
+</div>
+</div>
+<div class="relative z-10">
+<div class="font-headline text-3xl font-extrabold text-white tracking-tight">48.2M</div>
+<div class="flex items-center gap-1.5 mt-2 text-xs text-[#958ea0] font-mono">
+<span class="text-[#38bdf8] font-semibold">38.1M prompt</span>
+<span>·</span>
+<span class="text-white/80">10.1M completion</span>
+</div>
+</div>
+</div>
+<!-- Card 4: Est. Cost Saved -->
+<div class="bg-[#16171d] hover:bg-[#1a1b22] transition-colors rounded-xl p-5 border border-white/[0.07] flex flex-col justify-between relative overflow-hidden group">
+<!-- Subtle contour graphic background -->
+<svg class="absolute right-0 bottom-0 w-32 h-32 opacity-10 pointer-events-none text-amber-400 translate-x-4 translate-y-4" fill="none" stroke="currentColor" stroke-width="1.2" viewbox="0 0 100 100">
+<rect height="60" rx="8" width="60" x="30" y="30"></rect>
+<rect height="40" rx="6" width="40" x="40" y="40"></rect>
+<rect height="20" rx="4" width="20" x="50" y="50"></rect>
+</svg>
+<div class="flex items-center justify-between mb-3 relative z-10">
+<span class="text-[11px] font-mono uppercase tracking-wider text-[#958ea0] font-semibold">Est. Cost Saved</span>
+<div class="w-8 h-8 rounded-lg bg-amber-500/15 text-amber-400 flex items-center justify-center border border-amber-500/20">
+<span class="material-symbols-outlined text-[18px]">savings</span>
+</div>
+</div>
+<div class="relative z-10">
+<div class="font-headline text-3xl font-extrabold text-white tracking-tight">$418.60</div>
+<div class="flex items-center gap-1.5 mt-2 text-xs text-[#958ea0]">
+<span class="text-white/90 font-medium">OpenAI baseline equiv.</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Main Charts Row: Request Volume Trend + Route Distribution -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<!-- Chart 1: Volume Trend (Spans 2 cols) -->
+<div class="lg:col-span-2 bg-[#16171d] rounded-xl p-6 border border-white/[0.07] flex flex-col justify-between relative overflow-hidden">
+<div>
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
+<div>
+<div class="flex items-center gap-2">
+<h2 class="font-headline text-base font-bold text-white">Request Volume &amp; Cache Hits Overview</h2>
+<span class="font-mono text-[10px] px-2 py-0.5 rounded bg-[#a078ff]/15 text-[#d0bcff] font-semibold border border-[#a078ff]/30">24h Rolling</span>
+</div>
+<p class="text-xs text-[#958ea0] mt-0.5">Hourly traffic ingestion vs local edge cache intercept</p>
+</div>
+<div class="flex items-center gap-4 text-xs font-medium">
+<div class="flex items-center gap-1.5">
+<span class="w-2.5 h-2.5 rounded-full bg-[#7c3aed]"></span>
+<span class="text-white">Upstream Ingress</span>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="w-2.5 h-2.5 rounded-full bg-[#38bdf8]"></span>
+<span class="text-[#38bdf8]">Local Cache Intercept</span>
+</div>
+</div>
+</div>
+<!-- SVG Graph Container -->
+<div class="relative w-full h-64 bg-[#0f1015] rounded-lg p-4 overflow-hidden border border-white/[0.05]">
+<svg class="w-full h-full" preserveaspectratio="none" viewbox="0 0 900 240">
+<defs>
+<lineargradient id="purpleGrad" x1="0" x2="0" y1="0" y2="1">
+<stop offset="0%" stop-color="#8b5cf6" stop-opacity="0.35"></stop>
+<stop offset="100%" stop-color="#8b5cf6" stop-opacity="0.0"></stop>
+</lineargradient>
+<lineargradient id="azureGrad" x1="0" x2="0" y1="0" y2="1">
+<stop offset="0%" stop-color="#38bdf8" stop-opacity="0.22"></stop>
+<stop offset="100%" stop-color="#38bdf8" stop-opacity="0.0"></stop>
+</lineargradient>
+</defs>
+<!-- Subtle horizontal grid lines -->
+<line stroke="rgba(255,255,255,0.06)" stroke-dasharray="4 4" stroke-width="1" x1="0" x2="900" y1="60" y2="60"></line>
+<line stroke="rgba(255,255,255,0.06)" stroke-dasharray="4 4" stroke-width="1" x1="0" x2="900" y1="120" y2="120"></line>
+<line stroke="rgba(255,255,255,0.06)" stroke-dasharray="4 4" stroke-width="1" x1="0" x2="900" y1="180" y2="180"></line>
+<!-- Fills -->
+<path d="M0,170 C100,150 180,180 260,110 C340,50 420,110 500,80 C580,60 660,130 740,70 C820,30 870,55 900,45 L900,240 L0,240 Z" fill="url(#purpleGrad)"></path>
+<path d="M0,210 C100,200 180,205 260,175 C340,160 420,170 500,150 C580,140 660,180 740,145 C820,120 870,130 900,115 L900,240 L0,240 Z" fill="url(#azureGrad)"></path>
+<!-- Lines -->
+<path d="M0,210 C100,200 180,205 260,175 C340,160 420,170 500,150 C580,140 660,180 740,145 C820,120 870,130 900,115" fill="none" stroke="#38bdf8" stroke-linecap="round" stroke-width="2.5"></path>
+<path d="M0,170 C100,150 180,180 260,110 C340,50 420,110 500,80 C580,60 660,130 740,70 C820,30 870,55 900,45" fill="none" stroke="#8b5cf6" stroke-linecap="round" stroke-width="2.5"></path>
+<!-- Markers -->
+<circle cx="740" cy="70" fill="#8b5cf6" r="5" stroke="#ffffff" stroke-width="2"></circle>
+<circle cx="740" cy="145" fill="#38bdf8" r="4.5" stroke="#ffffff" stroke-width="2"></circle>
+</svg>
+<!-- Peak Floating Tooltip -->
+<div class="absolute top-7 right-20 hidden sm:flex flex-col bg-[#1f1d2e] text-white p-2.5 px-3.5 rounded-lg shadow-lg border border-[#8b5cf6]/40 text-xs pointer-events-none">
+<div class="text-[10px] text-[#d0bcff] font-medium">Peak Ingress Traffic</div>
+<div class="font-extrabold text-sm flex items-center justify-between gap-3 text-white">
+<span>1,842 req/min</span>
+<span class="w-2 h-2 rounded-full bg-[#8b5cf6]"></span>
+</div>
+</div>
+</div>
+</div>
+<!-- Time Axis -->
+<div class="flex items-center justify-between mt-3 text-xs font-mono text-[#958ea0]">
+<span>00:00</span>
+<span>04:00</span>
+<span>08:00</span>
+<span>12:00</span>
+<span>16:00</span>
+<span>20:00</span>
+<span class="text-[#d0bcff] font-semibold flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-[#a078ff] animate-pulse"></span>Live
+            </span>
+</div>
+</div>
+<!-- Chart 2: Route Distribution Visual -->
+<div class="bg-[#16171d] rounded-xl p-6 border border-white/[0.07] flex flex-col justify-between relative overflow-hidden">
+<!-- Subtle contour graphic background -->
+<svg class="absolute top-0 right-0 w-36 h-36 opacity-5 pointer-events-none text-white -translate-y-6 translate-x-6" fill="none" stroke="currentColor" stroke-width="1.5" viewbox="0 0 100 100">
+<circle cx="50" cy="50" r="45"></circle>
+<circle cx="50" cy="50" r="30"></circle>
+<circle cx="50" cy="50" r="15"></circle>
+</svg>
+<div>
+<div class="flex items-center justify-between mb-1">
+<h2 class="font-headline text-base font-bold text-white">Route Distribution</h2>
+<span class="text-xs px-2 py-0.5 rounded-md bg-[#20222b] text-[#958ea0] font-mono border border-white/[0.06]">Last 24h</span>
+</div>
+<p class="text-xs text-[#958ea0] mb-6">Traffic segmentation across query engines</p>
+<!-- Overlapping circular visual -->
+<div class="relative h-44 flex items-center justify-center">
+<!-- Primary Big Circle -->
+<div class="w-36 h-36 rounded-full bg-gradient-to-br from-[#7c3aed] to-[#6d28d9] flex flex-col items-center justify-center text-white shadow-xl shadow-purple-900/30 z-10 -mr-6 border border-purple-400/20">
+<span class="font-headline text-2xl font-extrabold tracking-tight">86%</span>
+<span class="text-[10px] font-semibold text-white/80 uppercase tracking-wider">Primary</span>
+</div>
+<!-- Failover Circle -->
+<div class="w-28 h-28 rounded-full bg-gradient-to-br from-[#0284c7] to-[#0369a1] flex flex-col items-center justify-center text-white shadow-xl shadow-sky-900/30 -ml-4 z-20 border border-sky-400/20">
+<span class="font-headline text-xl font-extrabold tracking-tight">11%</span>
+<span class="text-[10px] font-semibold text-white/80 uppercase tracking-wider">Failover</span>
+</div>
+<!-- Daemon Small Circle -->
+<div class="w-16 h-16 p-2 rounded-full bg-gradient-to-br from-[#334155] to-[#1e293b] flex flex-col items-center justify-center text-white shadow-lg -ml-3 z-30 border border-white/20">
+<span class="font-headline text-xs font-extrabold">3%</span>
+<span class="text-[8px] font-semibold text-white/80 uppercase">Local</span>
+</div>
+</div>
+</div>
+<!-- Distribution Breakdown Metrics -->
+<div class="grid grid-cols-3 gap-2 pt-4 border-t border-white/[0.07] text-center">
+<div>
+<div class="text-xs font-mono font-bold text-white">24,502</div>
+<div class="text-[11px] text-[#958ea0] mt-0.5">Primary Tier</div>
+</div>
+<div>
+<div class="text-xs font-mono font-bold text-[#38bdf8]">3,134</div>
+<div class="text-[11px] text-[#958ea0] mt-0.5">Rerouted 429</div>
+</div>
+<div>
+<div class="text-xs font-mono font-bold text-[#d0bcff]">855</div>
+<div class="text-[11px] text-[#958ea0] mt-0.5">Daemon Local</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Provider Breakdown & Failover Summary Rows -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+<!-- Card: Top Provider Breakdown -->
+<div class="bg-[#16171d] rounded-xl p-6 border border-white/[0.07] flex flex-col justify-between relative overflow-hidden">
+<div>
+<div class="flex items-center justify-between mb-1.5">
+<h2 class="font-headline text-base font-bold text-white">Top Provider Breakdown</h2>
+<span class="text-xs px-2.5 py-0.5 rounded-full bg-[#38bdf8]/15 text-[#38bdf8] font-semibold border border-[#38bdf8]/30">Free Tiers Active</span>
+</div>
+<p class="text-xs text-[#958ea0] mb-5">Distribution of requests across connected zero-cost endpoints</p>
+<div class="flex flex-col gap-4">
+<!-- Item 1: OpenRouter -->
+<div>
+<div class="flex items-center justify-between text-xs mb-1.5">
+<span class="font-semibold text-white flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-[#8b5cf6]"></span>
+                    OpenRouter (Meta Llama-3 &amp; Gemma)
+                  </span>
+<span class="font-mono text-[#958ea0]">10,826 reqs <strong class="text-white font-bold ml-1">38%</strong></span>
+</div>
+<div class="w-full bg-[#0d0e13] h-2 rounded-full overflow-hidden border border-white/[0.06]">
+<div class="bg-[#8b5cf6] h-full rounded-full" style="width: 38%"></div>
+</div>
+</div>
+<!-- Item 2: Google AI Studio -->
+<div>
+<div class="flex items-center justify-between text-xs mb-1.5">
+<span class="font-semibold text-white flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-[#38bdf8]"></span>
+                    Google AI Studio (Gemini 1.5 Flash)
+                  </span>
+<span class="font-mono text-[#958ea0]">8,832 reqs <strong class="text-white font-bold ml-1">31%</strong></span>
+</div>
+<div class="w-full bg-[#0d0e13] h-2 rounded-full overflow-hidden border border-white/[0.06]">
+<div class="bg-[#38bdf8] h-full rounded-full" style="width: 31%"></div>
+</div>
+</div>
+<!-- Item 3: NVIDIA NIM -->
+<div>
+<div class="flex items-center justify-between text-xs mb-1.5">
+<span class="font-semibold text-white flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                    NVIDIA NIM (Llama 3.1 70B Cloud)
+                  </span>
+<span class="font-mono text-[#958ea0]">5,413 reqs <strong class="text-white font-bold ml-1">19%</strong></span>
+</div>
+<div class="w-full bg-[#0d0e13] h-2 rounded-full overflow-hidden border border-white/[0.06]">
+<div class="bg-emerald-400 h-full rounded-full" style="width: 19%"></div>
+</div>
+</div>
+<!-- Item 4: Mistral & Ollama -->
+<div>
+<div class="flex items-center justify-between text-xs mb-1.5">
+<span class="font-semibold text-white flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-[#958ea0]"></span>
+                    Mistral &amp; Local Ollama
+                  </span>
+<span class="font-mono text-[#958ea0]">3,420 reqs <strong class="text-white font-bold ml-1">12%</strong></span>
+</div>
+<div class="w-full bg-[#0d0e13] h-2 rounded-full overflow-hidden border border-white/[0.06]">
+<div class="bg-[#958ea0]/50 h-full rounded-full" style="width: 12%"></div>
+</div>
+</div>
+</div>
+</div>
+<div class="mt-5 pt-3.5 border-t border-white/[0.07] flex items-center justify-between text-xs text-[#958ea0]">
+<span>Dynamic load auto-balancing enabled</span>
+<button class="text-[#d0bcff] hover:text-white font-semibold flex items-center gap-1 transition-colors">
+<span class="material-symbols-outlined text-[15px]">tune</span> Settings
+            </button>
+</div>
+</div>
+<!-- Card: Failover & Reliability Summary -->
+<div class="bg-[#16171d] rounded-xl p-6 border border-white/[0.07] flex flex-col justify-between relative overflow-hidden">
+<div>
+<div class="flex items-center justify-between mb-1.5">
+<h2 class="font-headline text-base font-bold text-white">Failover &amp; Reliability Summary</h2>
+<span class="text-xs px-2.5 py-0.5 rounded-full bg-[#20222b] text-white font-semibold border border-white/[0.07]">Automatic</span>
+</div>
+<p class="text-xs text-[#958ea0] mb-5">How queries resolved across priority backup tiers when limits were hit</p>
+<div class="flex flex-col gap-3">
+<!-- Tier 1 -->
+<div class="p-3.5 rounded-lg bg-[#111217] border border-white/[0.05] flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="w-2.5 h-2.5 rounded-full bg-[#8b5cf6]"></div>
+<div>
+<div class="text-xs font-bold text-white">Tier 1 • Primary Route</div>
+<div class="text-[11px] text-[#958ea0]">Standard direct response without failover</div>
+</div>
+</div>
+<span class="font-mono text-sm font-extrabold text-[#d0bcff]">86.0%</span>
+</div>
+<!-- Tier 2 -->
+<div class="p-3.5 rounded-lg bg-[#111217] border border-white/[0.05] flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="w-2.5 h-2.5 rounded-full bg-[#38bdf8]"></div>
+<div>
+<div class="text-xs font-bold text-white">Tier 2 • Automatic Re-route</div>
+<div class="text-[11px] text-[#958ea0]">Triggered by upstream 429 rate limit</div>
+</div>
+</div>
+<span class="font-mono text-sm font-extrabold text-[#38bdf8]">11.0%</span>
+</div>
+<!-- Tier 3 -->
+<div class="p-3.5 rounded-lg bg-[#111217] border border-white/[0.05] flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="w-2.5 h-2.5 rounded-full bg-amber-400"></div>
+<div>
+<div class="text-xs font-bold text-white">Tier 3 • Local Daemon Fallback</div>
+<div class="text-[11px] text-[#958ea0]">Prevented 5xx outage on network timeout</div>
+</div>
+</div>
+<span class="font-mono text-sm font-extrabold text-amber-400">2.4%</span>
+</div>
+</div>
+</div>
+<div class="mt-5 pt-3.5 border-t border-white/[0.07] flex items-center justify-between text-xs text-[#958ea0]">
+<span>Overall network resilience score: <strong class="text-white font-bold ml-1 bg-[#a078ff]/20 text-[#d0bcff] px-2 py-0.5 rounded border border-[#a078ff]/30">A+</strong></span>
+<span class="text-white font-semibold flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> 0 Outages
+            </span>
+</div>
+</div>
+</div>
+<!-- Recent Activity Feed Table -->
+<div class="bg-[#16171d] rounded-xl border border-white/[0.07] overflow-hidden shadow-sm">
+<div class="p-5 border-b border-white/[0.07] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+<div>
+<h2 class="font-headline text-base font-bold text-white">Recent Activity Log</h2>
+<p class="text-xs text-[#958ea0] mt-0.5">Clean feed of recent virtual queries and real-time execution results</p>
+</div>
+<div class="flex items-center gap-3">
+<button class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#20222b] hover:bg-[#282b37] text-white text-xs font-semibold border border-white/[0.08] transition-colors">
+<span class="material-symbols-outlined text-[15px] text-[#38bdf8]">filter_list</span>
+<span>Filter Logs</span>
+</button>
+</div>
+</div>
+<div class="w-full overflow-x-auto">
+<table class="w-full text-left text-xs border-collapse">
+<thead>
+<tr class="bg-[#111217] text-[#958ea0] uppercase tracking-wider font-semibold border-b border-white/[0.06]">
+<th class="py-3.5 px-5 font-mono text-[11px]">Time</th>
+<th class="py-3.5 px-5 font-mono text-[11px]">Virtual Model</th>
+<th class="py-3.5 px-5 font-mono text-[11px]">Route Taken</th>
+<th class="py-3.5 px-5 font-mono text-[11px] text-right">Status</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-white/[0.04] text-[#e3e1e9]">
+<!-- Item 1 -->
+<tr class="hover:bg-white/[0.02] transition-colors">
+<td class="py-3.5 px-5 font-mono text-[#958ea0]">14:42:08</td>
+<td class="py-3.5 px-5 font-semibold text-white">
+<div class="flex items-center gap-2.5">
+<div class="w-6 h-6 rounded-md bg-[#8b5cf6]/15 text-[#d0bcff] flex items-center justify-center">
+<span class="material-symbols-outlined text-[14px]">smart_toy</span>
+</div>
+<span>llama-3-8b-instruct</span>
+</div>
+</td>
+<td class="py-3.5 px-5 text-[#958ea0]">
+                  Primary → <span class="text-white font-medium">OpenRouter</span>
+</td>
+<td class="py-3.5 px-5 text-right">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> 200 OK
+                  </span>
+</td>
+</tr>
+<!-- Item 2 -->
+<tr class="hover:bg-white/[0.02] transition-colors bg-white/[0.01]">
+<td class="py-3.5 px-5 font-mono text-[#958ea0]">14:42:04</td>
+<td class="py-3.5 px-5 font-semibold text-white">
+<div class="flex items-center gap-2.5">
+<div class="w-6 h-6 rounded-md bg-amber-500/15 text-amber-400 flex items-center justify-center">
+<span class="material-symbols-outlined text-[14px]">psychology</span>
+</div>
+<span>gemini-1.5-flash</span>
+</div>
+</td>
+<td class="py-3.5 px-5 text-[#958ea0]">
+                  Failover 429 → <span class="text-amber-400 font-semibold">NVIDIA NIM</span>
+</td>
+<td class="py-3.5 px-5 text-right">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30">
+<span class="material-symbols-outlined text-[12px]">alt_route</span> Failover OK
+                  </span>
+</td>
+</tr>
+<!-- Item 3 -->
+<tr class="hover:bg-white/[0.02] transition-colors">
+<td class="py-3.5 px-5 font-mono text-[#958ea0]">14:41:59</td>
+<td class="py-3.5 px-5 font-semibold text-white">
+<div class="flex items-center gap-2.5">
+<div class="w-6 h-6 rounded-md bg-[#38bdf8]/15 text-[#38bdf8] flex items-center justify-center">
+<span class="material-symbols-outlined text-[14px]">bolt</span>
+</div>
+<span>codestral-22b</span>
+</div>
+</td>
+<td class="py-3.5 px-5 text-[#958ea0]">
+                  Local → <span class="text-[#38bdf8] font-medium">Edge KV Cache (11ms)</span>
+</td>
+<td class="py-3.5 px-5 text-right">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#38bdf8]/15 text-[#38bdf8] border border-[#38bdf8]/30">
+<span class="w-1.5 h-1.5 rounded-full bg-[#38bdf8]"></span> Cached Hit
+                  </span>
+</td>
+</tr>
+<!-- Item 4 -->
+<tr class="hover:bg-white/[0.02] transition-colors bg-white/[0.01]">
+<td class="py-3.5 px-5 font-mono text-[#958ea0]">14:41:51</td>
+<td class="py-3.5 px-5 font-semibold text-white">
+<div class="flex items-center gap-2.5">
+<div class="w-6 h-6 rounded-md bg-[#8b5cf6]/15 text-[#d0bcff] flex items-center justify-center">
+<span class="material-symbols-outlined text-[14px]">dns</span>
+</div>
+<span>qwen-2.5-coder-7b</span>
+</div>
+</td>
+<td class="py-3.5 px-5 text-[#958ea0]">
+                  Primary → <span class="text-white font-medium">Local Ollama Socket</span>
+</td>
+<td class="py-3.5 px-5 text-right">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> 200 OK
+                  </span>
+</td>
+</tr>
+<!-- Item 5 -->
+<tr class="hover:bg-white/[0.02] transition-colors">
+<td class="py-3.5 px-5 font-mono text-[#958ea0]">14:41:44</td>
+<td class="py-3.5 px-5 font-semibold text-white">
+<div class="flex items-center gap-2.5">
+<div class="w-6 h-6 rounded-md bg-[#38bdf8]/15 text-[#38bdf8] flex items-center justify-center">
+<span class="material-symbols-outlined text-[14px]">memory</span>
+</div>
+<span>meta/llama-3.1-70b</span>
+</div>
+</td>
+<td class="py-3.5 px-5 text-[#958ea0]">
+                  Primary → <span class="text-white font-medium">NVIDIA Cloud</span>
+</td>
+<td class="py-3.5 px-5 text-right">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> 200 OK
+                  </span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Table Footer Pagination -->
+<div class="p-4 px-5 bg-[#111217] border-t border-white/[0.06] flex flex-col sm:flex-row items-center justify-between text-xs text-[#958ea0] gap-3">
+<span>Showing latest 5 of 28,491 requests</span>
+<div class="flex items-center gap-2">
+<button class="px-3 py-1 rounded bg-[#1a1b21] text-[#958ea0] border border-white/[0.07] disabled:opacity-40" disabled="">Previous</button>
+<span class="px-2.5 py-1 rounded bg-[#7c3aed] text-white font-mono font-bold text-xs">1</span>
+<button class="px-3 py-1 rounded bg-[#1a1b21] text-white hover:bg-[#20222b] transition-colors border border-white/[0.07]">Next</button>
+</div>
+</div>
+</div>
+</main>
+<!-- Obsidian Slate Standard Footer Matching SCREEN_7 & SCREEN_8 -->
+<footer class="border-t border-white/[0.07] py-4 px-8 bg-[#121318] mt-auto">
+<div class="flex flex-col md:flex-row items-center justify-between gap-3 text-xs text-[#958ea0]">
+<div class="flex items-center gap-3">
+<span class="font-mono text-white font-semibold">PoolGateway v2.4.0 (Obsidian Slate)</span>
+<span class="w-1 h-1 rounded-full bg-white/20"></span>
+<span class="text-[#38bdf8] font-medium">P99: 82ms Edge Response</span>
+</div>
+<div class="flex items-center gap-5 font-medium">
+<a class="hover:text-white transition-colors" href="#">Failover Matrix</a>
+<a class="hover:text-white transition-colors" href="#">API Keys</a>
+<a class="hover:text-white transition-colors" href="#">CLI &amp; SDK</a>
+<a class="hover:text-white transition-colors" href="#">Status</a>
+</div>
+</div>
+</footer>
+</div>
+</div>
+</body></html>
