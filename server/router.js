@@ -23,6 +23,86 @@ function estimateTokens(text) {
   return Math.ceil(text.length / 4);
 }
 
+function redactHeaders(headers = {}) {
+  return Object.fromEntries(Object.entries(headers).map(([name, value]) => {
+    const lowerName = name.toLowerCase();
+    const sensitive = lowerName === 'authorization' || lowerName === 'x-api-key' ||
+      lowerName === 'api-key' || lowerName === 'proxy-authorization';
+    return [name, sensitive ? '[REDACTED]' : value];
+  }));
+}
+
+function toSerializable(value, seen = new WeakSet()) {
+  if (value === null || typeof value !== 'object') return value;
+  if (seen.has(value)) return '[Circular]';
+  seen.add(value);
+  if (Buffer.isBuffer(value)) return value.toString('utf8');
+  if (Array.isArray(value)) return value.map(item => toSerializable(item, seen));
+  return Object.fromEntries(Object.entries(value).map(([key, item]) => [
+    key,
+    toSerializable(item, seen)
+  ]));
+}
+
+function buildRequestDiagnostics({ reqPayload, targetUrl, headers, payloadToSend, timeoutMs, err = null, response = null }) {
+  return {
+    request: {
+      method: 'POST',
+      url: targetUrl,
+      headers: redactHeaders(headers),
+      body: toSerializable(payloadToSend),
+      timeoutMs
+    },
+    response: response ? {
+      status: response.status,
+      statusText: response.statusText,
+      headers: redactHeaders(response.headers),
+      body: toSerializable(response.data)
+    } : null,
+    error: err ? {
+      name: err.name,
+      message: err.message,
+      code: err.code,
+      stack: err.stack
+    } : null,
+    gateway: {
+      requestedModel: reqPayload.model,
+      stream: reqPayload.stream === true
+    }
+  };
+}
+
+export function sanitizeProviderPayload(payload, providerId, modelId) {
+  const standardKeys = new Set([
+    'model', 'messages', 'temperature', 'top_p', 'stream', 'max_tokens',
+    'tools', 'tool_choice', 'response_format', 'frequency_penalty',
+    'presence_penalty', 'stop', 'n', 'seed', 'user', 'logprobs',
+    'top_logprobs'
+  ]);
+  const sanitized = Object.fromEntries(
+    Object.entries(payload).filter(([key]) => standardKeys.has(key))
+  );
+  const providerType = providerId.split(':')[0].toLowerCase();
+  const supportsOSeries = providerType === 'openai' && /^o[134](?:-|$)/i.test(modelId);
+
+  if (supportsOSeries && payload.max_completion_tokens !== undefined) {
+    sanitized.max_completion_tokens = payload.max_completion_tokens;
+  }
+  if (supportsOSeries && payload.reasoning_effort !== undefined) {
+    sanitized.reasoning_effort = payload.reasoning_effort;
+  }
+
+  return sanitized;
+}
+
+export function providerSupportsModel(provider, modelId) {
+  const providerType = provider.id.split(':')[0].toLowerCase();
+  if (providerType === 'reka' && /^(?:glm|deepseek)/i.test(modelId)) {
+    return false;
+  }
+  return true;
+}
+
 /**
  * Calculate cost of equivalent paid model call.
  * @param {string} virtualModelId 
@@ -329,7 +409,16 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
         reqPayload._poolReservation = poolReservation.entry;
         reqPayload._poolId = virtualModel.id;
       }
-      targets = [...virtualModel.targets].filter(t => t.enabled !== false);
+      targets = [...virtualModel.targets].filter(t => {
+        if (t.enabled === false) return false;
+        const provider = config.providers.find(p => p.id === t.providerId);
+        const compatible = provider && providerSupportsModel(provider, t.modelId) &&
+          provider.models.some(model => model.id === t.modelId);
+        if (!compatible) {
+          eventLog(`Ignoring invalid pool target ${t.providerId}/${t.modelId}; provider/model mapping is incompatible or unavailable.`);
+        }
+        return compatible;
+      });
       if (targets.length === 0) {
         return res.status(503).json({ error: { message: `Virtual pool "${requestedModel}" has no active/enabled models available.`, type: 'pool_empty' } });
       }
@@ -338,7 +427,7 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
       // If not a virtual model, look if any provider offers this exact model ID
       config.providers.forEach(p => {
         const match = p.models.find(m => m.id === requestedModel);
-        if (match) {
+        if (match && providerSupportsModel(p, requestedModel)) {
           targets.push({ providerId: p.id, modelId: requestedModel });
         }
       });
@@ -346,6 +435,11 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
       if (targets.length > 0) {
         eventLog(`Model "${requestedModel}" found directly in providers. Fallback available.`);
       } else {
+        if (/^(?:glm|deepseek)/i.test(requestedModel)) {
+          return res.status(400).json({
+            error: { message: `No compatible provider is configured for model "${requestedModel}".` }
+          });
+        }
         // Fallback: use the first enabled provider's first model
         const activeProvider = config.providers.find(p => p.enabled && p.apiKey);
         if (activeProvider && activeProvider.models.length > 0) {
@@ -397,6 +491,10 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
     if (!provider || !provider.enabled) {
       continue;
     }
+    if (!providerSupportsModel(provider, target.modelId)) {
+      eventLog(`Skipping incompatible target ${provider.id}/${target.modelId}; provider/model mapping is invalid.`);
+      continue;
+    }
     
     const hasKeys = provider.apiKeys && provider.apiKeys.some(k => k.enabled && k.key);
     if (!provider.apiKey && !hasKeys && provider.id !== 'cloudflare') {
@@ -404,7 +502,11 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
       continue;
     }
 
-    const baseModelObj = provider.models.find(m => m.id === target.modelId) || { id: target.modelId };
+    const baseModelObj = provider.models.find(m => m.id === target.modelId);
+    if (!baseModelObj) {
+      eventLog(`Skipping unavailable target ${provider.id}/${target.modelId}; model is not registered by the provider.`);
+      continue;
+    }
     const modelObj = target.limits ? { ...baseModelObj, limits: { ...(baseModelObj.limits || {}), ...target.limits } } : baseModelObj;
     
     // Resolve load-balanced key — atomically checks limits and reserves the slot
@@ -476,8 +578,16 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
           }
           const provider = currentConfig.providers.find(p => p.id === target.providerId);
           if (!provider || !provider.enabled) continue;
+          if (!providerSupportsModel(provider, target.modelId)) {
+            eventLog(`Skipping incompatible target ${provider.id}/${target.modelId} during queue recheck.`);
+            continue;
+          }
           
-          const baseModelObj = provider.models.find(m => m.id === target.modelId) || { id: target.modelId };
+          const baseModelObj = provider.models.find(m => m.id === target.modelId);
+          if (!baseModelObj) {
+            eventLog(`Skipping unavailable target ${provider.id}/${target.modelId} during queue recheck.`);
+            continue;
+          }
           const modelObj = target.limits ? { ...baseModelObj, limits: { ...(baseModelObj.limits || {}), ...target.limits } } : baseModelObj;
           const promptTokensEst = estimateTokens(JSON.stringify(reqPayload.messages || []));
           const keyResolution = resolveLoadBalancedKey(provider, modelObj, promptTokensEst);
@@ -510,7 +620,12 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
         p.models?.length > 0
       );
       if (anyActiveProvider) {
-        const fallbackModel = anyActiveProvider.models[0];
+        const fallbackModel = anyActiveProvider.models.find(model => providerSupportsModel(anyActiveProvider, model.id));
+        if (!fallbackModel) {
+          return res.status(503).json({
+            error: { message: 'No compatible emergency fallback model is available.' }
+          });
+        }
         const promptTokensEst = estimateTokens(JSON.stringify(reqPayload.messages || []));
         const fbResolution = resolveLoadBalancedKey(anyActiveProvider, fallbackModel, promptTokensEst);
         if (!fbResolution.limited) {
@@ -528,6 +643,23 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
 
   if (!chosenTarget) {
     eventLog(`FAIL: All endpoints rate limited and queue timeout reached. Failing request.`);
+    updateStats(false, requestedModel, 0, 0, {
+      providerId: 'gateway',
+      modelId: 'unknown',
+      latencyMs: 0,
+      error: 'All eligible providers are currently rate-limited or in cooldown.',
+      diagnostics: {
+        gateway: {
+          requestedModel,
+          requestBody: reqPayload,
+          rateLimitedTargets: rateLimitedTargets.map(t => ({
+            providerId: t.provider.id,
+            modelId: t.target.modelId,
+            retryAfterMs: t.retryAfterMs
+          }))
+        }
+      }
+    });
     return res.status(429).json({
       error: {
         message: 'All eligible providers are currently rate-limited or in cooldown.',
@@ -585,7 +717,7 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
   }
 
   // Adjust model ID in payload and remove all internal tracking fields (starting with _)
-  const apiPayload = { ...reqPayload, model: target.modelId };
+  const apiPayload = sanitizeProviderPayload({ ...reqPayload, model: target.modelId }, provider.id, target.modelId);
   for (const key of Object.keys(apiPayload)) {
     if (key.startsWith('_')) {
       delete apiPayload[key];
@@ -918,7 +1050,11 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
         modelId: target.modelId,
         latencyMs: Date.now() - requestStartTime,
         cacheHit: false,
-        error: errorMsg
+        error: errorMsg,
+        diagnostics: buildRequestDiagnostics({
+          reqPayload, targetUrl, headers, payloadToSend, timeoutMs, err,
+          response: err.response
+        })
       });
       return res.status(status || 500).json({
         error: {
@@ -956,7 +1092,11 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
       modelId: target.modelId,
       latencyMs: Date.now() - requestStartTime,
       cacheHit: false,
-      error: errorMsg
+      error: errorMsg,
+      diagnostics: buildRequestDiagnostics({
+        reqPayload, targetUrl, headers, payloadToSend, timeoutMs, err,
+        response: err.response
+      })
     });
 
     // Trigger failover retry!
@@ -1049,7 +1189,8 @@ function updateStats(success, virtualModelId = null, promptTokens = 0, completio
       totalTokens: (promptTokens || 0) + (completionTokens || 0),
       latencyMs: extra.latencyMs || 0,
       cacheHit: !!extra.cacheHit,
-      error: extra.error || null
+      error: extra.error || null,
+      diagnostics: extra.diagnostics || null
     });
   } catch (err) {
     console.error('Failed to add stats history entry:', err);

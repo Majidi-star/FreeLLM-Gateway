@@ -88,6 +88,7 @@ export const Statistics: React.FC<StatisticsProps> = ({ config }) => {
   const [errorSearch, setErrorSearch] = useState('');
   const [showViewAllLimits, setShowViewAllLimits] = useState(false);
   const [limitsCurrentPage, setLimitsCurrentPage] = useState(1);
+  const [expandedHistoryIds, setExpandedHistoryIds] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     setCurrentPage(1);
@@ -1367,6 +1368,8 @@ export const Statistics: React.FC<StatisticsProps> = ({ config }) => {
                 </thead>
                 <tbody>
                   {filteredHistory.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((item, idx) => {
+                    const historyId = `${item.timestamp}-${(currentPage - 1) * itemsPerPage + idx}`;
+                    const isExpanded = !!expandedHistoryIds[historyId];
                     let errCode = '';
                     let errMsg = '';
                     if (!item.success && item.error) {
@@ -1380,7 +1383,8 @@ export const Statistics: React.FC<StatisticsProps> = ({ config }) => {
                     }
 
                     return (
-                    <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.02)', background: idx % 2 === 0 ? 'rgba(255,255,255,0.01)' : 'transparent' }}>
+                    <React.Fragment key={historyId}>
+                    <tr onClick={() => setExpandedHistoryIds(prev => ({ ...prev, [historyId]: !prev[historyId] }))} style={{ borderBottom: '1px solid rgba(255,255,255,0.02)', background: idx % 2 === 0 ? 'rgba(255,255,255,0.01)' : 'transparent', cursor: item.diagnostics ? 'pointer' : 'default' }}>
                       <td style={{ padding: '0.4rem 0.5rem', color: 'var(--text-muted)' }}>
                         {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                       </td>
@@ -1415,7 +1419,7 @@ export const Statistics: React.FC<StatisticsProps> = ({ config }) => {
                         ) : (
                           <div style={{ display: 'flex', flexDirection: 'column' }}>
                             <span style={{ color: 'var(--error)', fontWeight: 600 }} title={item.error || 'Request failed'}>
-                              Failed ✖ {errCode ? `(${errCode})` : ''}
+                              Failed ✖ {errCode ? `(${errCode})` : ''} {item.diagnostics ? (isExpanded ? '▴' : '▾') : ''}
                             </span>
                             {errMsg && (
                               <span style={{ fontSize: '0.65rem', color: 'var(--error)', opacity: 0.8, maxWidth: '200px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={errMsg}>
@@ -1426,6 +1430,16 @@ export const Statistics: React.FC<StatisticsProps> = ({ config }) => {
                         )}
                       </td>
                     </tr>
+                    {isExpanded && item.diagnostics && (
+                      <tr>
+                        <td colSpan={7} style={{ padding: '0.75rem', background: 'rgba(0,0,0,0.35)' }}>
+                          <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxHeight: '500px', overflow: 'auto', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                            {JSON.stringify(item.diagnostics, null, 2)}
+                          </pre>
+                        </td>
+                      </tr>
+                    )}
+                    </React.Fragment>
                     );
                   })}
                 </tbody>

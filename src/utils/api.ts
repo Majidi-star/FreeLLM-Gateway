@@ -359,6 +359,12 @@ export interface StatsHistoryEntry {
   latencyMs: number;
   cacheHit: boolean;
   error: string | null;
+  diagnostics?: {
+    request?: Record<string, unknown>;
+    response?: Record<string, unknown> | null;
+    error?: Record<string, unknown> | null;
+    gateway?: Record<string, unknown>;
+  } | null;
 }
 
 export async function getStatsHistory(): Promise<StatsHistoryEntry[]> {
