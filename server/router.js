@@ -548,16 +548,21 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
   }
 
   if (!chosenTarget) {
-    // Attempt emergency system-wide fallback if all pool models are limited
+    // A pool may contain stale targets after provider model IDs change. Keep
+    // the gateway usable by trying current enabled providers instead of
+    // treating skipped configuration entries as rate limiting.
     if (!reqPayload._systemFallbackTried) {
       reqPayload._systemFallbackTried = true;
-      const anyActiveProvider = config.providers.find(p => 
+      const activeProviders = config.providers.filter(p =>
         p.enabled && 
         (p.apiKey || p.apiKeys?.some(k => k.enabled && k.key)) && 
         p.models?.length > 0
       );
-      if (anyActiveProvider) {
-        const fallbackModel = anyActiveProvider.models[0];
+      for (const anyActiveProvider of activeProviders) {
+        const fallbackModel = anyActiveProvider.models.find(model =>
+          resolveProviderModelId(anyActiveProvider, model.id)
+        );
+        if (!fallbackModel) continue;
         const promptTokensEst = estimateTokens(JSON.stringify(reqPayload.messages || []));
         const fbResolution = resolveLoadBalancedKey(anyActiveProvider, fallbackModel, promptTokensEst);
         if (!fbResolution.limited) {
@@ -568,16 +573,20 @@ export async function routeChatCompletion(reqPayload, res, onRoutingEvent = null
             reqReservation: fbResolution.entry,  // slot already claimed atomically
           };
           eventLog(`EMERGENCY FALLBACK: Virtual pool limited. Using active provider ${anyActiveProvider.name} (${fallbackModel.id}) as fallback.`);
+          break;
         }
       }
     }
   }
 
   if (!chosenTarget) {
-    eventLog(`FAIL: All endpoints rate limited and queue timeout reached. Failing request.`);
-    return res.status(429).json({
+    const hasRateLimitedTargets = rateLimitedTargets.length > 0;
+    eventLog(`FAIL: No compatible enabled backend is available for request.`);
+    return res.status(hasRateLimitedTargets ? 429 : 503).json({
       error: {
-        message: 'All eligible providers are currently rate-limited or in cooldown.',
+        message: hasRateLimitedTargets
+          ? 'All eligible providers are currently rate-limited or in cooldown.'
+          : 'The requested pool has no compatible enabled provider/model targets.',
         details: rateLimitedTargets.map(t => `${t.provider.id}: ${t.retryAfterMs}ms`).join(', ')
       }
     });
