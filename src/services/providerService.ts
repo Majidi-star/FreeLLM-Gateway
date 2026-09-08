@@ -86,11 +86,14 @@ export class ProviderService {
         tag: conn.credential_tag,
       });
 
+      const probeEndpoint = provider.protocol === 'gemini' ? '/v1beta/models' : '/v1/models';
+
       // Call models list endpoint as lightweight health check
       const response = await callProviderEndpoint({
         baseUrl: provider.base_url,
-        endpoint: '/models',
+        endpoint: probeEndpoint,
         apiKey,
+        protocol: provider.protocol,
         method: 'GET',
         timeoutMs: 10000,
       });

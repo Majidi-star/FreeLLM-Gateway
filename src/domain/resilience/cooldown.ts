@@ -4,6 +4,24 @@ export interface CooldownConfig {
   maxCooldownMs?: number;  // default 30000ms
 }
 
+export function calculateCooldownMs(
+  authType: 'api_key' | 'oauth' | 'keyless' = 'api_key',
+  failureIndex: number = 0,
+  retryAfterSeconds?: number,
+  config?: CooldownConfig
+): number {
+  const baseApiKeyMs = config?.baseApiKeyMs ?? 3000;
+  const baseOAuthMs = config?.baseOAuthMs ?? 5000;
+  const maxCooldownMs = config?.maxCooldownMs ?? 30000;
+
+  if (retryAfterSeconds && retryAfterSeconds > 0) {
+    return Math.min(retryAfterSeconds * 1000, maxCooldownMs);
+  }
+
+  const base = authType === 'oauth' ? baseOAuthMs : baseApiKeyMs;
+  return Math.min(base * Math.pow(2, failureIndex), maxCooldownMs);
+}
+
 export class CooldownTracker {
   private failureIndex = 0;
   private cooldownUntil = 0;
@@ -21,13 +39,13 @@ export class CooldownTracker {
   }
 
   public recordFailure(now: number, retryAfterSeconds?: number): number {
-    let durationMs: number;
+    const durationMs = calculateCooldownMs(this.authType, this.failureIndex, retryAfterSeconds, {
+      baseApiKeyMs: this.baseApiKeyMs,
+      baseOAuthMs: this.baseOAuthMs,
+      maxCooldownMs: this.maxCooldownMs,
+    });
 
-    if (retryAfterSeconds && retryAfterSeconds > 0) {
-      durationMs = Math.min(retryAfterSeconds * 1000, this.maxCooldownMs);
-    } else {
-      const base = this.authType === 'oauth' ? this.baseOAuthMs : this.baseApiKeyMs;
-      durationMs = Math.min(base * Math.pow(2, this.failureIndex), this.maxCooldownMs);
+    if (!retryAfterSeconds || retryAfterSeconds <= 0) {
       this.failureIndex += 1;
     }
 

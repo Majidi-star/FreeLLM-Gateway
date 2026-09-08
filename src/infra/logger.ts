@@ -2,6 +2,9 @@ import pino from 'pino';
 
 export const SENSITIVE_KEYS = [
   'api_key',
+  'api-key',
+  'x-api-key',
+  'x-goog-api-key',
   'apikey',
   'key',
   'token',
@@ -23,11 +26,25 @@ export function redactSensitiveData(obj: unknown): unknown {
   }
 
   if (typeof obj === 'string') {
-    // Redact bearer tokens or API key-like patterns in raw strings if needed
-    if (/bearer\s+[a-zA-Z0-9_\-\.]+/i.test(obj)) {
-      return obj.replace(/(bearer\s+)[a-zA-Z0-9_\-\.]+/gi, '$1[REDACTED]');
+    let result = obj;
+
+    if (/bearer\s+[a-zA-Z0-9_\-\.]+/i.test(result)) {
+      result = result.replace(/(bearer\s+)[a-zA-Z0-9_\-\.]+/gi, '$1[REDACTED]');
     }
-    return obj;
+
+    if (/sk-[A-Za-z0-9_-]{16,}/.test(result)) {
+      result = result.replace(/sk-[A-Za-z0-9_-]{16,}/g, 'sk-[REDACTED]');
+    }
+
+    if (/AIza[0-9A-Za-z_-]{30,}/.test(result)) {
+      result = result.replace(/AIza[0-9A-Za-z_-]{30,}/g, 'AIza[REDACTED]');
+    }
+
+    if (/[?&](api_key|key|token)=[^&\s]+/i.test(result)) {
+      result = result.replace(/([?&](?:api_key|key|token)=)[^&\s]+/gi, '$1[REDACTED]');
+    }
+
+    return result;
   }
 
   if (typeof obj !== 'object') {

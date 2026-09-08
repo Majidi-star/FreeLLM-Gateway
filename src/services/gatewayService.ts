@@ -6,8 +6,8 @@ import { HealthRepository } from '../infra/db/repositories/healthRepo.js';
 import { QuotaRepository } from '../infra/db/repositories/quotaRepo.js';
 import { RequestLogRepository } from '../infra/db/repositories/requestLogRepo.js';
 import { CircuitBreaker } from '../domain/resilience/circuitBreaker.js';
-import { CooldownTracker } from '../domain/resilience/cooldown.js';
-import { computeSlidingWindowUsage, wouldQuotaExceed } from '../domain/quota/slidingWindow.js';
+import { calculateCooldownMs } from '../domain/resilience/cooldown.js';
+import { computeSlidingWindowUsage, getWindowStart, wouldQuotaExceed } from '../domain/quota/slidingWindow.js';
 import { resolvePolicyFunction } from '../domain/routing/policySelector.js';
 import { translateRequestToProvider } from '../domain/translation/openaiToProvider.js';
 import { translateResponseToOpenAI } from '../domain/translation/providerToOpenai.js';
@@ -59,7 +59,7 @@ export class GatewayService {
 
       if (!conn || !mdl || !prov) continue;
 
-      // Health state
+      // Health state & Cooldown state from DB
       const healthRecord = this.healthRepo.get(conn.id);
       const cb = new CircuitBreaker(
         { failureThreshold: 5 },
@@ -67,18 +67,21 @@ export class GatewayService {
         healthRecord ? { state: healthRecord.state, consecutiveFailures: healthRecord.consecutive_failures, openedAt: healthRecord.opened_at } : undefined
       );
 
-      // Cooldown state
-      const cooldownTracker = new CooldownTracker(prov.auth_type);
+      const isCooldownActive = healthRecord?.cooldown_until != null && now < healthRecord.cooldown_until;
 
       // Quota headroom estimate
-      const policy = this.quotaRepo.getPolicy(conn.id, 'daily_tokens');
       let quotaRemainingPct = 1.0;
-      if (policy) {
-        const windowStart = Math.floor(now / (policy.window_seconds * 1000)) * (policy.window_seconds * 1000);
-        const currentUsage = this.quotaRepo.getUsage(conn.id, 'daily_tokens', windowStart);
-        const prevUsage = this.quotaRepo.getUsage(conn.id, 'daily_tokens', windowStart - policy.window_seconds * 1000);
-        const usage = computeSlidingWindowUsage({ currentUsage, previousUsage: prevUsage, windowSeconds: policy.window_seconds, nowMs: now });
-        quotaRemainingPct = Math.max(0, 1 - usage / policy.limit_value);
+      try {
+        const policy = this.quotaRepo.getPolicy(conn.id, 'daily_tokens');
+        if (policy) {
+          const windowStart = getWindowStart(now, policy.window_seconds);
+          const currentUsage = this.quotaRepo.getUsage(conn.id, 'daily_tokens', windowStart);
+          const prevUsage = this.quotaRepo.getUsage(conn.id, 'daily_tokens', windowStart - policy.window_seconds * 1000);
+          const usage = computeSlidingWindowUsage({ currentUsage, previousUsage: prevUsage, windowSeconds: policy.window_seconds, nowMs: now });
+          quotaRemainingPct = Math.max(0, 1 - usage / policy.limit_value);
+        }
+      } catch (quotaErr: any) {
+        logger.warn({ connectionId: conn.id, error: quotaErr.message }, 'Failed to compute quota headroom');
       }
 
       const taskFitnessMap = JSON.parse(mdl.task_fitness || '{}');
@@ -96,7 +99,7 @@ export class GatewayService {
         role: step.role,
         weight: step.weight,
         healthState: cb.getState(),
-        isCooldownActive: cooldownTracker.isActive(now),
+        isCooldownActive,
         quotaRemainingPct,
         benchTtftMs: mdl.bench_ttft_ms || undefined,
         benchP95LatencyMs: mdl.bench_p95_latency_ms || undefined,
@@ -132,25 +135,47 @@ export class GatewayService {
         continue;
       }
 
-      // 2. Quota Gate
-      const dailyPolicy = this.quotaRepo.getPolicy(conn.id, 'daily_tokens');
-      if (dailyPolicy) {
-        const estimatedTokens = request.max_tokens || 1000;
-        const windowStart = Math.floor(Date.now() / (dailyPolicy.window_seconds * 1000)) * (dailyPolicy.window_seconds * 1000);
-        const currentUsage = this.quotaRepo.getUsage(conn.id, 'daily_tokens', windowStart);
-        const prevUsage = this.quotaRepo.getUsage(conn.id, 'daily_tokens', windowStart - dailyPolicy.window_seconds * 1000);
+      // 2. Cooldown Gate
+      if (healthRecord?.cooldown_until != null && Date.now() < healthRecord.cooldown_until) {
+        decisionTrace.push({
+          stepIndex: step.orderIndex,
+          connectionId: step.connectionId,
+          providerSlug: step.providerSlug,
+          modelId: step.modelId,
+          status: 'skipped',
+          reason: 'Cooldown is active',
+        });
+        continue;
+      }
 
-        if (wouldQuotaExceed(dailyPolicy.limit_value, { currentUsage, previousUsage: prevUsage, windowSeconds: dailyPolicy.window_seconds, nowMs: Date.now() }, estimatedTokens)) {
-          decisionTrace.push({
-            stepIndex: step.orderIndex,
-            connectionId: step.connectionId,
-            providerSlug: step.providerSlug,
-            modelId: step.modelId,
-            status: 'skipped',
-            reason: 'Quota limit would be exceeded',
-          });
-          continue;
+      // 2. Quota Gate (Fail-Open on DB error)
+      let quotaExceeded = false;
+      try {
+        const dailyPolicy = this.quotaRepo.getPolicy(conn.id, 'daily_tokens');
+        if (dailyPolicy) {
+          const estimatedTokens = request.max_tokens || 1000;
+          const windowStart = getWindowStart(Date.now(), dailyPolicy.window_seconds);
+          const currentUsage = this.quotaRepo.getUsage(conn.id, 'daily_tokens', windowStart);
+          const prevUsage = this.quotaRepo.getUsage(conn.id, 'daily_tokens', windowStart - dailyPolicy.window_seconds * 1000);
+
+          if (wouldQuotaExceed(dailyPolicy.limit_value, { currentUsage, previousUsage: prevUsage, windowSeconds: dailyPolicy.window_seconds, nowMs: Date.now() }, estimatedTokens)) {
+            quotaExceeded = true;
+          }
         }
+      } catch (quotaErr: any) {
+        logger.warn({ connectionId: conn.id, error: quotaErr.message }, 'Quota gate database call failed; failing open');
+      }
+
+      if (quotaExceeded) {
+        decisionTrace.push({
+          stepIndex: step.orderIndex,
+          connectionId: step.connectionId,
+          providerSlug: step.providerSlug,
+          modelId: step.modelId,
+          status: 'skipped',
+          reason: 'Quota limit would be exceeded',
+        });
+        continue;
       }
 
       // 3. Dispatch Attempt
@@ -167,6 +192,7 @@ export class GatewayService {
           baseUrl: step.providerBaseUrl,
           endpoint: translated.endpoint,
           apiKey,
+          protocol: step.providerProtocol,
           method: 'POST',
           headers: translated.headers,
           body: translated.body,
@@ -187,10 +213,22 @@ export class GatewayService {
         });
 
         // Record Quota Usage
-        const tokensUsed = oaiResponse.usage?.total_tokens || 500;
-        const currentWindowStart = Math.floor(Date.now() / (86400 * 1000)) * (86400 * 1000);
-        this.quotaRepo.recordUsage(conn.id, 'daily_tokens', currentWindowStart, tokensUsed);
-        this.quotaRepo.recordUsage(conn.id, 'daily_requests', currentWindowStart, 1);
+        let tokensUsed = 0;
+        if (oaiResponse.usage && typeof oaiResponse.usage.total_tokens === 'number') {
+          tokensUsed = oaiResponse.usage.total_tokens;
+        } else {
+          logger.warn({ connectionId: conn.id, providerSlug: step.providerSlug }, 'Missing usage metadata from provider response; recording 0 tokens');
+        }
+
+        try {
+          const dailyPolicy = this.quotaRepo.getPolicy(conn.id, 'daily_tokens');
+          const windowSec = dailyPolicy ? dailyPolicy.window_seconds : 86400;
+          const currentWindowStart = getWindowStart(Date.now(), windowSec);
+          this.quotaRepo.recordUsage(conn.id, 'daily_tokens', currentWindowStart, tokensUsed);
+          this.quotaRepo.recordUsage(conn.id, 'daily_requests', currentWindowStart, 1);
+        } catch (recErr: any) {
+          logger.warn({ connectionId: conn.id, error: recErr.message }, 'Failed to record quota usage');
+        }
 
         decisionTrace.push({
           stepIndex: step.orderIndex,
@@ -223,15 +261,42 @@ export class GatewayService {
           latencyMs: httpRes.latencyMs,
         };
       } catch (err: any) {
-        cb.recordFailure();
-        const snapshot = cb.getSnapshot();
-        this.healthRepo.upsert({
-          connection_id: conn.id,
-          state: snapshot.state,
-          consecutive_failures: snapshot.consecutiveFailures,
-          opened_at: snapshot.openedAt,
-          cooldown_until: null,
-        });
+        const statusCode = err.statusCode;
+        const prov = this.providerRepo.findById(conn.provider_id);
+        const authType = prov?.auth_type || 'api_key';
+
+        if (statusCode === 401 || statusCode === 403) {
+          // Terminal credential error: mark connection expired, DO NOT record failure in circuit breaker
+          this.connectionRepo.updateStatus(conn.id, 'expired', err.message);
+          decisionTrace.push({
+            stepIndex: step.orderIndex,
+            connectionId: step.connectionId,
+            providerSlug: step.providerSlug,
+            modelId: step.modelId,
+            status: 'attempted_failed',
+            error: err.message,
+            reason: 'CREDENTIAL_EXPIRED',
+          });
+          logger.warn({ connectionId: conn.id, error: err.message }, 'Credential expired (401/403), connection status updated to expired');
+          continue;
+        }
+
+        const isBreakerEligible = statusCode === undefined || [408, 429, 500, 502, 503, 504].includes(statusCode);
+
+        if (isBreakerEligible) {
+          cb.recordFailure();
+          const snapshot = cb.getSnapshot();
+          const cooldownDuration = calculateCooldownMs(authType, snapshot.consecutiveFailures - 1, err.retryAfterSeconds);
+          const cooldownUntil = Date.now() + cooldownDuration;
+
+          this.healthRepo.upsert({
+            connection_id: conn.id,
+            state: snapshot.state,
+            consecutive_failures: snapshot.consecutiveFailures,
+            opened_at: snapshot.openedAt,
+            cooldown_until: cooldownUntil,
+          });
+        }
 
         decisionTrace.push({
           stepIndex: step.orderIndex,

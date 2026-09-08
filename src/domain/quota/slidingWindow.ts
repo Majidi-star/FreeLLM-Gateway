@@ -5,9 +5,14 @@ export interface QuotaWindowInput {
   nowMs: number;
 }
 
+export function getWindowStart(nowMs: number, windowSeconds: number): number {
+  const windowMs = windowSeconds * 1000;
+  return Math.floor(nowMs / windowMs) * windowMs;
+}
+
 export function computeSlidingWindowUsage(input: QuotaWindowInput): number {
   const windowMs = input.windowSeconds * 1000;
-  const windowStart = Math.floor(input.nowMs / windowMs) * windowMs;
+  const windowStart = getWindowStart(input.nowMs, input.windowSeconds);
   const elapsedIntoWindow = input.nowMs - windowStart;
 
   const weight = Math.max(0, 1 - elapsedIntoWindow / windowMs);

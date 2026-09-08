@@ -22,12 +22,12 @@ export function translateRequestToProvider(
   }
 
   if (protocol === 'anthropic') {
-    let systemPrompt: string | undefined;
+    const systemTexts: string[] = [];
     const anthropicMessages: Array<{ role: 'user' | 'assistant'; content: unknown }> = [];
 
     for (const msg of request.messages) {
       if (msg.role === 'system') {
-        systemPrompt = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content);
+        systemTexts.push(typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content));
       } else if (msg.role === 'user' || msg.role === 'assistant') {
         anthropicMessages.push({
           role: msg.role,
@@ -35,6 +35,15 @@ export function translateRequestToProvider(
         });
       }
     }
+
+    if (anthropicMessages.length === 0) {
+      anthropicMessages.push({
+        role: 'user',
+        content: 'Proceed.',
+      });
+    }
+
+    const systemPrompt = systemTexts.length > 0 ? systemTexts.join('\n\n') : undefined;
 
     return {
       endpoint: '/v1/messages',
@@ -54,22 +63,37 @@ export function translateRequestToProvider(
   }
 
   if (protocol === 'gemini') {
-    const contents = request.messages
-      .filter((m) => m.role !== 'system')
-      .map((m) => ({
-        role: m.role === 'assistant' ? 'model' : 'user',
-        parts: [{ text: typeof m.content === 'string' ? m.content : JSON.stringify(m.content) }],
-      }));
+    const systemTexts: string[] = [];
+    const contents: Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }> = [];
 
-    const systemInstruction = request.messages.find((m) => m.role === 'system');
+    for (const m of request.messages) {
+      if (m.role === 'system') {
+        systemTexts.push(typeof m.content === 'string' ? m.content : JSON.stringify(m.content));
+      } else if (m.role === 'user' || m.role === 'assistant') {
+        const role = m.role === 'assistant' ? 'model' : 'user';
+        const partText = typeof m.content === 'string' ? m.content : JSON.stringify(m.content);
+        const lastTurn = contents[contents.length - 1];
+
+        if (lastTurn && lastTurn.role === role) {
+          lastTurn.parts.push({ text: partText });
+        } else {
+          contents.push({
+            role,
+            parts: [{ text: partText }],
+          });
+        }
+      }
+    }
+
+    const systemInstruction = systemTexts.length > 0
+      ? { parts: [{ text: systemTexts.join('\n\n') }] }
+      : undefined;
 
     return {
       endpoint: `/v1beta/models/${targetModelName}:generateContent`,
       body: {
         contents,
-        systemInstruction: systemInstruction
-          ? { parts: [{ text: typeof systemInstruction.content === 'string' ? systemInstruction.content : JSON.stringify(systemInstruction.content) }] }
-          : undefined,
+        system_instruction: systemInstruction,
         generationConfig: {
           temperature: request.temperature,
           topP: request.top_p,

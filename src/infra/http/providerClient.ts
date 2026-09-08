@@ -5,6 +5,7 @@ export interface ProviderRequestOptions {
   baseUrl: string;
   endpoint: string;
   apiKey: string;
+  protocol?: 'openai' | 'anthropic' | 'gemini' | 'custom' | string;
   method?: 'GET' | 'POST';
   headers?: Record<string, string>;
   body?: unknown;
@@ -17,6 +18,37 @@ export interface ProviderResponse<T = unknown> {
   latencyMs: number;
 }
 
+export function parseRetryAfter(headerValue: string | null | undefined): number | undefined {
+  if (!headerValue) return undefined;
+  const trimmed = headerValue.trim();
+  if (!trimmed) return undefined;
+
+  if (/^\d+$/.test(trimmed)) {
+    const seconds = parseInt(trimmed, 10);
+    return isNaN(seconds) ? undefined : Math.max(0, seconds);
+  }
+
+  const parsedDateMs = Date.parse(trimmed);
+  if (!isNaN(parsedDateMs)) {
+    const diffSec = Math.ceil((parsedDateMs - Date.now()) / 1000);
+    return Math.max(0, diffSec);
+  }
+
+  return undefined;
+}
+
+export function sanitizeErrorMessage(status: number, data: unknown, contentType: string): string {
+  const isHtml = contentType.includes('text/html') || (typeof data === 'string' && /^\s*</.test(data));
+  const rawText = typeof data === 'object' && data !== null && 'error' in (data as any)
+    ? JSON.stringify((data as any).error)
+    : String(data ?? '');
+
+  const stripped = rawText.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+  const snippet = stripped.slice(0, 60);
+
+  return `[PROVIDER_ERROR] status=${status} type=${isHtml ? 'HTML' : 'JSON'} snippet=${snippet}`;
+}
+
 export async function callProviderEndpoint<T = unknown>(options: ProviderRequestOptions): Promise<ProviderResponse<T>> {
   const timeoutMs = options.timeoutMs || getConfig().DEFAULT_PROVIDER_TIMEOUT_MS;
   const url = `${options.baseUrl.replace(/\/+$/, '')}/${options.endpoint.replace(/^\/+/, '')}`;
@@ -25,9 +57,20 @@ export async function callProviderEndpoint<T = unknown>(options: ProviderRequest
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     'User-Agent': 'GoalRoute-Gateway/1.0',
-    Authorization: `Bearer ${options.apiKey}`,
-    ...options.headers,
   };
+
+  if (options.protocol === 'anthropic') {
+    headers['x-api-key'] = options.apiKey;
+    headers['anthropic-version'] = '2023-06-01';
+  } else if (options.protocol === 'gemini') {
+    headers['x-goog-api-key'] = options.apiKey;
+  } else {
+    headers['Authorization'] = `Bearer ${options.apiKey}`;
+  }
+
+  if (options.headers) {
+    Object.assign(headers, options.headers);
+  }
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -53,10 +96,10 @@ export async function callProviderEndpoint<T = unknown>(options: ProviderRequest
     }
 
     if (!response.ok) {
-      const errMsg = typeof data === 'object' && data !== null && 'error' in (data as any)
-        ? JSON.stringify((data as any).error)
-        : String(data);
-      throw new AppError(`Provider returned HTTP ${response.status}: ${errMsg}`, 'PROVIDER_HTTP_ERROR', response.status);
+      const retryAfterHeader = response.headers.get('retry-after');
+      const retryAfterSeconds = parseRetryAfter(retryAfterHeader);
+      const sanitizedMsg = sanitizeErrorMessage(response.status, data, contentType);
+      throw new AppError(sanitizedMsg, 'PROVIDER_HTTP_ERROR', response.status, undefined, retryAfterSeconds);
     }
 
     return {

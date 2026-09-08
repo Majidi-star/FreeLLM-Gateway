@@ -2,13 +2,21 @@ export class AppError extends Error {
   public readonly code: string;
   public readonly statusCode: number;
   public readonly details?: Record<string, unknown>;
+  public readonly retryAfterSeconds?: number;
 
-  constructor(message: string, code = 'INTERNAL_ERROR', statusCode = 500, details?: Record<string, unknown>) {
+  constructor(
+    message: string,
+    code = 'INTERNAL_ERROR',
+    statusCode = 500,
+    details?: Record<string, unknown>,
+    retryAfterSeconds?: number
+  ) {
     super(message);
     this.name = this.constructor.name;
     this.code = code;
     this.statusCode = statusCode;
     this.details = details;
+    this.retryAfterSeconds = retryAfterSeconds;
     Object.setPrototypeOf(this, new.target.prototype);
   }
 }
