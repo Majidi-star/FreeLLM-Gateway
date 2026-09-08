@@ -1,0 +1,149 @@
+[
+  {
+    "providerSlug": "groq",
+    "modelName": "llama-3.3-70b-versatile",
+    "displayName": "Llama 3.3 70B Versatile",
+    "contextWindow": 128000,
+    "supportsTools": true,
+    "supportsVision": false,
+    "costInputPer1k": 0,
+    "costOutputPer1k": 0,
+    "benchTps": 280,
+    "benchTtftMs": 220,
+    "benchP95LatencyMs": 850,
+    "taskFitness": {
+      "coding_agent": 0.9,
+      "chatbot": 0.95,
+      "batch": 0.85,
+      "research": 0.9,
+      "general": 0.92
+    },
+    "isActive": true
+  },
+  {
+    "providerSlug": "groq",
+    "modelName": "llama-3.1-8b-instant",
+    "displayName": "Llama 3.1 8B Instant",
+    "contextWindow": 128000,
+    "supportsTools": true,
+    "supportsVision": false,
+    "costInputPer1k": 0,
+    "costOutputPer1k": 0,
+    "benchTps": 560,
+    "benchTtftMs": 110,
+    "benchP95LatencyMs": 400,
+    "taskFitness": {
+      "coding_agent": 0.75,
+      "chatbot": 0.88,
+      "batch": 0.95,
+      "research": 0.7,
+      "general": 0.85
+    },
+    "isActive": true
+  },
+  {
+    "providerSlug": "groq",
+    "modelName": "qwen-2.5-coder-32b",
+    "displayName": "Qwen 2.5 Coder 32B",
+    "contextWindow": 32768,
+    "supportsTools": true,
+    "supportsVision": false,
+    "costInputPer1k": 0,
+    "costOutputPer1k": 0,
+    "benchTps": 400,
+    "benchTtftMs": 180,
+    "benchP95LatencyMs": 600,
+    "taskFitness": {
+      "coding_agent": 0.96,
+      "chatbot": 0.82,
+      "batch": 0.88,
+      "research": 0.85,
+      "general": 0.88
+    },
+    "isActive": true
+  },
+  {
+    "providerSlug": "cerebras",
+    "modelName": "llama3.1-70b",
+    "displayName": "Cerebras Llama 3.1 70B",
+    "contextWindow": 8192,
+    "supportsTools": true,
+    "supportsVision": false,
+    "costInputPer1k": 0,
+    "costOutputPer1k": 0,
+    "benchTps": 1800,
+    "benchTtftMs": 90,
+    "benchP95LatencyMs": 250,
+    "taskFitness": {
+      "coding_agent": 0.88,
+      "chatbot": 0.92,
+      "batch": 0.98,
+      "research": 0.85,
+      "general": 0.9
+    },
+    "isActive": true
+  },
+  {
+    "providerSlug": "sambanova",
+    "modelName": "Qwen2.5-Coder-32B-Instruct",
+    "displayName": "SambaNova Qwen 2.5 Coder 32B",
+    "contextWindow": 16384,
+    "supportsTools": true,
+    "supportsVision": false,
+    "costInputPer1k": 0,
+    "costOutputPer1k": 0,
+    "benchTps": 450,
+    "benchTtftMs": 190,
+    "benchP95LatencyMs": 550,
+    "taskFitness": {
+      "coding_agent": 0.95,
+      "chatbot": 0.80,
+      "batch": 0.90,
+      "research": 0.84,
+      "general": 0.87
+    },
+    "isActive": true
+  },
+  {
+    "providerSlug": "deepseek",
+    "modelName": "deepseek-chat",
+    "displayName": "DeepSeek V3",
+    "contextWindow": 64000,
+    "supportsTools": true,
+    "supportsVision": false,
+    "costInputPer1k": 0.00014,
+    "costOutputPer1k": 0.00028,
+    "benchTps": 85,
+    "benchTtftMs": 450,
+    "benchP95LatencyMs": 1200,
+    "taskFitness": {
+      "coding_agent": 0.98,
+      "chatbot": 0.94,
+      "batch": 0.9,
+      "research": 0.96,
+      "general": 0.95
+    },
+    "isActive": true
+  },
+  {
+    "providerSlug": "openrouter",
+    "modelName": "google/gemini-2.0-flash-exp:free",
+    "displayName": "Gemini 2.0 Flash (Free)",
+    "contextWindow": 1048576,
+    "supportsTools": true,
+    "supportsVision": true,
+    "costInputPer1k": 0,
+    "costOutputPer1k": 0,
+    "benchTps": 150,
+    "benchTtftMs": 300,
+    "benchP95LatencyMs": 900,
+    "taskFitness": {
+      "coding_agent": 0.92,
+      "chatbot": 0.95,
+      "batch": 0.95,
+      "research": 0.98,
+      "general": 0.96
+    },
+    "isActive": true
+  }
+]

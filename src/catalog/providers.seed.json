@@ -1,0 +1,92 @@
+[
+  {
+    "slug": "groq",
+    "displayName": "Groq Cloud",
+    "baseUrl": "https://api.groq.com/openai/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://console.groq.com/docs",
+    "capabilities": {
+      "vision": true,
+      "tools": true,
+      "streaming": true,
+      "jsonMode": true
+    },
+    "isActive": true
+  },
+  {
+    "slug": "openrouter",
+    "displayName": "OpenRouter",
+    "baseUrl": "https://openrouter.ai/api/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://openrouter.ai/docs",
+    "capabilities": {
+      "vision": true,
+      "tools": true,
+      "streaming": true,
+      "jsonMode": true
+    },
+    "isActive": true
+  },
+  {
+    "slug": "cerebras",
+    "displayName": "Cerebras Inference",
+    "baseUrl": "https://api.cerebras.ai/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://inference-docs.cerebras.ai",
+    "capabilities": {
+      "vision": false,
+      "tools": true,
+      "streaming": true,
+      "jsonMode": true
+    },
+    "isActive": true
+  },
+  {
+    "slug": "sambanova",
+    "displayName": "SambaNova Cloud",
+    "baseUrl": "https://api.sambanova.ai/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://cloud.sambanova.ai/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": true,
+      "streaming": true,
+      "jsonMode": true
+    },
+    "isActive": true
+  },
+  {
+    "slug": "together",
+    "displayName": "Together AI",
+    "baseUrl": "https://api.together.xyz/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://docs.together.ai",
+    "capabilities": {
+      "vision": true,
+      "tools": true,
+      "streaming": true,
+      "jsonMode": true
+    },
+    "isActive": true
+  },
+  {
+    "slug": "deepseek",
+    "displayName": "DeepSeek Platform",
+    "baseUrl": "https://api.deepseek.com/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://platform.deepseek.com/api-docs",
+    "capabilities": {
+      "vision": false,
+      "tools": true,
+      "streaming": true,
+      "jsonMode": true
+    },
+    "isActive": true
+  }
+]

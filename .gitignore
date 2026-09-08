@@ -1,1 +1,7 @@
+node_modules/
+dist/
+data/
+.env
 graphify-out/
+coverage/
+*.log
