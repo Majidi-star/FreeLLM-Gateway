@@ -127,3 +127,84 @@ export async function callProviderEndpoint<T = unknown>(options: ProviderRequest
     throw new AppError(`Provider HTTP call failed: ${err.message}`, 'PROVIDER_FETCH_FAILED', 502);
   }
 }
+
+export interface ProviderStreamResponse {
+  statusCode: number;
+  stream: AsyncIterable<Uint8Array | string>;
+  latencyMs: number;
+}
+
+export async function callProviderEndpointStream(options: ProviderRequestOptions): Promise<ProviderStreamResponse> {
+  const timeoutMs = options.timeoutMs || getConfig().DEFAULT_PROVIDER_TIMEOUT_MS;
+  const url = `${options.baseUrl.replace(/\/+$/, '')}/${options.endpoint.replace(/^\/+/, '')}`;
+  const method = options.method || 'POST';
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'User-Agent': 'GoalRoute-Gateway/1.0',
+  };
+
+  if (options.protocol === 'anthropic') {
+    headers['x-api-key'] = options.apiKey;
+    headers['anthropic-version'] = '2023-06-01';
+  } else if (options.protocol === 'gemini') {
+    headers['x-goog-api-key'] = options.apiKey;
+  } else {
+    headers['Authorization'] = `Bearer ${options.apiKey}`;
+  }
+
+  if (options.headers) {
+    Object.assign(headers, options.headers);
+  }
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const startTime = Date.now();
+
+  try {
+    const response = await fetch(url, {
+      method,
+      headers,
+      body: options.body ? JSON.stringify(options.body) : undefined,
+      signal: controller.signal,
+    });
+
+    const latencyMs = Date.now() - startTime;
+    clearTimeout(timer);
+
+    if (!response.ok) {
+      const contentType = response.headers.get('content-type') || '';
+      let data: unknown;
+      if (contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        data = await response.text();
+      }
+      const retryAfterHeader = response.headers.get('retry-after');
+      const retryAfterSeconds = parseRetryAfter(retryAfterHeader);
+      const safeData = typeof data === 'string' && data.length > 64 * 1024 ? data.slice(0, 64 * 1024) : data;
+      const sanitizedMsg = sanitizeErrorMessage(response.status, safeData, contentType);
+      throw new AppError(sanitizedMsg, 'PROVIDER_HTTP_ERROR', response.status, undefined, retryAfterSeconds);
+    }
+
+    if (!response.body) {
+      throw new AppError('Provider response body is empty', 'PROVIDER_FETCH_FAILED', 502);
+    }
+
+    return {
+      statusCode: response.status,
+      stream: response.body as unknown as AsyncIterable<Uint8Array>,
+      latencyMs,
+    };
+  } catch (err: any) {
+    clearTimeout(timer);
+    if (err.name === 'AbortError') {
+      throw new AppError(`Provider stream request timed out after ${timeoutMs}ms`, 'PROVIDER_TIMEOUT', 408);
+    }
+    if (err instanceof AppError) {
+      throw err;
+    }
+    throw new AppError(`Provider HTTP stream call failed: ${err.message}`, 'PROVIDER_FETCH_FAILED', 502);
+  }
+}
+

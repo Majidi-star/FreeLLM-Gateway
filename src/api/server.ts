@@ -113,6 +113,23 @@ export async function buildApp() {
     }
 
     const body = req.body as any;
+    if (body?.stream) {
+      const dispatchResult = await gatewayService.dispatchStream(targetPoolId, body);
+
+      reply.raw.setHeader('Content-Type', 'text/event-stream');
+      reply.raw.setHeader('Cache-Control', 'no-cache');
+      reply.raw.setHeader('Connection', 'keep-alive');
+      reply.raw.setHeader('x-goalroute-provider', dispatchResult.selectedStep.providerSlug);
+      reply.raw.setHeader('x-goalroute-model', dispatchResult.selectedStep.modelName);
+      reply.raw.setHeader('x-goalroute-latency-ms', String(dispatchResult.latencyMs));
+
+      for await (const chunk of dispatchResult.stream) {
+        reply.raw.write(chunk);
+      }
+      reply.raw.end();
+      return reply;
+    }
+
     const dispatchResult = await gatewayService.dispatch(targetPoolId, body);
 
     reply.header('x-goalroute-provider', dispatchResult.selectedStep.providerSlug);
