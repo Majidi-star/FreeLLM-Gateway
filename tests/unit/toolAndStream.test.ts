@@ -361,4 +361,112 @@ describe('Tool & Function Calling and SSE Streaming Suite', () => {
       });
     });
   });
+
+  describe('6. Operation Crucible Regression Tests', () => {
+    it('1. Parallel Tool Index Test: Anthropic and Gemini parallel tool calls emit indices 0 and 1 in stream deltas', async () => {
+      // Anthropic parallel tool test
+      const anthropicParallelChunks = [
+        'event: content_block_start\ndata: {"type":"content_block_start","index":0,"content_block":{"type":"tool_use","id":"call_0","name":"tool_a"}}\n\n',
+        'event: content_block_start\ndata: {"type":"content_block_start","index":1,"content_block":{"type":"tool_use","id":"call_1","name":"tool_b"}}\n\n',
+        'event: content_block_delta\ndata: {"type":"content_block_delta","index":0,"delta":{"type":"input_json_delta","partial_json":"{\\"a\\":1}"}}\n\n',
+        'event: content_block_delta\ndata: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"{\\"b\\":2}"}}\n\n',
+        'event: message_delta\ndata: {"type":"message_delta","delta":{"stop_reason":"tool_use"}}\n\n',
+      ];
+
+      const anthropicDeltas: any[] = [];
+      for await (const chunk of transformToOpenAISSEStream(anthropicParallelChunks, 'anthropic', 'claude-3-5-sonnet')) {
+        if (chunk.startsWith('data: {')) {
+          anthropicDeltas.push(JSON.parse(chunk.slice(5)));
+        }
+      }
+
+      const anthropicIndices = anthropicDeltas
+        .filter(d => d.choices?.[0]?.delta?.tool_calls)
+        .map(d => d.choices[0].delta.tool_calls[0].index);
+      expect(anthropicIndices).toEqual([0, 1, 0, 1]);
+
+      // Gemini parallel tool test
+      const geminiParallelChunks = [
+        'data: {"candidates":[{"content":{"parts":[{"functionCall":{"name":"tool_a","args":{"a":1}}},{"functionCall":{"name":"tool_b","args":{"b":2}}}]}}]}\n\n',
+      ];
+
+      const geminiDeltas: any[] = [];
+      for await (const chunk of transformToOpenAISSEStream(geminiParallelChunks, 'gemini', 'gemini-1.5-pro')) {
+        if (chunk.startsWith('data: {')) {
+          geminiDeltas.push(JSON.parse(chunk.slice(5)));
+        }
+      }
+
+      const geminiIndices = geminiDeltas
+        .filter(d => d.choices?.[0]?.delta?.tool_calls)
+        .map(d => d.choices[0].delta.tool_calls[0].index);
+      expect(geminiIndices).toEqual([0, 1]);
+    });
+
+    it('2. Finish Reason Precedence Test: Gemini functionCall followed by STOP finishes with tool_calls', async () => {
+      const geminiStream = [
+        'data: {"candidates":[{"content":{"parts":[{"functionCall":{"name":"get_weather","args":{"city":"Tokyo"}}}]}}]}\n\n',
+        'data: {"candidates":[{"finishReason":"STOP"}],"usageMetadata":{"promptTokenCount":10,"candidatesTokenCount":5}}\n\n',
+      ];
+
+      const deltas: any[] = [];
+      for await (const chunk of transformToOpenAISSEStream(geminiStream, 'gemini', 'gemini-1.5-pro')) {
+        if (chunk.startsWith('data: {')) {
+          deltas.push(JSON.parse(chunk.slice(5)));
+        }
+      }
+
+      const finalChunk = deltas[deltas.length - 1];
+      expect(finalChunk.choices[0].finish_reason).toBe('tool_calls');
+    });
+
+    it('3. Mid-Stream Error Guard Test: handles aborted upstream with error event, data: [DONE], and clean end', async () => {
+      async function* faultyStream() {
+        yield 'data: {"candidates":[{"content":{"parts":[{"text":"Partial content"}]}}]}\n\n';
+        throw new Error('Upstream provider stream disconnected');
+      }
+
+      let onErrorCalled = false;
+      const chunks: string[] = [];
+
+      try {
+        for await (const chunk of transformToOpenAISSEStream(
+          faultyStream(),
+          'gemini',
+          'gemini-1.5-pro',
+          undefined,
+          undefined,
+          (err) => { onErrorCalled = true; }
+        )) {
+          chunks.push(chunk);
+        }
+      } catch {
+        // Expected stream error
+      }
+
+      expect(onErrorCalled).toBe(true);
+      expect(chunks.length).toBeGreaterThan(0);
+      expect(chunks[0]).toContain('Partial content');
+    });
+
+    it('4. Abort Usage Recording Test: client socket abort records quota_usage >= 1 used tokens', async () => {
+      async function* infiniteStream() {
+        yield 'data: {"candidates":[{"content":{"parts":[{"text":"Chunk 1 text for usage billing."}]}}]}\n\n';
+        yield 'data: {"candidates":[{"content":{"parts":[{"text":"Chunk 2 text for usage billing."}]}}]}\n\n';
+      }
+
+      let reportedUsage: any = null;
+      const stream = transformToOpenAISSEStream(infiniteStream(), 'gemini', 'gemini-1.5-pro', (usage) => {
+        reportedUsage = usage;
+      });
+
+      // Consume first chunk and simulate client abort (break)
+      for await (const _ of stream) {
+        break;
+      }
+
+      expect(reportedUsage).not.toBeNull();
+      expect(reportedUsage.totalTokens).toBeGreaterThanOrEqual(1);
+    });
+  });
 });

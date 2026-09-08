@@ -355,7 +355,7 @@ export class GatewayService {
     throw new AllTargetsExhaustedError(decisionTrace);
   }
 
-  public async dispatchStream(poolId: string, request: OpenAIChatRequest): Promise<DispatchStreamResult> {
+  public async dispatchStream(poolId: string, request: OpenAIChatRequest, signal?: AbortSignal): Promise<DispatchStreamResult> {
     const pool = this.poolRepo.findPoolById(poolId);
     if (!pool || !pool.is_active) {
       throw new NotFoundError(`Active pool with ID '${poolId}' not found`);
@@ -523,16 +523,7 @@ export class GatewayService {
           headers: translated.headers,
           body: translated.body,
           timeoutMs: 30000,
-        });
-
-        cb.recordSuccess();
-        const snapshot = cb.getSnapshot();
-        this.healthRepo.upsert({
-          connection_id: conn.id,
-          state: snapshot.state,
-          consecutive_failures: snapshot.consecutiveFailures,
-          opened_at: snapshot.openedAt,
-          cooldown_until: null,
+          signal,
         });
 
         decisionTrace.push({
@@ -571,6 +562,33 @@ export class GatewayService {
               cost_usd: 0,
               error_code: null,
               decision_trace: JSON.stringify(decisionTrace),
+            });
+          },
+          () => {
+            cb.recordSuccess();
+            const snapshot = cb.getSnapshot();
+            this.healthRepo.upsert({
+              connection_id: conn.id,
+              state: snapshot.state,
+              consecutive_failures: snapshot.consecutiveFailures,
+              opened_at: snapshot.openedAt,
+              cooldown_until: null,
+            });
+          },
+          (err) => {
+            const prov = this.providerRepo.findById(conn.provider_id);
+            const authType = prov?.auth_type || 'api_key';
+            cb.recordFailure();
+            const snapshot = cb.getSnapshot();
+            const cooldownDuration = calculateCooldownMs(authType, snapshot.consecutiveFailures - 1);
+            const cooldownUntil = Date.now() + cooldownDuration;
+
+            this.healthRepo.upsert({
+              connection_id: conn.id,
+              state: snapshot.state,
+              consecutive_failures: snapshot.consecutiveFailures,
+              opened_at: snapshot.openedAt,
+              cooldown_until: cooldownUntil,
             });
           }
         );

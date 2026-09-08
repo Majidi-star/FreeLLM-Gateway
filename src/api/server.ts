@@ -59,6 +59,10 @@ export async function buildApp() {
 
   // Centralized Error Handler (Principle 2: Never fail-opaque)
   fastify.setErrorHandler((error, req, reply) => {
+    if (reply.raw.headersSent) {
+      return;
+    }
+
     if (error instanceof AppError) {
       logger.warn({ reqId: req.id, code: error.code, message: error.message }, 'Application error');
       return reply.status(error.statusCode).send({
@@ -114,19 +118,44 @@ export async function buildApp() {
 
     const body = req.body as any;
     if (body?.stream) {
-      const dispatchResult = await gatewayService.dispatchStream(targetPoolId, body);
+      const abortController = new AbortController();
+      let streamFinished = false;
 
-      reply.raw.setHeader('Content-Type', 'text/event-stream');
-      reply.raw.setHeader('Cache-Control', 'no-cache');
-      reply.raw.setHeader('Connection', 'keep-alive');
-      reply.raw.setHeader('x-goalroute-provider', dispatchResult.selectedStep.providerSlug);
-      reply.raw.setHeader('x-goalroute-model', dispatchResult.selectedStep.modelName);
-      reply.raw.setHeader('x-goalroute-latency-ms', String(dispatchResult.latencyMs));
+      const onClose = () => {
+        if (!streamFinished) {
+          abortController.abort();
+        }
+      };
+      req.raw.on('close', onClose);
 
-      for await (const chunk of dispatchResult.stream) {
-        reply.raw.write(chunk);
+      try {
+        const dispatchResult = await gatewayService.dispatchStream(targetPoolId, body, abortController.signal);
+
+        reply.raw.setHeader('Content-Type', 'text/event-stream');
+        reply.raw.setHeader('Cache-Control', 'no-cache');
+        reply.raw.setHeader('Connection', 'keep-alive');
+        reply.raw.setHeader('x-goalroute-provider', dispatchResult.selectedStep.providerSlug);
+        reply.raw.setHeader('x-goalroute-model', dispatchResult.selectedStep.modelName);
+        reply.raw.setHeader('x-goalroute-latency-ms', String(dispatchResult.latencyMs));
+
+        for await (const chunk of dispatchResult.stream) {
+          reply.raw.write(chunk);
+        }
+        streamFinished = true;
+      } catch (err: any) {
+        if (reply.raw.headersSent) {
+          reply.raw.write('data: {"id":"chatcmpl-err","object":"chat.completion.chunk","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}\n\n');
+          reply.raw.write('event: error\ndata: {"error":"Upstream provider stream disconnected"}\n\n');
+          reply.raw.write('data: [DONE]\n\n');
+        } else {
+          throw err;
+        }
+      } finally {
+        req.raw.removeListener('close', onClose);
+        if (reply.raw.headersSent) {
+          reply.raw.end();
+        }
       }
-      reply.raw.end();
       return reply;
     }
 

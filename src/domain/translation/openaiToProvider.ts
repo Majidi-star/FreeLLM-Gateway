@@ -1,4 +1,5 @@
 import { OpenAIChatMessage, OpenAIChatRequest } from './types.js';
+import { logger } from '../../infra/logger.js';
 
 export interface TranslatedRequest {
   endpoint: string;
@@ -26,12 +27,16 @@ export function translateRequestToProvider(
   targetModelName: string
 ): TranslatedRequest {
   if (protocol === 'openai' || protocol === 'custom') {
+    const body: Record<string, unknown> = {
+      ...request,
+      model: targetModelName,
+    };
+    if (request.stream) {
+      body.stream_options = { include_usage: true };
+    }
     return {
       endpoint: '/chat/completions',
-      body: {
-        ...request,
-        model: targetModelName,
-      },
+      body,
     };
   }
 
@@ -167,6 +172,7 @@ export function translateRequestToProvider(
   if (protocol === 'gemini') {
     const systemTexts: string[] = [];
     const contents: Array<{ role: 'user' | 'model'; parts: Array<Record<string, unknown>> }> = [];
+    let hasSeenAssistantWithToolCalls = false;
 
     const functionDeclarations = request.tools
       ?.filter(t => t.type === 'function')
@@ -201,6 +207,7 @@ export function translateRequestToProvider(
           }
         }
         if (m.tool_calls && m.tool_calls.length > 0) {
+          hasSeenAssistantWithToolCalls = true;
           for (const tc of m.tool_calls) {
             parts.push({
               functionCall: {
@@ -222,23 +229,38 @@ export function translateRequestToProvider(
           }
         }
       } else if (m.role === 'tool') {
-        const toolName = m.name || findToolNameById(request.messages, m.tool_call_id) || 'tool_result';
-        const funcRespPart = {
-          functionResponse: {
-            name: toolName,
-            response: {
-              result: typeof m.content === 'string' ? m.content : (m.content ?? ''),
-            },
-          },
-        };
-        const lastTurn = contents[contents.length - 1];
-        if (lastTurn && lastTurn.role === 'user') {
-          lastTurn.parts.push(funcRespPart);
+        const toolName = m.name || findToolNameById(request.messages, m.tool_call_id) || 'tool';
+        const contentStr = typeof m.content === 'string' ? m.content : JSON.stringify(m.content ?? '');
+        if (!hasSeenAssistantWithToolCalls) {
+          logger.warn({ toolCallId: m.tool_call_id, toolName }, 'Sanitizing orphan Gemini tool response with no preceding tool_calls');
+          const orphanText = `[Tool Output: ${toolName}]: ${contentStr}`;
+          const lastTurn = contents[contents.length - 1];
+          if (lastTurn && lastTurn.role === 'user') {
+            lastTurn.parts.push({ text: orphanText });
+          } else {
+            contents.push({
+              role: 'user',
+              parts: [{ text: orphanText }],
+            });
+          }
         } else {
-          contents.push({
-            role: 'user',
-            parts: [funcRespPart],
-          });
+          const funcRespPart = {
+            functionResponse: {
+              name: toolName,
+              response: {
+                result: contentStr,
+              },
+            },
+          };
+          const lastTurn = contents[contents.length - 1];
+          if (lastTurn && lastTurn.role === 'user') {
+            lastTurn.parts.push(funcRespPart);
+          } else {
+            contents.push({
+              role: 'user',
+              parts: [funcRespPart],
+            });
+          }
         }
       }
     }

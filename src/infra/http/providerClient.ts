@@ -10,6 +10,7 @@ export interface ProviderRequestOptions {
   headers?: Record<string, string>;
   body?: unknown;
   timeoutMs?: number;
+  signal?: AbortSignal;
 }
 
 export interface ProviderResponse<T = unknown> {
@@ -159,6 +160,14 @@ export async function callProviderEndpointStream(options: ProviderRequestOptions
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const onExternalAbort = () => controller.abort();
+  if (options.signal) {
+    if (options.signal.aborted) {
+      controller.abort();
+    } else {
+      options.signal.addEventListener('abort', onExternalAbort, { once: true });
+    }
+  }
   const startTime = Date.now();
 
   try {
@@ -171,6 +180,9 @@ export async function callProviderEndpointStream(options: ProviderRequestOptions
 
     const latencyMs = Date.now() - startTime;
     clearTimeout(timer);
+    if (options.signal) {
+      options.signal.removeEventListener('abort', onExternalAbort);
+    }
 
     if (!response.ok) {
       const contentType = response.headers.get('content-type') || '';
@@ -198,6 +210,9 @@ export async function callProviderEndpointStream(options: ProviderRequestOptions
     };
   } catch (err: any) {
     clearTimeout(timer);
+    if (options.signal) {
+      options.signal.removeEventListener('abort', onExternalAbort);
+    }
     if (err.name === 'AbortError') {
       throw new AppError(`Provider stream request timed out after ${timeoutMs}ms`, 'PROVIDER_TIMEOUT', 408);
     }
