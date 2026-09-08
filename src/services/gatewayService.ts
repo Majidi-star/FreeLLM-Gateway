@@ -34,7 +34,66 @@ export interface DispatchStreamResult {
   latencyMs: number;
 }
 
-export const locallyExpiredConnectionIds = new Set<string>();
+export const breakerRegistry = new Map<string, CircuitBreaker>();
+
+export function getSharedCircuitBreaker(
+  connId: string,
+  healthRecord: { state: any; consecutive_failures: number; opened_at: number | null } | null,
+  now: number
+): CircuitBreaker {
+  let cb = breakerRegistry.get(connId);
+  if (!cb) {
+    cb = new CircuitBreaker(
+      { failureThreshold: 5 },
+      { now: () => Date.now() },
+      healthRecord ? { state: healthRecord.state, consecutiveFailures: healthRecord.consecutive_failures, openedAt: healthRecord.opened_at } : undefined
+    );
+    breakerRegistry.set(connId, cb);
+  }
+  return cb;
+}
+
+export const locallyExpiredConnections = new Map<string, number>();
+
+export function pruneLocallyExpiredConnections(now: number = Date.now()): void {
+  for (const [id, expiry] of locallyExpiredConnections.entries()) {
+    if (now >= expiry) {
+      locallyExpiredConnections.delete(id);
+    }
+  }
+}
+
+export const locallyExpiredConnectionIds = {
+  add(id: string): void {
+    locallyExpiredConnections.set(id, Date.now() + 10 * 60 * 1000);
+  },
+  has(id: string): boolean {
+    pruneLocallyExpiredConnections();
+    const expiry = locallyExpiredConnections.get(id);
+    if (!expiry) return false;
+    if (Date.now() >= expiry) {
+      locallyExpiredConnections.delete(id);
+      return false;
+    }
+    return true;
+  },
+  delete(id: string): boolean {
+    return locallyExpiredConnections.delete(id);
+  },
+  clear(): void {
+    locallyExpiredConnections.clear();
+  },
+};
+
+export function safeParseTaskFitness(raw?: string | null): Record<string, number> {
+  if (!raw) return {};
+  try {
+    const parsed = JSON.parse(raw);
+    return typeof parsed === 'object' && parsed !== null ? parsed : {};
+  } catch {
+    return {};
+  }
+}
 
 export class GatewayService {
   constructor(
@@ -74,11 +133,7 @@ export class GatewayService {
 
       // Health state & Cooldown state from DB
       const healthRecord = this.healthRepo.get(conn.id);
-      const cb = new CircuitBreaker(
-        { failureThreshold: 5 },
-        { now: () => now },
-        healthRecord ? { state: healthRecord.state, consecutiveFailures: healthRecord.consecutive_failures, openedAt: healthRecord.opened_at } : undefined
-      );
+      const cb = getSharedCircuitBreaker(conn.id, healthRecord, now);
 
       const isCooldownActive = healthRecord?.cooldown_until != null && now < healthRecord.cooldown_until;
 
@@ -97,7 +152,7 @@ export class GatewayService {
         logger.warn({ connectionId: conn.id, error: quotaErr.message }, 'Failed to compute quota headroom');
       }
 
-      const taskFitnessMap = JSON.parse(mdl.task_fitness || '{}');
+      const taskFitnessMap = safeParseTaskFitness(mdl.task_fitness);
 
       stepInfos.push({
         id: step.id,
@@ -141,11 +196,7 @@ export class GatewayService {
 
       // 1. Circuit Breaker Gate
       const healthRecord = this.healthRepo.get(conn.id);
-      const cb = new CircuitBreaker(
-        { failureThreshold: 5 },
-        { now: () => Date.now() },
-        healthRecord ? { state: healthRecord.state, consecutiveFailures: healthRecord.consecutive_failures, openedAt: healthRecord.opened_at } : undefined
-      );
+      const cb = getSharedCircuitBreaker(conn.id, healthRecord, Date.now());
 
       if (!cb.allowRequest()) {
         decisionTrace.push({
@@ -174,10 +225,10 @@ export class GatewayService {
 
       // 2. Quota Gate (Fail-Open on DB error)
       let quotaExceeded = false;
+      const estimatedTokens = request.max_tokens || 1000;
       try {
         const dailyPolicy = this.quotaRepo.getPolicy(conn.id, 'daily_tokens');
         if (dailyPolicy) {
-          const estimatedTokens = request.max_tokens || 1000;
           const windowStart = getWindowStart(Date.now(), dailyPolicy.window_seconds);
           const currentUsage = this.quotaRepo.getUsage(conn.id, 'daily_tokens', windowStart);
           const prevUsage = this.quotaRepo.getUsage(conn.id, 'daily_tokens', windowStart - dailyPolicy.window_seconds * 1000);
@@ -200,6 +251,17 @@ export class GatewayService {
           reason: 'Quota limit would be exceeded',
         });
         continue;
+      }
+
+      // Pre-reserve estimated tokens in quota ledger
+      let currentWindowStart = Date.now();
+      try {
+        const dailyPolicy = this.quotaRepo.getPolicy(conn.id, 'daily_tokens');
+        const windowSec = dailyPolicy ? dailyPolicy.window_seconds : 86400;
+        currentWindowStart = getWindowStart(Date.now(), windowSec);
+        this.quotaRepo.recordUsage(conn.id, 'daily_tokens', currentWindowStart, estimatedTokens);
+      } catch (recErr: any) {
+        logger.warn({ connectionId: conn.id, error: recErr.message }, 'Failed to pre-reserve quota usage');
       }
 
       // 3. Dispatch Attempt
@@ -236,19 +298,22 @@ export class GatewayService {
           cooldown_until: null,
         });
 
-        // Record Quota Usage
-        let tokensUsed = 0;
+        // Record Quota Usage Adjustment (Delta)
+        let actualTokens = estimatedTokens;
         if (oaiResponse.usage && typeof oaiResponse.usage.total_tokens === 'number') {
-          tokensUsed = oaiResponse.usage.total_tokens;
+          actualTokens = oaiResponse.usage.total_tokens;
         } else {
-          logger.warn({ connectionId: conn.id, providerSlug: step.providerSlug }, 'Missing usage metadata from provider response; recording 0 tokens');
+          logger.warn({ connectionId: conn.id, providerSlug: step.providerSlug }, 'Missing usage metadata from provider response; retaining estimated tokens');
+          const promptChars = (request.messages || []).reduce((acc, m) => acc + (typeof m.content === 'string' ? m.content.length : 0), 0);
+          const completionChars = oaiResponse.choices?.[0]?.message?.content ? oaiResponse.choices[0].message.content.length : 0;
+          actualTokens = Math.max(estimatedTokens, Math.ceil((promptChars + completionChars) / 4));
         }
 
         try {
-          const dailyPolicy = this.quotaRepo.getPolicy(conn.id, 'daily_tokens');
-          const windowSec = dailyPolicy ? dailyPolicy.window_seconds : 86400;
-          const currentWindowStart = getWindowStart(Date.now(), windowSec);
-          this.quotaRepo.recordUsage(conn.id, 'daily_tokens', currentWindowStart, tokensUsed);
+          const deltaTokens = actualTokens - estimatedTokens;
+          if (deltaTokens !== 0) {
+            this.quotaRepo.recordUsage(conn.id, 'daily_tokens', currentWindowStart, deltaTokens);
+          }
           this.quotaRepo.recordUsage(conn.id, 'daily_requests', currentWindowStart, 1);
         } catch (recErr: any) {
           logger.warn({ connectionId: conn.id, error: recErr.message }, 'Failed to record quota usage');
@@ -285,6 +350,12 @@ export class GatewayService {
           latencyMs: httpRes.latencyMs,
         };
       } catch (err: any) {
+        // Refund pre-reserved tokens on dispatch failure
+        try {
+          this.quotaRepo.recordUsage(conn.id, 'daily_tokens', currentWindowStart, -estimatedTokens);
+        } catch (refundErr: any) {
+          logger.warn({ connectionId: conn.id, error: refundErr.message }, 'Failed to refund pre-reserved quota');
+        }
         const statusCode = err.statusCode;
         const prov = this.providerRepo.findById(conn.provider_id);
         const authType = prov?.auth_type || 'api_key';
@@ -380,11 +451,7 @@ export class GatewayService {
       }
 
       const healthRecord = this.healthRepo.get(conn.id);
-      const cb = new CircuitBreaker(
-        { failureThreshold: 5 },
-        { now: () => now },
-        healthRecord ? { state: healthRecord.state, consecutiveFailures: healthRecord.consecutive_failures, openedAt: healthRecord.opened_at } : undefined
-      );
+      const cb = getSharedCircuitBreaker(conn.id, healthRecord, now);
 
       const isCooldownActive = healthRecord?.cooldown_until != null && now < healthRecord.cooldown_until;
 
@@ -402,7 +469,7 @@ export class GatewayService {
         logger.warn({ connectionId: conn.id, error: quotaErr.message }, 'Failed to compute quota headroom');
       }
 
-      const taskFitnessMap = JSON.parse(mdl.task_fitness || '{}');
+      const taskFitnessMap = safeParseTaskFitness(mdl.task_fitness);
 
       stepInfos.push({
         id: step.id,
@@ -445,11 +512,7 @@ export class GatewayService {
       }
 
       const healthRecord = this.healthRepo.get(conn.id);
-      const cb = new CircuitBreaker(
-        { failureThreshold: 5 },
-        { now: () => Date.now() },
-        healthRecord ? { state: healthRecord.state, consecutiveFailures: healthRecord.consecutive_failures, openedAt: healthRecord.opened_at } : undefined
-      );
+      const cb = getSharedCircuitBreaker(conn.id, healthRecord, Date.now());
 
       if (!cb.allowRequest()) {
         decisionTrace.push({
@@ -476,10 +539,10 @@ export class GatewayService {
       }
 
       let quotaExceeded = false;
+      const estimatedTokens = request.max_tokens || 1000;
       try {
         const dailyPolicy = this.quotaRepo.getPolicy(conn.id, 'daily_tokens');
         if (dailyPolicy) {
-          const estimatedTokens = request.max_tokens || 1000;
           const windowStart = getWindowStart(Date.now(), dailyPolicy.window_seconds);
           const currentUsage = this.quotaRepo.getUsage(conn.id, 'daily_tokens', windowStart);
           const prevUsage = this.quotaRepo.getUsage(conn.id, 'daily_tokens', windowStart - dailyPolicy.window_seconds * 1000);
@@ -502,6 +565,17 @@ export class GatewayService {
           reason: 'Quota limit would be exceeded',
         });
         continue;
+      }
+
+      // Pre-reserve estimated tokens in quota ledger
+      let currentWindowStart = Date.now();
+      try {
+        const dailyPolicy = this.quotaRepo.getPolicy(conn.id, 'daily_tokens');
+        const windowSec = dailyPolicy ? dailyPolicy.window_seconds : 86400;
+        currentWindowStart = getWindowStart(Date.now(), windowSec);
+        this.quotaRepo.recordUsage(conn.id, 'daily_tokens', currentWindowStart, estimatedTokens);
+      } catch (recErr: any) {
+        logger.warn({ connectionId: conn.id, error: recErr.message }, 'Failed to pre-reserve quota usage');
       }
 
       try {
@@ -542,10 +616,10 @@ export class GatewayService {
           step.modelName,
           (usage) => {
             try {
-              const dailyPolicy = this.quotaRepo.getPolicy(conn.id, 'daily_tokens');
-              const windowSec = dailyPolicy ? dailyPolicy.window_seconds : 86400;
-              const currentWindowStart = getWindowStart(Date.now(), windowSec);
-              this.quotaRepo.recordUsage(conn.id, 'daily_tokens', currentWindowStart, usage.totalTokens);
+              const deltaTokens = usage.totalTokens - estimatedTokens;
+              if (deltaTokens !== 0) {
+                this.quotaRepo.recordUsage(conn.id, 'daily_tokens', currentWindowStart, deltaTokens);
+              }
               this.quotaRepo.recordUsage(conn.id, 'daily_requests', currentWindowStart, 1);
             } catch (recErr: any) {
               logger.warn({ connectionId: conn.id, error: recErr.message }, 'Failed to record quota usage');
@@ -576,6 +650,9 @@ export class GatewayService {
             });
           },
           (err) => {
+            try {
+              this.quotaRepo.recordUsage(conn.id, 'daily_tokens', currentWindowStart, -estimatedTokens);
+            } catch {}
             const prov = this.providerRepo.findById(conn.provider_id);
             const authType = prov?.auth_type || 'api_key';
             cb.recordFailure();
@@ -600,6 +677,9 @@ export class GatewayService {
           latencyMs: httpRes.latencyMs,
         };
       } catch (err: any) {
+        try {
+          this.quotaRepo.recordUsage(conn.id, 'daily_tokens', currentWindowStart, -estimatedTokens);
+        } catch {}
         const statusCode = err.statusCode;
         const prov = this.providerRepo.findById(conn.provider_id);
         const authType = prov?.auth_type || 'api_key';

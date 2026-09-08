@@ -50,6 +50,43 @@ export function sanitizeErrorMessage(status: number, data: unknown, contentType:
   return `[PROVIDER_ERROR] status=${status} type=${isHtml ? 'HTML' : 'JSON'} snippet=${snippet}`;
 }
 
+export async function readBoundedBody(response: Response, maxBytes: number = 15 * 1024 * 1024): Promise<string> {
+  if (!response.body) {
+    if (typeof response.text === 'function') {
+      const text = await response.text();
+      if (text.length > maxBytes) {
+        throw new AppError('Upstream payload exceeds maximum safety limit (15MB)', 'PAYLOAD_TOO_LARGE', 502);
+      }
+      return text;
+    }
+    return '';
+  }
+  const reader = response.body.getReader();
+  let totalBytes = 0;
+  const chunks: Uint8Array[] = [];
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (value) {
+      totalBytes += value.byteLength;
+      if (totalBytes > maxBytes) {
+        reader.cancel();
+        throw new AppError('Upstream payload exceeds maximum safety limit (15MB)', 'PAYLOAD_TOO_LARGE', 502);
+      }
+      chunks.push(value);
+    }
+  }
+
+  const totalBuffer = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    totalBuffer.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder().decode(totalBuffer);
+}
+
 export async function callProviderEndpoint<T = unknown>(options: ProviderRequestOptions): Promise<ProviderResponse<T>> {
   const timeoutMs = options.timeoutMs || getConfig().DEFAULT_PROVIDER_TIMEOUT_MS;
   const url = `${options.baseUrl.replace(/\/+$/, '')}/${options.endpoint.replace(/^\/+/, '')}`;
@@ -96,12 +133,26 @@ export async function callProviderEndpoint<T = unknown>(options: ProviderRequest
       }
     }
 
-    let data: unknown;
     const contentType = response.headers.get('content-type') || '';
-    if (contentType.includes('application/json')) {
+    let data: unknown;
+    const rawText = await readBoundedBody(response, 15 * 1024 * 1024);
+
+    if (rawText) {
+      if (contentType.includes('application/json')) {
+        try {
+          data = JSON.parse(rawText);
+        } catch {
+          data = rawText;
+        }
+      } else {
+        data = rawText;
+      }
+    } else if (typeof response.json === 'function' && contentType.includes('application/json')) {
       data = await response.json();
-    } else {
+    } else if (typeof response.text === 'function') {
       data = await response.text();
+    } else {
+      data = '';
     }
 
     if (!response.ok) {
@@ -187,10 +238,24 @@ export async function callProviderEndpointStream(options: ProviderRequestOptions
     if (!response.ok) {
       const contentType = response.headers.get('content-type') || '';
       let data: unknown;
-      if (contentType.includes('application/json')) {
+      const rawText = await readBoundedBody(response, 15 * 1024 * 1024);
+
+      if (rawText) {
+        if (contentType.includes('application/json')) {
+          try {
+            data = JSON.parse(rawText);
+          } catch {
+            data = rawText;
+          }
+        } else {
+          data = rawText;
+        }
+      } else if (typeof response.json === 'function' && contentType.includes('application/json')) {
         data = await response.json();
-      } else {
+      } else if (typeof response.text === 'function') {
         data = await response.text();
+      } else {
+        data = '';
       }
       const retryAfterHeader = response.headers.get('retry-after');
       const retryAfterSeconds = parseRetryAfter(retryAfterHeader);

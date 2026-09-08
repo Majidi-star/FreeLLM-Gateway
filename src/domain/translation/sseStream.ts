@@ -1,4 +1,5 @@
 import { generateId } from '../../shared/ids.js';
+import { AppError } from '../../shared/errors.js';
 
 export interface UsageReport {
   promptTokens: number;
@@ -34,6 +35,7 @@ export async function* transformToOpenAISSEStream(
 ): AsyncGenerator<string, void, unknown> {
   const streamId = generateId('chatcmpl');
   const created = Math.floor(Date.now() / 1000);
+  const decoder = new TextDecoder();
 
   let buffer = '';
   let accumulatedContent = '';
@@ -62,8 +64,11 @@ export async function* transformToOpenAISSEStream(
 
   try {
     for await (const chunk of upstreamStream) {
-      const textChunk = typeof chunk === 'string' ? chunk : new TextDecoder().decode(chunk, { stream: true });
+      const textChunk = typeof chunk === 'string' ? chunk : decoder.decode(chunk, { stream: true });
       buffer += textChunk;
+      if (buffer.length > 1024 * 1024) {
+        throw new AppError('SSE stream line buffer overflow (1MB limit exceeded)', 'BUFFER_OVERFLOW', 502);
+      }
 
       const lines = buffer.split(/\r?\n/);
       buffer = lines.pop() ?? '';

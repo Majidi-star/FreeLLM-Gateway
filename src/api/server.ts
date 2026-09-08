@@ -1,5 +1,6 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
+import { once } from 'events';
 import { getConfig } from '../infra/config.js';
 import { logger } from '../infra/logger.js';
 import { getDatabase } from '../infra/db/client.js';
@@ -48,13 +49,51 @@ export async function buildApp() {
   const fastify = Fastify({
     logger: false, // Use our Pino redacting logger
     genReqId: () => generateId('req'),
+    requestTimeout: 30000,
+    connectionTimeout: 30000,
+    keepAliveTimeout: 65000,
   });
 
-  await fastify.register(cors);
+  await fastify.register(cors, {
+    origin: (origin, cb) => {
+      if (!origin || origin.includes('localhost') || origin.includes('127.0.0.1')) {
+        return cb(null, true);
+      }
+      return cb(null, false);
+    },
+  });
 
-  // Global Request Logging & RequestId Middleware
+  // Global Request Logging & Authentication Middleware
   fastify.addHook('onRequest', async (req, reply) => {
     logger.info({ reqId: req.id, method: req.method, url: req.url }, 'Incoming HTTP request');
+
+    const url = req.url;
+    if (url.startsWith('/api/v1/')) {
+      if (url.startsWith('/api/v1/health')) {
+        return;
+      }
+      const authHeader = req.headers['authorization'];
+      if (!authHeader) {
+        return reply.status(401).send({ error: { message: 'Unauthorized', type: 'authentication_error' } });
+      }
+      const token = authHeader.replace(/^Bearer\s+/i, '').trim();
+      if (token !== config.ADMIN_API_TOKEN) {
+        return reply.status(401).send({ error: { message: 'Unauthorized', type: 'authentication_error' } });
+      }
+    } else if (url.startsWith('/v1/chat/completions')) {
+      const authHeader = req.headers['authorization'];
+      if (authHeader) {
+        const token = authHeader.replace(/^Bearer\s+/i, '').trim();
+        if (token !== config.ADMIN_API_TOKEN) {
+          return reply.status(401).send({ error: { message: 'Unauthorized', type: 'authentication_error' } });
+        }
+      } else {
+        const isDevAllowed = config.NODE_ENV === 'development' && (config.ADMIN_API_TOKEN === 'dev-admin-secret-token' || process.env.ALLOW_ANONYMOUS_DEV === 'true');
+        if (!isDevAllowed) {
+          return reply.status(401).send({ error: { message: 'Unauthorized', type: 'authentication_error' } });
+        }
+      }
+    }
   });
 
   // Centralized Error Handler (Principle 2: Never fail-opaque)
@@ -139,7 +178,10 @@ export async function buildApp() {
         reply.raw.setHeader('x-goalroute-latency-ms', String(dispatchResult.latencyMs));
 
         for await (const chunk of dispatchResult.stream) {
-          reply.raw.write(chunk);
+          const canWriteMore = reply.raw.write(chunk);
+          if (!canWriteMore) {
+            await once(reply.raw, 'drain');
+          }
         }
         streamFinished = true;
       } catch (err: any) {
