@@ -15,7 +15,7 @@ export function calculateCooldownMs(
   const maxCooldownMs = config?.maxCooldownMs ?? 30000;
 
   if (retryAfterSeconds && retryAfterSeconds > 0) {
-    return Math.min(retryAfterSeconds * 1000, maxCooldownMs);
+    return Math.min(retryAfterSeconds * 1000, 3600000);
   }
 
   const base = authType === 'oauth' ? baseOAuthMs : baseApiKeyMs;

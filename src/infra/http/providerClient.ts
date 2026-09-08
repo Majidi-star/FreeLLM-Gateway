@@ -87,6 +87,14 @@ export async function callProviderEndpoint<T = unknown>(options: ProviderRequest
     const latencyMs = Date.now() - startTime;
     clearTimeout(timer);
 
+    const contentLengthHeader = response.headers.get('content-length');
+    if (contentLengthHeader) {
+      const contentLength = parseInt(contentLengthHeader, 10);
+      if (!isNaN(contentLength) && contentLength > 15 * 1024 * 1024) {
+        throw new AppError('Upstream payload exceeds maximum safety limit (15MB)', 'PAYLOAD_TOO_LARGE', 502);
+      }
+    }
+
     let data: unknown;
     const contentType = response.headers.get('content-type') || '';
     if (contentType.includes('application/json')) {
@@ -98,7 +106,8 @@ export async function callProviderEndpoint<T = unknown>(options: ProviderRequest
     if (!response.ok) {
       const retryAfterHeader = response.headers.get('retry-after');
       const retryAfterSeconds = parseRetryAfter(retryAfterHeader);
-      const sanitizedMsg = sanitizeErrorMessage(response.status, data, contentType);
+      const safeData = typeof data === 'string' && data.length > 64 * 1024 ? data.slice(0, 64 * 1024) : data;
+      const sanitizedMsg = sanitizeErrorMessage(response.status, safeData, contentType);
       throw new AppError(sanitizedMsg, 'PROVIDER_HTTP_ERROR', response.status, undefined, retryAfterSeconds);
     }
 

@@ -26,6 +26,8 @@ export interface DispatchResult {
   latencyMs: number;
 }
 
+export const locallyExpiredConnectionIds = new Set<string>();
+
 export class GatewayService {
   constructor(
     private poolRepo: PoolRepository,
@@ -58,6 +60,9 @@ export class GatewayService {
       const prov = conn ? this.providerRepo.findById(conn.provider_id) : null;
 
       if (!conn || !mdl || !prov) continue;
+      if (conn.status === 'expired' || conn.status === 'banned' || conn.status === 'unavailable' || locallyExpiredConnectionIds.has(conn.id)) {
+        continue;
+      }
 
       // Health state & Cooldown state from DB
       const healthRecord = this.healthRepo.get(conn.id);
@@ -113,7 +118,18 @@ export class GatewayService {
     const decisionTrace: DecisionTraceEntry[] = [];
 
     for (const step of orderedSteps) {
-      const conn = this.connectionRepo.findById(step.connectionId)!;
+      const conn = this.connectionRepo.findById(step.connectionId);
+      if (!conn || conn.status === 'expired' || conn.status === 'banned' || conn.status === 'unavailable' || locallyExpiredConnectionIds.has(step.connectionId)) {
+        decisionTrace.push({
+          stepIndex: step.orderIndex,
+          connectionId: step.connectionId,
+          providerSlug: step.providerSlug,
+          modelId: step.modelId,
+          status: 'skipped',
+          reason: `Connection status is ${conn?.status || 'expired'}`,
+        });
+        continue;
+      }
 
       // 1. Circuit Breaker Gate
       const healthRecord = this.healthRepo.get(conn.id);
@@ -265,8 +281,11 @@ export class GatewayService {
         const prov = this.providerRepo.findById(conn.provider_id);
         const authType = prov?.auth_type || 'api_key';
 
-        if (statusCode === 401 || statusCode === 403) {
-          // Terminal credential error: mark connection expired, DO NOT record failure in circuit breaker
+        const isHtmlWaf = /type=HTML/i.test(err.message || '') || /<html>/i.test(err.message || '');
+        const isTerminalAuth = statusCode === 401 || (statusCode === 403 && !isHtmlWaf);
+
+        if (isTerminalAuth) {
+          locallyExpiredConnectionIds.add(conn.id);
           this.connectionRepo.updateStatus(conn.id, 'expired', err.message);
           decisionTrace.push({
             stepIndex: step.orderIndex,
@@ -281,7 +300,7 @@ export class GatewayService {
           continue;
         }
 
-        const isBreakerEligible = statusCode === undefined || [408, 429, 500, 502, 503, 504].includes(statusCode);
+        const isBreakerEligible = statusCode === undefined || [403, 408, 429, 500, 502, 503, 504].includes(statusCode);
 
         if (isBreakerEligible) {
           cb.recordFailure();

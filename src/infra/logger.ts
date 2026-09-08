@@ -20,7 +20,7 @@ export const SENSITIVE_KEYS = [
   'private_key',
 ];
 
-export function redactSensitiveData(obj: unknown): unknown {
+export function redactSensitiveData(obj: unknown, seen = new WeakSet()): unknown {
   if (obj === null || obj === undefined) {
     return obj;
   }
@@ -32,6 +32,10 @@ export function redactSensitiveData(obj: unknown): unknown {
       result = result.replace(/(bearer\s+)[a-zA-Z0-9_\-\.]+/gi, '$1[REDACTED]');
     }
 
+    if (/sk-ant-[A-Za-z0-9_-]{20,}/.test(result)) {
+      result = result.replace(/sk-ant-[A-Za-z0-9_-]{20,}/g, 'sk-ant-[REDACTED]');
+    }
+
     if (/sk-[A-Za-z0-9_-]{16,}/.test(result)) {
       result = result.replace(/sk-[A-Za-z0-9_-]{16,}/g, 'sk-[REDACTED]');
     }
@@ -40,8 +44,16 @@ export function redactSensitiveData(obj: unknown): unknown {
       result = result.replace(/AIza[0-9A-Za-z_-]{30,}/g, 'AIza[REDACTED]');
     }
 
-    if (/[?&](api_key|key|token)=[^&\s]+/i.test(result)) {
-      result = result.replace(/([?&](?:api_key|key|token)=)[^&\s]+/gi, '$1[REDACTED]');
+    if (/gsk_[A-Za-z0-9]{20,}/.test(result)) {
+      result = result.replace(/gsk_[A-Za-z0-9]{20,}/g, 'gsk_[REDACTED]');
+    }
+
+    if (/hf_[A-Za-z0-9]{20,}/.test(result)) {
+      result = result.replace(/hf_[A-Za-z0-9]{20,}/g, 'hf_[REDACTED]');
+    }
+
+    if (/(?:[?&]|%26)?(?:api_key|key|token|auth)(?:=|%3D)[^&\s]+/i.test(result)) {
+      result = result.replace(/((?:[?&]|%26)?(?:api_key|key|token|auth)(?:=|%3D))[^&\s]+/gi, '$1[REDACTED]');
     }
 
     return result;
@@ -51,8 +63,13 @@ export function redactSensitiveData(obj: unknown): unknown {
     return obj;
   }
 
+  if (seen.has(obj)) {
+    return '[CIRCULAR]';
+  }
+  seen.add(obj);
+
   if (Array.isArray(obj)) {
-    return obj.map((item) => redactSensitiveData(item));
+    return obj.map((item) => redactSensitiveData(item, seen));
   }
 
   const redacted: Record<string, unknown> = {};
@@ -63,7 +80,7 @@ export function redactSensitiveData(obj: unknown): unknown {
     if (isSensitive) {
       redacted[key] = '[REDACTED]';
     } else {
-      redacted[key] = redactSensitiveData(value);
+      redacted[key] = redactSensitiveData(value, seen);
     }
   }
 

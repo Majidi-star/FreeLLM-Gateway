@@ -120,7 +120,7 @@ describe('Chaos & Resilience Test Suite', () => {
       credential_iv: Buffer.from('iv'),
       credential_tag: Buffer.from('tag'),
       tier: 'free',
-      status: 'unavailable',
+      status: 'healthy',
       last_tested_at: null,
       last_error: '500 Server Error',
     });
