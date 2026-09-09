@@ -15,7 +15,13 @@ export const GoalStudioModal: React.FC<GoalStudioModalProps> = ({ isOpen, onClos
   const [minAvailability, setMinAvailability] = useState(99.5);
   const [applied, setApplied] = useState(false);
 
-  if (!isOpen) return null;
+  const saveTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  React.useEffect(() => {
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    };
+  }, []);
 
   const handleIntentSelect = (intent: 'coding' | 'chat' | 'reasoning' | 'custom') => {
     setSelectedIntent(intent);
@@ -34,14 +40,6 @@ export const GoalStudioModal: React.FC<GoalStudioModalProps> = ({ isOpen, onClos
     }
   };
 
-  const saveTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  React.useEffect(() => {
-    return () => {
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    };
-  }, []);
-
   const handleSave = () => {
     setApplied(true);
     if (onApplyGoal) {
@@ -53,6 +51,8 @@ export const GoalStudioModal: React.FC<GoalStudioModalProps> = ({ isOpen, onClos
       onClose();
     }, 600);
   };
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">

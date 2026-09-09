@@ -102,7 +102,8 @@ type StreamStatus = 'connecting' | 'live' | 'unauthorized' | 'closed';
 const getAdminToken = () =>
   sessionStorage.getItem('goalroute_admin_token') ||
   localStorage.getItem('goalroute_admin_token') ||
-  '';
+  (import.meta as any).env?.VITE_ADMIN_API_TOKEN ||
+  'dev-admin-secret-token';
 
 export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalStudio, onSelectTrace }) => {
   const [activeSetupPreset, setActiveSetupPreset] = useState<'standard' | 'high_perf' | 'cost_saver' | 'reasoning'>('standard');
