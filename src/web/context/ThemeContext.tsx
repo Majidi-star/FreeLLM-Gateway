@@ -74,6 +74,28 @@ export const PRESET_THEMES: Record<Exclude<ThemePreset, 'Custom'>, ColorTokens> 
   },
 };
 
+const COLOR_REGEX = /^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+(?:\s*,\s*(?:0|1|0?\.\d+))?\s*\))$/;
+
+const ALLOWED_TOKENS = [
+  '--bg-obsidian',
+  '--bg-rail',
+  '--bg-card',
+  '--bg-card-active',
+  '--bg-well',
+  '--border-subtle',
+  '--border-hover',
+  '--accent-primary',
+  '--accent-primary-hover',
+  '--signal-mint',
+  '--signal-amber',
+  '--signal-coral',
+  '--text-primary',
+  '--text-secondary',
+  '--text-muted',
+];
+
+const FORBIDDEN_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+
 interface ThemeContextType {
   preset: ThemePreset;
   tokens: ColorTokens;
@@ -154,16 +176,46 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const importTheme = (jsonString: string): boolean => {
     try {
       const parsed = JSON.parse(jsonString);
-      if (parsed && typeof parsed === 'object') {
-        const importedTokens = parsed.tokens || parsed;
-        const updated = { ...tokens, ...importedTokens };
-        setPresetState('Custom');
-        setTokensState(updated);
-        applyTokensToDOM(updated);
-        localStorage.setItem('goalroute_theme_preset', 'Custom');
-        localStorage.setItem('goalroute_theme_tokens', JSON.stringify(updated));
-        return true;
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+        return false;
       }
+
+      for (const key of Object.keys(parsed)) {
+        if (FORBIDDEN_KEYS.has(key)) {
+          return false;
+        }
+      }
+
+      const importedTokens = parsed.tokens !== undefined ? parsed.tokens : parsed;
+      if (!importedTokens || typeof importedTokens !== 'object' || Array.isArray(importedTokens)) {
+        return false;
+      }
+
+      const tokenKeys = Object.keys(importedTokens);
+      if (tokenKeys.length === 0) {
+        return false;
+      }
+
+      for (const key of tokenKeys) {
+        if (FORBIDDEN_KEYS.has(key)) {
+          return false;
+        }
+        if (!ALLOWED_TOKENS.includes(key)) {
+          return false;
+        }
+        const val = importedTokens[key];
+        if (typeof val !== 'string' || !COLOR_REGEX.test(val)) {
+          return false;
+        }
+      }
+
+      const updated = { ...tokens, ...importedTokens };
+      setPresetState('Custom');
+      setTokensState(updated);
+      applyTokensToDOM(updated);
+      localStorage.setItem('goalroute_theme_preset', 'Custom');
+      localStorage.setItem('goalroute_theme_tokens', JSON.stringify(updated));
+      return true;
     } catch (e) {
       console.error('Failed to import theme JSON', e);
     }

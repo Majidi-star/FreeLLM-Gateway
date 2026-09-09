@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Sliders, Palette, Download, Upload, RotateCcw, Check, Sparkles, AlertCircle } from 'lucide-react';
 import { useTheme, PRESET_THEMES, ThemePreset, ColorTokens } from '../../context/ThemeContext.js';
+import { sanitizeForClipboard } from '../../utils/clipboardSanitizer.js';
 
 const TOKEN_LABELS: Record<keyof ColorTokens, { label: string; description: string }> = {
   '--bg-obsidian': { label: 'Viewport Canvas', description: 'Main background canvas for the application window' },
@@ -28,7 +29,7 @@ export const SettingsAppearanceStudio: React.FC = () => {
 
   const handleExport = () => {
     const jsonStr = exportTheme();
-    navigator.clipboard.writeText(jsonStr);
+    navigator.clipboard.writeText(sanitizeForClipboard(jsonStr));
     setCopiedJson(true);
     setTimeout(() => setCopiedJson(false), 2000);
   };

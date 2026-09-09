@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, CheckCircle2, AlertTriangle, Copy, Check, ChevronDown, ChevronRight, Cpu, Clock, DollarSign, Shield, Info, ArrowUpRight } from 'lucide-react';
 import { GlossaryTerm } from '../common/GlossaryTerm.js';
+import { sanitizeForClipboard } from '../../utils/clipboardSanitizer.js';
 
 export interface DecisionTrace {
   id: string;
@@ -43,7 +44,7 @@ export const DecisionInspectorDrawer: React.FC<DecisionInspectorDrawerProps> = (
   if (!isOpen || !trace) return null;
 
   const handleCopyJson = () => {
-    navigator.clipboard.writeText(JSON.stringify(trace, null, 2).trim());
+    navigator.clipboard.writeText(sanitizeForClipboard(JSON.stringify(trace, null, 2)));
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

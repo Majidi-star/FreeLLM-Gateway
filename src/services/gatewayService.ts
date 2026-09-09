@@ -112,6 +112,8 @@ export function safeParseTaskFitness(raw?: string | null): Record<string, number
 }
 
 export class GatewayService extends EventEmitter {
+  private lastLogTimestamp = 0;
+
   constructor(
     private poolRepo: PoolRepository,
     private connectionRepo: ConnectionRepository,
@@ -135,7 +137,9 @@ export class GatewayService extends EventEmitter {
     isFallback: boolean;
     candidateTrace: DecisionTraceEntry[];
   }) {
-    this.emit('log', payload);
+    const timestamp = Math.max(Date.now(), this.lastLogTimestamp + 1);
+    this.lastLogTimestamp = timestamp;
+    this.emit('log', { ...payload, timestamp });
   }
 
   public async dispatch(poolId: string, request: OpenAIChatRequest): Promise<DispatchResult> {
