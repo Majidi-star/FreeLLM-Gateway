@@ -70,4 +70,22 @@ export class QuotaRepository {
     `);
     stmt.run(connectionId, dimension, windowStart, amount);
   }
+
+  public reserveQuota(
+    connectionId: string,
+    dimension: string,
+    windowStart: number,
+    amount: number,
+    limitValue: number
+  ): boolean {
+    const stmt = this.db.prepare(`
+      INSERT INTO quota_usage (connection_id, dimension, window_start, used_value)
+      VALUES (?, ?, ?, ?)
+      ON CONFLICT(connection_id, dimension, window_start) DO UPDATE SET
+        used_value = used_value + excluded.used_value
+      WHERE used_value + excluded.used_value <= ?
+    `);
+    const result = stmt.run(connectionId, dimension, windowStart, amount, limitValue);
+    return result.changes > 0;
+  }
 }

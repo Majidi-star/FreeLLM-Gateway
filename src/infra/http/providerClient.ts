@@ -112,6 +112,14 @@ export async function callProviderEndpoint<T = unknown>(options: ProviderRequest
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const onExternalAbort = () => controller.abort();
+  if (options.signal) {
+    if (options.signal.aborted) {
+      controller.abort();
+    } else {
+      options.signal.addEventListener('abort', onExternalAbort, { once: true });
+    }
+  }
   const startTime = Date.now();
 
   try {
@@ -124,6 +132,9 @@ export async function callProviderEndpoint<T = unknown>(options: ProviderRequest
 
     const latencyMs = Date.now() - startTime;
     clearTimeout(timer);
+    if (options.signal) {
+      options.signal.removeEventListener('abort', onExternalAbort);
+    }
 
     const contentLengthHeader = response.headers.get('content-length');
     if (contentLengthHeader) {

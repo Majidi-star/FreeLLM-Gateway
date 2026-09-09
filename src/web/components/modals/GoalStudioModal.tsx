@@ -34,12 +34,21 @@ export const GoalStudioModal: React.FC<GoalStudioModalProps> = ({ isOpen, onClos
     }
   };
 
+  const saveTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  React.useEffect(() => {
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    };
+  }, []);
+
   const handleSave = () => {
     setApplied(true);
     if (onApplyGoal) {
       onApplyGoal({ intent: selectedIntent, maxLatency, targetQuality, minAvailability });
     }
-    setTimeout(() => {
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
       setApplied(false);
       onClose();
     }, 600);

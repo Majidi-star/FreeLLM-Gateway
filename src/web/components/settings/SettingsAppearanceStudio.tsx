@@ -26,12 +26,29 @@ export const SettingsAppearanceStudio: React.FC = () => {
   const [importJsonText, setImportJsonText] = useState('');
   const [importStatus, setImportStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [copiedJson, setCopiedJson] = useState(false);
+  const activeTimersRef = React.useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
+
+  React.useEffect(() => {
+    return () => {
+      activeTimersRef.current.forEach((t) => clearTimeout(t));
+      activeTimersRef.current.clear();
+    };
+  }, []);
+
+  const safeTimeout = (fn: () => void, ms: number) => {
+    const t = setTimeout(() => {
+      activeTimersRef.current.delete(t);
+      fn();
+    }, ms);
+    activeTimersRef.current.add(t);
+    return t;
+  };
 
   const handleExport = () => {
     const jsonStr = exportTheme();
     navigator.clipboard.writeText(sanitizeForClipboard(jsonStr));
     setCopiedJson(true);
-    setTimeout(() => setCopiedJson(false), 2000);
+    safeTimeout(() => setCopiedJson(false), 2000);
   };
 
   const handleImport = () => {
@@ -39,7 +56,7 @@ export const SettingsAppearanceStudio: React.FC = () => {
     if (success) {
       setImportStatus('success');
       setImportJsonText('');
-      setTimeout(() => setImportStatus('idle'), 2500);
+      safeTimeout(() => setImportStatus('idle'), 2500);
     } else {
       setImportStatus('error');
     }

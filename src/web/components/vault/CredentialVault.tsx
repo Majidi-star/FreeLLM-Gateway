@@ -81,10 +81,29 @@ export const CredentialVault: React.FC = () => {
   const [isProbing, setIsProbing] = useState(false);
   const [testingKeyIds, setTestingKeyIds] = useState<Record<string, boolean>>({});
 
+  const adminToken = (import.meta.env.VITE_ADMIN_TOKEN as string) || '';
+  const activeTimers = React.useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
+
+  React.useEffect(() => {
+    return () => {
+      activeTimers.current.forEach((t) => clearTimeout(t));
+      activeTimers.current.clear();
+    };
+  }, []);
+
+  const safeTimeout = (fn: () => void, ms: number) => {
+    const t = setTimeout(() => {
+      activeTimers.current.delete(t);
+      fn();
+    }, ms);
+    activeTimers.current.add(t);
+    return t;
+  };
+
   const handleTestAllKeys = () => {
     setIsProbing(true);
     // Simulate 400ms handshake probe animation
-    setTimeout(() => {
+    safeTimeout(() => {
       setKeys((prev) =>
         prev.map((k) => ({
           ...k,
@@ -103,7 +122,7 @@ export const CredentialVault: React.FC = () => {
     try {
       await fetch(`/api/v1/providers/${id}`, {
         method: 'DELETE',
-        headers: { authorization: 'Bearer dev-admin-secret-token' },
+        headers: adminToken ? { authorization: `Bearer ${adminToken}` } : {},
       });
     } catch (e) {
       console.error('Failed to revoke provider key', e);
@@ -116,12 +135,12 @@ export const CredentialVault: React.FC = () => {
     try {
       const res = await fetch(`/api/v1/providers/${id}/test`, {
         method: 'POST',
-        headers: { authorization: 'Bearer dev-admin-secret-token' },
+        headers: adminToken ? { authorization: `Bearer ${adminToken}` } : {},
       });
       const data = await res.json().catch(() => ({}));
       const elapsed = Date.now() - startTime;
       if (elapsed < 400) {
-        await new Promise((resolve) => setTimeout(resolve, 400 - elapsed));
+        await new Promise<void>((resolve) => safeTimeout(resolve, 400 - elapsed));
       }
       setKeys((prev) =>
         prev.map((k) => {
@@ -137,7 +156,7 @@ export const CredentialVault: React.FC = () => {
     } catch (e) {
       const elapsed = Date.now() - startTime;
       if (elapsed < 400) {
-        await new Promise((resolve) => setTimeout(resolve, 400 - elapsed));
+        await new Promise<void>((resolve) => safeTimeout(resolve, 400 - elapsed));
       }
       setKeys((prev) =>
         prev.map((k) => (k.id === id ? { ...k, status: 'degraded', lastVerified: 'Failed' } : k))

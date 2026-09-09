@@ -56,9 +56,13 @@ export async function buildApp() {
 
   await fastify.register(cors, {
     origin: (origin, cb) => {
-      if (!origin || origin.includes('localhost') || origin.includes('127.0.0.1')) {
-        return cb(null, true);
-      }
+      if (!origin) return cb(null, true);
+      try {
+        const { hostname } = new URL(origin);
+        if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.endsWith('.localhost')) {
+          return cb(null, true);
+        }
+      } catch {}
       return cb(null, false);
     },
   });
@@ -70,6 +74,9 @@ export async function buildApp() {
     const url = req.url;
     if (url.startsWith('/api/v1/')) {
       if (url.startsWith('/api/v1/health')) {
+        return;
+      }
+      if (url.startsWith('/api/v1/request-logs/stream') && (req.query as any)?.token === config.ADMIN_API_TOKEN) {
         return;
       }
       const authHeader = req.headers['authorization'];
@@ -125,7 +132,15 @@ export async function buildApp() {
   });
 
   // Health probe endpoint
-  fastify.get('/api/v1/health', async () => {
+  fastify.get('/api/v1/health', async (req) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader ? authHeader.replace(/^Bearer\s+/i, '').trim() : '';
+    const isAuthenticated = token === config.ADMIN_API_TOKEN;
+
+    if (!isAuthenticated) {
+      return { status: 'ok', timestamp: Date.now() };
+    }
+
     const connections = connectionRepo.listAll();
     const summary = connections.map((c) => {
       const p = providerRepo.findById(c.provider_id);
@@ -177,37 +192,54 @@ export async function buildApp() {
         reply.raw.setHeader('x-goalroute-model', dispatchResult.selectedStep.modelName);
         reply.raw.setHeader('x-goalroute-latency-ms', String(dispatchResult.latencyMs));
 
+        reply.raw.on('error', () => {});
+
         for await (const chunk of dispatchResult.stream) {
           const canWriteMore = reply.raw.write(chunk);
           if (!canWriteMore) {
-            await once(reply.raw, 'drain');
+            await Promise.race([once(reply.raw, 'drain'), once(reply.raw, 'close')]);
+            if (reply.raw.destroyed) break;
           }
         }
         streamFinished = true;
       } catch (err: any) {
-        if (reply.raw.headersSent) {
+        if (reply.raw.headersSent && !reply.raw.writableEnded && !reply.raw.destroyed) {
           reply.raw.write('data: {"id":"chatcmpl-err","object":"chat.completion.chunk","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}\n\n');
           reply.raw.write('event: error\ndata: {"error":"Upstream provider stream disconnected"}\n\n');
           reply.raw.write('data: [DONE]\n\n');
-        } else {
+        } else if (!reply.raw.headersSent) {
           throw err;
         }
       } finally {
         req.raw.removeListener('close', onClose);
-        if (reply.raw.headersSent) {
+        if (reply.raw.headersSent && !reply.raw.writableEnded && !reply.raw.destroyed) {
           reply.raw.end();
         }
       }
       return reply;
     }
 
-    const dispatchResult = await gatewayService.dispatch(targetPoolId, body);
+    const abortController = new AbortController();
+    let isFinished = false;
+    const onClose = () => {
+      if (!isFinished) {
+        abortController.abort();
+      }
+    };
+    req.raw.on('close', onClose);
 
-    reply.header('x-goalroute-provider', dispatchResult.selectedStep.providerSlug);
-    reply.header('x-goalroute-model', dispatchResult.selectedStep.modelName);
-    reply.header('x-goalroute-latency-ms', dispatchResult.latencyMs);
+    try {
+      const dispatchResult = await gatewayService.dispatch(targetPoolId, body, abortController.signal);
+      isFinished = true;
 
-    return reply.send(dispatchResult.response);
+      reply.header('x-goalroute-provider', dispatchResult.selectedStep.providerSlug);
+      reply.header('x-goalroute-model', dispatchResult.selectedStep.modelName);
+      reply.header('x-goalroute-latency-ms', dispatchResult.latencyMs);
+
+      return reply.send(dispatchResult.response);
+    } finally {
+      req.raw.removeListener('close', onClose);
+    }
   });
 
   // Management Routes
@@ -228,7 +260,8 @@ export async function buildApp() {
 
   fastify.get('/api/v1/request-logs', async (req) => {
     const q = req.query as any;
-    return logRepo.query({ poolId: q?.poolId, limit: q?.limit ? Number(q.limit) : 50 });
+    const limit = Math.min(Math.max(1, Math.floor(Number(q?.limit)) || 50), 500);
+    return logRepo.query({ poolId: q?.poolId, limit });
   });
 
   fastify.get('/api/v1/request-logs/stream', async (req, reply) => {

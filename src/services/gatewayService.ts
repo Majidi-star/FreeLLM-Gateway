@@ -142,7 +142,7 @@ export class GatewayService extends EventEmitter {
     this.emit('log', { ...payload, timestamp });
   }
 
-  public async dispatch(poolId: string, request: OpenAIChatRequest): Promise<DispatchResult> {
+  public async dispatch(poolId: string, request: OpenAIChatRequest, signal?: AbortSignal): Promise<DispatchResult> {
     const traceId = (request as any).traceId || generateId('tr');
     const clientName = (request as any).user || 'GoalRoute Client';
 
@@ -251,6 +251,7 @@ export class GatewayService extends EventEmitter {
 
       // 2. Cooldown Gate
       if (healthRecord?.cooldown_until != null && Date.now() < healthRecord.cooldown_until) {
+        cb.releaseProbe();
         decisionTrace.push({
           stepIndex: step.orderIndex,
           connectionId: step.connectionId,
@@ -262,17 +263,22 @@ export class GatewayService extends EventEmitter {
         continue;
       }
 
-      // 2. Quota Gate (Fail-Open on DB error)
+      // 3. Quota Gate (Atomic Reservation)
       let quotaExceeded = false;
       const estimatedTokens = request.max_tokens || 1000;
+      let currentWindowStart = Date.now();
       try {
         const dailyPolicy = this.quotaRepo.getPolicy(conn.id, 'daily_tokens');
         if (dailyPolicy) {
-          const windowStart = getWindowStart(Date.now(), dailyPolicy.window_seconds);
-          const currentUsage = this.quotaRepo.getUsage(conn.id, 'daily_tokens', windowStart);
-          const prevUsage = this.quotaRepo.getUsage(conn.id, 'daily_tokens', windowStart - dailyPolicy.window_seconds * 1000);
-
-          if (wouldQuotaExceed(dailyPolicy.limit_value, { currentUsage, previousUsage: prevUsage, windowSeconds: dailyPolicy.window_seconds, nowMs: Date.now() }, estimatedTokens)) {
+          currentWindowStart = getWindowStart(Date.now(), dailyPolicy.window_seconds);
+          const reserved = this.quotaRepo.reserveQuota(
+            conn.id,
+            'daily_tokens',
+            currentWindowStart,
+            estimatedTokens,
+            dailyPolicy.limit_value
+          );
+          if (!reserved) {
             quotaExceeded = true;
           }
         }
@@ -281,6 +287,7 @@ export class GatewayService extends EventEmitter {
       }
 
       if (quotaExceeded) {
+        cb.releaseProbe();
         decisionTrace.push({
           stepIndex: step.orderIndex,
           connectionId: step.connectionId,
@@ -292,18 +299,7 @@ export class GatewayService extends EventEmitter {
         continue;
       }
 
-      // Pre-reserve estimated tokens in quota ledger
-      let currentWindowStart = Date.now();
-      try {
-        const dailyPolicy = this.quotaRepo.getPolicy(conn.id, 'daily_tokens');
-        const windowSec = dailyPolicy ? dailyPolicy.window_seconds : 86400;
-        currentWindowStart = getWindowStart(Date.now(), windowSec);
-        this.quotaRepo.recordUsage(conn.id, 'daily_tokens', currentWindowStart, estimatedTokens);
-      } catch (recErr: any) {
-        logger.warn({ connectionId: conn.id, error: recErr.message }, 'Failed to pre-reserve quota usage');
-      }
-
-      // 3. Dispatch Attempt
+      // 4. Dispatch Attempt
       try {
         const apiKey = decryptCredential({
           ciphertext: conn.credential_enc,
@@ -322,6 +318,7 @@ export class GatewayService extends EventEmitter {
           headers: translated.headers,
           body: translated.body,
           timeoutMs: 30000,
+          signal,
         });
 
         const oaiResponse = translateResponseToOpenAI(httpRes.data, step.providerProtocol, step.modelName);
@@ -624,6 +621,7 @@ export class GatewayService extends EventEmitter {
       }
 
       if (healthRecord?.cooldown_until != null && Date.now() < healthRecord.cooldown_until) {
+        cb.releaseProbe();
         decisionTrace.push({
           stepIndex: step.orderIndex,
           connectionId: step.connectionId,
@@ -635,16 +633,22 @@ export class GatewayService extends EventEmitter {
         continue;
       }
 
+      // Quota Gate (Atomic Reservation)
       let quotaExceeded = false;
       const estimatedTokens = request.max_tokens || 1000;
+      let currentWindowStart = Date.now();
       try {
         const dailyPolicy = this.quotaRepo.getPolicy(conn.id, 'daily_tokens');
         if (dailyPolicy) {
-          const windowStart = getWindowStart(Date.now(), dailyPolicy.window_seconds);
-          const currentUsage = this.quotaRepo.getUsage(conn.id, 'daily_tokens', windowStart);
-          const prevUsage = this.quotaRepo.getUsage(conn.id, 'daily_tokens', windowStart - dailyPolicy.window_seconds * 1000);
-
-          if (wouldQuotaExceed(dailyPolicy.limit_value, { currentUsage, previousUsage: prevUsage, windowSeconds: dailyPolicy.window_seconds, nowMs: Date.now() }, estimatedTokens)) {
+          currentWindowStart = getWindowStart(Date.now(), dailyPolicy.window_seconds);
+          const reserved = this.quotaRepo.reserveQuota(
+            conn.id,
+            'daily_tokens',
+            currentWindowStart,
+            estimatedTokens,
+            dailyPolicy.limit_value
+          );
+          if (!reserved) {
             quotaExceeded = true;
           }
         }
@@ -653,6 +657,7 @@ export class GatewayService extends EventEmitter {
       }
 
       if (quotaExceeded) {
+        cb.releaseProbe();
         decisionTrace.push({
           stepIndex: step.orderIndex,
           connectionId: step.connectionId,
@@ -662,17 +667,6 @@ export class GatewayService extends EventEmitter {
           reason: 'Quota limit would be exceeded',
         });
         continue;
-      }
-
-      // Pre-reserve estimated tokens in quota ledger
-      let currentWindowStart = Date.now();
-      try {
-        const dailyPolicy = this.quotaRepo.getPolicy(conn.id, 'daily_tokens');
-        const windowSec = dailyPolicy ? dailyPolicy.window_seconds : 86400;
-        currentWindowStart = getWindowStart(Date.now(), windowSec);
-        this.quotaRepo.recordUsage(conn.id, 'daily_tokens', currentWindowStart, estimatedTokens);
-      } catch (recErr: any) {
-        logger.warn({ connectionId: conn.id, error: recErr.message }, 'Failed to pre-reserve quota usage');
       }
 
       try {

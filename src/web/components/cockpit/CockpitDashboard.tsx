@@ -102,11 +102,18 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
   const [traces, setTraces] = useState<DecisionTrace[]>(SAMPLE_TRACES);
 
   React.useEffect(() => {
+    const adminToken = (import.meta.env.VITE_ADMIN_TOKEN as string) || '';
+    const controller = new AbortController();
+
     // Preload recent logs from API
     fetch('/api/v1/request-logs', {
-      headers: { authorization: 'Bearer dev-admin-secret-token' },
+      headers: adminToken ? { authorization: `Bearer ${adminToken}` } : {},
+      signal: controller.signal,
     })
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+        return res.json();
+      })
       .then((logs) => {
         if (Array.isArray(logs) && logs.length > 0) {
           const mapped = logs.map((l: any) => {
@@ -134,8 +141,14 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
       .catch(() => {});
 
     // Subscribe to SSE real-time stream
-    const es = new EventSource('/api/v1/request-logs/stream');
+    const sseUrl = adminToken
+      ? `/api/v1/request-logs/stream?token=${encodeURIComponent(adminToken)}`
+      : '/api/v1/request-logs/stream';
+    const es = new EventSource(sseUrl);
+    let reconnectCount = 0;
+
     es.onmessage = (event) => {
+      reconnectCount = 0;
       try {
         const parsed = JSON.parse(event.data);
         if (parsed && (parsed.traceId || parsed.provider)) {
@@ -145,7 +158,15 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
       } catch {}
     };
 
+    es.onerror = () => {
+      reconnectCount += 1;
+      if (reconnectCount >= 5) {
+        es.close();
+      }
+    };
+
     return () => {
+      controller.abort();
       es.close();
     };
   }, []);

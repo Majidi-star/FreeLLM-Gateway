@@ -6,7 +6,7 @@ import { HealthRepository } from '../infra/db/repositories/healthRepo.js';
 import { QuotaRepository } from '../infra/db/repositories/quotaRepo.js';
 import { solveGoal } from '../domain/goal/solver.js';
 import { GoalInput, CandidateSource, PoolPlan } from '../domain/goal/types.js';
-import { isConnectionActive } from './gatewayService.js';
+import { isConnectionActive, safeParseTaskFitness } from './gatewayService.js';
 import { NotFoundError } from '../shared/errors.js';
 
 export class GoalService {
@@ -67,7 +67,7 @@ export class GoalService {
       const reqPolicy = this.quotaRepo.getPolicy(conn.id, 'daily_requests');
 
       for (const model of models) {
-        const taskFitnessMap = JSON.parse(model.task_fitness || '{}');
+        const taskFitnessMap = safeParseTaskFitness(model.task_fitness);
         const fitness = taskFitnessMap[taskType] ?? 0.5;
 
         candidates.push({

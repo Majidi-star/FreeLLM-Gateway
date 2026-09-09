@@ -14,6 +14,8 @@ import { PoolRepository } from '../../src/infra/db/repositories/poolRepo.js';
 import { HealthRepository } from '../../src/infra/db/repositories/healthRepo.js';
 import { QuotaRepository } from '../../src/infra/db/repositories/quotaRepo.js';
 
+import { getConfig } from '../../src/infra/config.js';
+
 describe('GoalRoute End-to-End Integration Flow', () => {
   beforeEach(() => {
     process.env.ENCRYPTION_MASTER_KEY = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
@@ -94,6 +96,7 @@ describe('GoalRoute End-to-End Integration Flow', () => {
     const healthRes = await app.inject({
       method: 'GET',
       url: '/api/v1/health',
+      headers: { authorization: `Bearer ${getConfig().ADMIN_API_TOKEN}` },
     });
 
     expect(healthRes.statusCode).toBe(200);

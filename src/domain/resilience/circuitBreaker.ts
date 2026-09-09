@@ -98,6 +98,12 @@ export class CircuitBreaker {
     return false; // State is OPEN
   }
 
+  public releaseProbe(): void {
+    if (this.state === 'half_open') {
+      this.halfOpenProbeActive = false;
+    }
+  }
+
   public recordSuccess(): void {
     this.state = 'closed';
     this.consecutiveFailures = 0;

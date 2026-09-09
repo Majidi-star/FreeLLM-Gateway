@@ -40,13 +40,21 @@ interface DecisionInspectorDrawerProps {
 export const DecisionInspectorDrawer: React.FC<DecisionInspectorDrawerProps> = ({ trace, isOpen, onClose }) => {
   const [copied, setCopied] = useState(false);
   const [showRawJson, setShowRawJson] = useState(false);
+  const copyTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  React.useEffect(() => {
+    return () => {
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+    };
+  }, []);
 
   if (!isOpen || !trace) return null;
 
   const handleCopyJson = () => {
     navigator.clipboard.writeText(sanitizeForClipboard(JSON.stringify(trace, null, 2)));
     setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+    copyTimerRef.current = setTimeout(() => setCopied(false), 2000);
   };
 
   return (
