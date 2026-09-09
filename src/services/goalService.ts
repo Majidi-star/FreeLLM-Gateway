@@ -6,6 +6,7 @@ import { HealthRepository } from '../infra/db/repositories/healthRepo.js';
 import { QuotaRepository } from '../infra/db/repositories/quotaRepo.js';
 import { solveGoal } from '../domain/goal/solver.js';
 import { GoalInput, CandidateSource, PoolPlan } from '../domain/goal/types.js';
+import { isConnectionActive } from './gatewayService.js';
 import { NotFoundError } from '../shared/errors.js';
 
 export class GoalService {
@@ -55,7 +56,7 @@ export class GoalService {
     const candidates: CandidateSource[] = [];
 
     for (const conn of connections) {
-      if (conn.status === 'banned' || conn.status === 'expired') continue;
+      if (!isConnectionActive(conn)) continue;
 
       const provider = this.providerRepo.findById(conn.provider_id);
       if (!provider || !provider.is_active) continue;

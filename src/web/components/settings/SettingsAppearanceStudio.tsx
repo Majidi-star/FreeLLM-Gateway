@@ -44,11 +44,28 @@ export const SettingsAppearanceStudio: React.FC = () => {
     }
   };
 
-  // Helper to safely parse color string to hex for <input type="color">
+  // Helper to safely parse color string (hex or rgba/rgb) to hex for <input type="color">
   const getHexForInput = (colorStr: string): string => {
-    if (colorStr.startsWith('#')) return colorStr;
-    if (colorStr.startsWith('rgba') || colorStr.startsWith('rgb')) {
-      return '#7c9cff'; // Fallback for rgba string in picker
+    if (!colorStr) return '#121622';
+    const trimmed = colorStr.trim();
+    if (trimmed.startsWith('#')) {
+      if (trimmed.length === 4) {
+        return `#${trimmed[1]}${trimmed[1]}${trimmed[2]}${trimmed[2]}${trimmed[3]}${trimmed[3]}`;
+      }
+      return trimmed;
+    }
+
+    const match = trimmed.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*([\d.]+)\s*)?\)$/i);
+    if (match) {
+      const r = Math.min(255, Math.max(0, parseInt(match[1], 10))).toString(16).padStart(2, '0');
+      const g = Math.min(255, Math.max(0, parseInt(match[2], 10))).toString(16).padStart(2, '0');
+      const b = Math.min(255, Math.max(0, parseInt(match[3], 10))).toString(16).padStart(2, '0');
+      if (match[4] !== undefined) {
+        const aFloat = parseFloat(match[4]);
+        const a = Math.min(255, Math.max(0, Math.round(aFloat * 255))).toString(16).padStart(2, '0');
+        return `#${r}${g}${b}${a}`;
+      }
+      return `#${r}${g}${b}`;
     }
     return '#121622';
   };

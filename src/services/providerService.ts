@@ -1,5 +1,7 @@
 import { ProviderRepository } from '../infra/db/repositories/providerRepo.js';
 import { ConnectionRepository, ProviderConnectionRecord } from '../infra/db/repositories/connectionRepo.js';
+import { HealthRepository } from '../infra/db/repositories/healthRepo.js';
+import { breakerRegistry, getSharedCircuitBreaker, locallyExpiredConnectionIds } from './gatewayService.js';
 import { encryptCredential, decryptCredential } from '../infra/security/vault.js';
 import { callProviderEndpoint } from '../infra/http/providerClient.js';
 import { NotFoundError, ValidationError } from '../shared/errors.js';
@@ -118,6 +120,58 @@ export class ProviderService {
     }
     this.connectionRepo.delete(connectionId);
     logger.info({ connectionId }, 'Removed provider connection');
+  }
+
+  public revokeConnection(id: string, healthRepo?: HealthRepository): { success: boolean; id: string; status: string } {
+    const conn = this.connectionRepo.findById(id);
+    let connectionsToRevoke: ProviderConnectionRecord[] = [];
+
+    if (conn) {
+      connectionsToRevoke.push(conn);
+    } else {
+      const providerConns = this.connectionRepo.listByProviderId(id);
+      if (providerConns.length > 0) {
+        connectionsToRevoke.push(...providerConns);
+      }
+    }
+
+    if (connectionsToRevoke.length === 0) {
+      throw new NotFoundError(`Connection or provider with ID '${id}' not found`);
+    }
+
+    const now = Date.now();
+    for (const c of connectionsToRevoke) {
+      // 1. Mark status as 'revoked' in SQLite WAL database
+      this.connectionRepo.updateStatus(c.id, 'revoked', 'Credential revoked by admin');
+      locallyExpiredConnectionIds.add(c.id);
+
+      // 2. Immediately transition circuit breaker state to OPEN
+      if (healthRepo) {
+        healthRepo.upsert({
+          connection_id: c.id,
+          state: 'open',
+          consecutive_failures: 5,
+          opened_at: now,
+          cooldown_until: now + 86400000,
+        });
+      }
+
+      const cb = breakerRegistry.get(c.id);
+      if (cb) {
+        while (cb.getState() !== 'open') {
+          cb.recordFailure();
+        }
+      } else {
+        const newCb = getSharedCircuitBreaker(c.id, { state: 'open', consecutive_failures: 5, opened_at: now }, now);
+        while (newCb.getState() !== 'open') {
+          newCb.recordFailure();
+        }
+      }
+
+      logger.info({ connectionId: c.id }, 'Credential revoked and circuit breaker set to OPEN');
+    }
+
+    return { success: true, id, status: 'revoked' };
   }
 
   public getDecryptedApiKey(connectionId: string): string {

@@ -13,6 +13,7 @@ export interface DecisionTrace {
   routingPolicy: string;
   heuristicScore: number;
   verdict: string;
+  isFallback?: boolean;
   candidates: {
     name: string;
     provider: string;
@@ -42,7 +43,7 @@ export const DecisionInspectorDrawer: React.FC<DecisionInspectorDrawerProps> = (
   if (!isOpen || !trace) return null;
 
   const handleCopyJson = () => {
-    navigator.clipboard.writeText(JSON.stringify(trace, null, 2));
+    navigator.clipboard.writeText(JSON.stringify(trace, null, 2).trim());
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

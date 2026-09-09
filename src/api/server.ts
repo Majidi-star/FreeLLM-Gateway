@@ -214,6 +214,7 @@ export async function buildApp() {
   fastify.get('/api/v1/providers', async () => providerService.listConnections());
   fastify.post('/api/v1/providers', async (req) => providerService.addConnection(req.body as any));
   fastify.post('/api/v1/providers/:id/test', async (req) => providerService.testConnection((req.params as any).id));
+  fastify.delete('/api/v1/providers/:id', async (req) => providerService.revokeConnection((req.params as any).id, healthRepo));
 
   fastify.get('/api/v1/goals', async () => goalService.listGoals());
   fastify.post('/api/v1/goals', async (req) => goalService.createGoal(req.body as any));
@@ -228,6 +229,36 @@ export async function buildApp() {
   fastify.get('/api/v1/request-logs', async (req) => {
     const q = req.query as any;
     return logRepo.query({ poolId: q?.poolId, limit: q?.limit ? Number(q.limit) : 50 });
+  });
+
+  fastify.get('/api/v1/request-logs/stream', async (req, reply) => {
+    reply.raw.setHeader('Content-Type', 'text/event-stream');
+    reply.raw.setHeader('Cache-Control', 'no-cache');
+    reply.raw.setHeader('Connection', 'keep-alive');
+    reply.raw.write(': ok\n\n');
+
+    const onLogEvent = (eventData: any) => {
+      if (!reply.raw.writableEnded) {
+        reply.raw.write(`data: ${JSON.stringify(eventData)}\n\n`);
+      }
+    };
+
+    gatewayService.on('log', onLogEvent);
+
+    const cleanup = () => {
+      gatewayService.removeListener('log', onLogEvent);
+      if (!reply.raw.writableEnded) {
+        reply.raw.end();
+      }
+    };
+
+    req.raw.on('close', cleanup);
+
+    if ((req.query as any)?.once === 'true') {
+      cleanup();
+    }
+
+    return reply;
   });
 
   return fastify;

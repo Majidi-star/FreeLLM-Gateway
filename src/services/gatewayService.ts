@@ -1,3 +1,4 @@
+import { EventEmitter } from 'events';
 import { PoolRepository } from '../infra/db/repositories/poolRepo.js';
 import { ConnectionRepository } from '../infra/db/repositories/connectionRepo.js';
 import { ModelRepository } from '../infra/db/repositories/modelRepo.js';
@@ -15,6 +16,7 @@ import { OpenAIChatRequest, OpenAIChatResponse } from '../domain/translation/typ
 import { callProviderEndpoint, callProviderEndpointStream } from '../infra/http/providerClient.js';
 import { transformToOpenAISSEStream } from '../domain/translation/sseStream.js';
 import { decryptCredential } from '../infra/security/vault.js';
+import { generateId } from '../shared/ids.js';
 import { AllTargetsExhaustedError, NotFoundError } from '../shared/errors.js';
 import { DecisionTraceEntry } from '../shared/types.js';
 import { PoolStepInfo } from '../domain/routing/types.js';
@@ -85,6 +87,20 @@ export const locallyExpiredConnectionIds = {
   },
 };
 
+export function isConnectionActive(conn: { status: string; id: string } | null): boolean {
+  if (!conn) return false;
+  if (['expired', 'revoked', 'deleted', 'banned', 'unavailable'].includes(conn.status)) {
+    return false;
+  }
+  if (conn.status !== 'active' && conn.status !== 'healthy' && conn.status !== 'untested') {
+    return false;
+  }
+  if (locallyExpiredConnectionIds.has(conn.id)) {
+    return false;
+  }
+  return true;
+}
+
 export function safeParseTaskFitness(raw?: string | null): Record<string, number> {
   if (!raw) return {};
   try {
@@ -95,7 +111,7 @@ export function safeParseTaskFitness(raw?: string | null): Record<string, number
   }
 }
 
-export class GatewayService {
+export class GatewayService extends EventEmitter {
   constructor(
     private poolRepo: PoolRepository,
     private connectionRepo: ConnectionRepository,
@@ -104,9 +120,28 @@ export class GatewayService {
     private healthRepo: HealthRepository,
     private quotaRepo: QuotaRepository,
     private logRepo: RequestLogRepository
-  ) {}
+  ) {
+    super();
+  }
+
+  private emitLogEvent(payload: {
+    traceId: string;
+    timestamp: number;
+    clientName: string;
+    provider: string;
+    model: string;
+    tokens: { prompt: number; completion: number; total: number };
+    latencyMs: number;
+    isFallback: boolean;
+    candidateTrace: DecisionTraceEntry[];
+  }) {
+    this.emit('log', payload);
+  }
 
   public async dispatch(poolId: string, request: OpenAIChatRequest): Promise<DispatchResult> {
+    const traceId = (request as any).traceId || generateId('tr');
+    const clientName = (request as any).user || 'GoalRoute Client';
+
     const pool = this.poolRepo.findPoolById(poolId);
     if (!pool || !pool.is_active) {
       throw new NotFoundError(`Active pool with ID '${poolId}' not found`);
@@ -127,7 +162,7 @@ export class GatewayService {
       const prov = conn ? this.providerRepo.findById(conn.provider_id) : null;
 
       if (!conn || !mdl || !prov) continue;
-      if (conn.status === 'expired' || conn.status === 'banned' || conn.status === 'unavailable' || locallyExpiredConnectionIds.has(conn.id)) {
+      if (!isConnectionActive(conn)) {
         continue;
       }
 
@@ -182,7 +217,7 @@ export class GatewayService {
 
     for (const step of orderedSteps) {
       const conn = this.connectionRepo.findById(step.connectionId);
-      if (!conn || conn.status === 'expired' || conn.status === 'banned' || conn.status === 'unavailable' || locallyExpiredConnectionIds.has(step.connectionId)) {
+      if (!conn || !isConnectionActive(conn)) {
         decisionTrace.push({
           stepIndex: step.orderIndex,
           connectionId: step.connectionId,
@@ -343,6 +378,26 @@ export class GatewayService {
           decision_trace: JSON.stringify(decisionTrace),
         });
 
+        const promptTokens = oaiResponse.usage?.prompt_tokens || 0;
+        const completionTokens = oaiResponse.usage?.completion_tokens || 0;
+        const isFallback = decisionTrace.some((t) => t.status === 'attempted_failed') || decisionTrace.length > 1;
+
+        this.emitLogEvent({
+          traceId,
+          timestamp: Date.now(),
+          clientName,
+          provider: step.providerSlug,
+          model: step.modelName,
+          tokens: {
+            prompt: promptTokens,
+            completion: completionTokens,
+            total: promptTokens + completionTokens,
+          },
+          latencyMs: httpRes.latencyMs,
+          isFallback,
+          candidateTrace: [...decisionTrace],
+        });
+
         return {
           response: oaiResponse,
           decisionTrace,
@@ -375,6 +430,17 @@ export class GatewayService {
             error: err.message,
             reason: 'CREDENTIAL_EXPIRED',
           });
+          this.emitLogEvent({
+            traceId,
+            timestamp: Date.now(),
+            clientName,
+            provider: step.providerSlug,
+            model: step.modelName,
+            tokens: { prompt: 0, completion: 0, total: 0 },
+            latencyMs: 0,
+            isFallback: true,
+            candidateTrace: [...decisionTrace],
+          });
           logger.warn({ connectionId: conn.id, error: err.message }, 'Credential expired (401/403), connection status updated to expired');
           continue;
         }
@@ -405,6 +471,18 @@ export class GatewayService {
           error: err.message,
         });
 
+        this.emitLogEvent({
+          traceId,
+          timestamp: Date.now(),
+          clientName,
+          provider: step.providerSlug,
+          model: step.modelName,
+          tokens: { prompt: 0, completion: 0, total: 0 },
+          latencyMs: 0,
+          isFallback: true,
+          candidateTrace: [...decisionTrace],
+        });
+
         logger.warn({ connectionId: conn.id, error: err.message }, 'Target dispatch failed, falling back to next step');
       }
     }
@@ -423,10 +501,25 @@ export class GatewayService {
       decision_trace: JSON.stringify(decisionTrace),
     });
 
+    this.emitLogEvent({
+      traceId,
+      timestamp: Date.now(),
+      clientName,
+      provider: 'unknown',
+      model: 'unknown',
+      tokens: { prompt: 0, completion: 0, total: 0 },
+      latencyMs: 0,
+      isFallback: true,
+      candidateTrace: [...decisionTrace],
+    });
+
     throw new AllTargetsExhaustedError(decisionTrace);
   }
 
   public async dispatchStream(poolId: string, request: OpenAIChatRequest, signal?: AbortSignal): Promise<DispatchStreamResult> {
+    const traceId = (request as any).traceId || generateId('tr');
+    const clientName = (request as any).user || 'GoalRoute Client';
+
     const pool = this.poolRepo.findPoolById(poolId);
     if (!pool || !pool.is_active) {
       throw new NotFoundError(`Active pool with ID '${poolId}' not found`);
@@ -446,7 +539,7 @@ export class GatewayService {
       const prov = conn ? this.providerRepo.findById(conn.provider_id) : null;
 
       if (!conn || !mdl || !prov) continue;
-      if (conn.status === 'expired' || conn.status === 'banned' || conn.status === 'unavailable' || locallyExpiredConnectionIds.has(conn.id)) {
+      if (!isConnectionActive(conn)) {
         continue;
       }
 
@@ -499,7 +592,7 @@ export class GatewayService {
 
     for (const step of orderedSteps) {
       const conn = this.connectionRepo.findById(step.connectionId);
-      if (!conn || conn.status === 'expired' || conn.status === 'banned' || conn.status === 'unavailable' || locallyExpiredConnectionIds.has(step.connectionId)) {
+      if (!conn || !isConnectionActive(conn)) {
         decisionTrace.push({
           stepIndex: step.orderIndex,
           connectionId: step.connectionId,
@@ -637,6 +730,23 @@ export class GatewayService {
               error_code: null,
               decision_trace: JSON.stringify(decisionTrace),
             });
+
+            const isFallback = decisionTrace.some((t) => t.status === 'attempted_failed') || decisionTrace.length > 1;
+            this.emitLogEvent({
+              traceId,
+              timestamp: Date.now(),
+              clientName,
+              provider: step.providerSlug,
+              model: step.modelName,
+              tokens: {
+                prompt: usage.promptTokens,
+                completion: usage.completionTokens,
+                total: usage.totalTokens,
+              },
+              latencyMs: httpRes.latencyMs,
+              isFallback,
+              candidateTrace: [...decisionTrace],
+            });
           },
           () => {
             cb.recordSuccess();
@@ -699,6 +809,17 @@ export class GatewayService {
             error: err.message,
             reason: 'CREDENTIAL_EXPIRED',
           });
+          this.emitLogEvent({
+            traceId,
+            timestamp: Date.now(),
+            clientName,
+            provider: step.providerSlug,
+            model: step.modelName,
+            tokens: { prompt: 0, completion: 0, total: 0 },
+            latencyMs: 0,
+            isFallback: true,
+            candidateTrace: [...decisionTrace],
+          });
           logger.warn({ connectionId: conn.id, error: err.message }, 'Credential expired (401/403), connection status updated to expired');
           continue;
         }
@@ -729,6 +850,18 @@ export class GatewayService {
           error: err.message,
         });
 
+        this.emitLogEvent({
+          traceId,
+          timestamp: Date.now(),
+          clientName,
+          provider: step.providerSlug,
+          model: step.modelName,
+          tokens: { prompt: 0, completion: 0, total: 0 },
+          latencyMs: 0,
+          isFallback: true,
+          candidateTrace: [...decisionTrace],
+        });
+
         logger.warn({ connectionId: conn.id, error: err.message }, 'Target stream dispatch failed, falling back to next step');
       }
     }
@@ -744,6 +877,18 @@ export class GatewayService {
       cost_usd: 0,
       error_code: 'ALL_TARGETS_EXHAUSTED',
       decision_trace: JSON.stringify(decisionTrace),
+    });
+
+    this.emitLogEvent({
+      traceId,
+      timestamp: Date.now(),
+      clientName,
+      provider: 'unknown',
+      model: 'unknown',
+      tokens: { prompt: 0, completion: 0, total: 0 },
+      latencyMs: 0,
+      isFallback: true,
+      candidateTrace: [...decisionTrace],
     });
 
     throw new AllTargetsExhaustedError(decisionTrace);

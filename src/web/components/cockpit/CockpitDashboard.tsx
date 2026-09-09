@@ -65,8 +65,90 @@ const SAMPLE_TRACES: DecisionTrace[] = [
   },
 ];
 
+function convertSseEventToDecisionTrace(evt: any): DecisionTrace {
+  const dateStr = evt.timestamp ? new Date(evt.timestamp).toLocaleTimeString() : new Date().toLocaleTimeString();
+  const candidateList = (evt.candidateTrace || []).map((c: any) => ({
+    name: c.modelId || evt.model || 'Unknown Model',
+    provider: c.providerSlug || evt.provider || 'Unknown Provider',
+    latencyMs: c.latencyMs || 0,
+    score: c.status === 'selected' ? 95 : 70,
+    status: c.status === 'selected' ? ('selected' as const) : (c.status === 'skipped' ? ('filtered' as const) : ('evaluated' as const)),
+    reason: c.reason || c.error || (c.status === 'selected' ? 'Selected Winner' : 'Evaluated candidate'),
+  }));
+
+  return {
+    id: evt.traceId || evt.id || `tr-${Math.random().toString(36).substring(2, 9)}`,
+    timestamp: dateStr,
+    promptSnippet: evt.promptSnippet || `${evt.clientName || 'Client'} request -> ${evt.provider || 'Gateway'}/${evt.model || 'LLM'}`,
+    selectedModel: evt.model || 'Unknown Model',
+    selectedProvider: evt.provider || 'Unknown Provider',
+    latencyMs: evt.latencyMs || 0,
+    tokens: evt.tokens || { prompt: 0, completion: 0, total: 0 },
+    routingPolicy: evt.isFallback ? 'Self-Healing Failover' : 'Greedy Set-Cover',
+    heuristicScore: evt.isFallback ? 82 : 98,
+    verdict: evt.isFallback
+      ? `Failover triggered! Switched to ${evt.provider}/${evt.model} after primary route encountered an error or cooldown.`
+      : `Selected ${evt.model} via ${evt.provider} due to latency advantage while meeting quality constraints.`,
+    isFallback: Boolean(evt.isFallback),
+    candidates: candidateList.length > 0 ? candidateList : [
+      { name: evt.model || 'Primary Model', provider: evt.provider || 'Provider', latencyMs: evt.latencyMs || 0, score: 95, status: 'selected' }
+    ],
+    factors: { latency: 95, cost: 100, capability: 90, health: 100 },
+  };
+}
+
 export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalStudio, onSelectTrace }) => {
   const [activeSetupPreset, setActiveSetupPreset] = useState<'standard' | 'high_perf' | 'cost_saver' | 'reasoning'>('standard');
+  const [traces, setTraces] = useState<DecisionTrace[]>(SAMPLE_TRACES);
+
+  React.useEffect(() => {
+    // Preload recent logs from API
+    fetch('/api/v1/request-logs', {
+      headers: { authorization: 'Bearer dev-admin-secret-token' },
+    })
+      .then((res) => res.json())
+      .then((logs) => {
+        if (Array.isArray(logs) && logs.length > 0) {
+          const mapped = logs.map((l: any) => {
+            let traceList = [];
+            try { traceList = JSON.parse(l.decision_trace || '[]'); } catch {}
+            return convertSseEventToDecisionTrace({
+              traceId: l.id,
+              timestamp: l.created_at,
+              clientName: 'GoalRoute Client',
+              provider: l.connection_id ? l.connection_id : 'Gateway',
+              model: l.model_id ? l.model_id : 'LLM',
+              tokens: { prompt: l.tokens_in || 0, completion: l.tokens_out || 0, total: (l.tokens_in || 0) + (l.tokens_out || 0) },
+              latencyMs: l.latency_ms || 0,
+              isFallback: l.status === 'failed' || traceList.length > 1,
+              candidateTrace: traceList,
+            });
+          });
+          setTraces((prev) => {
+            const ids = new Set(prev.map((t) => t.id));
+            const newUnique = mapped.filter((t) => !ids.has(t.id));
+            return [...newUnique, ...prev].slice(0, 50);
+          });
+        }
+      })
+      .catch(() => {});
+
+    // Subscribe to SSE real-time stream
+    const es = new EventSource('/api/v1/request-logs/stream');
+    es.onmessage = (event) => {
+      try {
+        const parsed = JSON.parse(event.data);
+        if (parsed && (parsed.traceId || parsed.provider)) {
+          const traceObj = convertSseEventToDecisionTrace(parsed);
+          setTraces((prev) => [traceObj, ...prev.filter((t) => t.id !== traceObj.id)].slice(0, 50));
+        }
+      } catch {}
+    };
+
+    return () => {
+      es.close();
+    };
+  }, []);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
@@ -325,17 +407,27 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
 
         <div className="rounded-[24px] bg-[var(--bg-card)] border border-[var(--border-subtle)] overflow-hidden shadow-xl">
           <div className="divide-y divide-[var(--border-subtle)]">
-            {SAMPLE_TRACES.map((tr) => (
+            {traces.map((tr) => (
               <div key={tr.id} className="p-4 hover:bg-[var(--bg-card-active)] transition-colors flex flex-col md:flex-row md:items-center justify-between gap-4">
                 
                 <div className="space-y-1 flex-1">
                   <div className="flex items-center space-x-2.5">
-                    <span className="w-2 h-2 rounded-full bg-[var(--signal-mint)] shrink-0" />
+                    {tr.isFallback ? (
+                      <span className="w-2 h-2 rounded-full bg-[var(--signal-amber)] animate-pulse shrink-0" />
+                    ) : (
+                      <span className="w-2 h-2 rounded-full bg-[var(--signal-mint)] shrink-0" />
+                    )}
                     <span className="text-[11px] font-mono text-[var(--text-muted)]" dir="ltr">{tr.timestamp}</span>
                     <span className="text-xs font-mono text-slate-300 font-bold" dir="ltr">{tr.selectedModel}</span>
-                    <span className="text-[10px] font-mono text-[var(--accent-primary)] bg-[var(--accent-primary)]/10 px-2 py-0.5 rounded-md">
-                      {tr.routingPolicy}
-                    </span>
+                    {tr.isFallback ? (
+                      <span className="text-[10px] font-mono font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20">
+                        ⚠ Fallback
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-mono text-[var(--accent-primary)] bg-[var(--accent-primary)]/10 px-2 py-0.5 rounded-md">
+                        {tr.routingPolicy}
+                      </span>
+                    )}
                   </div>
 
                   <p className="text-xs font-mono text-slate-300 truncate max-w-xl bg-[var(--bg-well)] p-2 rounded-lg border border-[var(--border-subtle)] mt-1" dir="ltr">

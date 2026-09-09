@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GoalRoute Gateway</title>
+    <script>
+      (function() {
+        try {
+          var saved = localStorage.getItem('goalroute_theme_tokens');
+          if (saved) {
+            var tokens = JSON.parse(saved);
+            for (var key in tokens) {
+              if (Object.prototype.hasOwnProperty.call(tokens, key)) {
+                document.documentElement.style.setProperty(key, tokens[key]);
+              }
+            }
+          }
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/web/main.tsx"></script>
+  </body>
+</html>

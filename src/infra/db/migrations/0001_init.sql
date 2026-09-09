@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS provider_connections (
     credential_tag      BLOB NOT NULL,
     tier                TEXT NOT NULL DEFAULT 'free' CHECK (tier IN ('free','paid','subscription')),
     status              TEXT NOT NULL DEFAULT 'untested'
-                            CHECK (status IN ('untested','healthy','unavailable','expired','banned')),
+                            CHECK (status IN ('untested','healthy','unavailable','expired','banned','revoked','deleted','active')),
     last_tested_at      INTEGER,
     last_error          TEXT,
     created_at          INTEGER NOT NULL,

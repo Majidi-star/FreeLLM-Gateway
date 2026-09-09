@@ -14,7 +14,7 @@ export type HealthState = 'closed' | 'open' | 'half_open';
 
 export type ConnectionTier = 'free' | 'paid' | 'subscription';
 
-export type ConnectionStatus = 'untested' | 'healthy' | 'unavailable' | 'expired' | 'banned';
+export type ConnectionStatus = 'untested' | 'healthy' | 'unavailable' | 'expired' | 'banned' | 'revoked' | 'deleted' | 'active';
 
 export type StepRole = 'primary' | 'backup' | 'overflow';
 

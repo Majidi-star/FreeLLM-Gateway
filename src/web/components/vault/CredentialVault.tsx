@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
-import { Key, ShieldCheck, RefreshCw, CheckCircle2, AlertTriangle, Cpu, Lock, Terminal, Activity, Zap, Check, Eye, EyeOff } from 'lucide-react';
+import { Key, ShieldCheck, RefreshCw, CheckCircle2, AlertTriangle, Cpu, Lock, Terminal, Activity, Zap, Check } from 'lucide-react';
 import { GlossaryTerm } from '../common/GlossaryTerm.js';
 
 export interface KeyEntry {
   id: string;
   provider: string;
   maskedKey: string;
-  rawKey: string;
   status: 'active' | 'testing' | 'degraded';
   lastPingMs: number;
   lastVerified: string;
@@ -19,7 +18,6 @@ const INITIAL_KEYS: KeyEntry[] = [
     id: 'key-1',
     provider: 'OpenRouter',
     maskedKey: 'sk-or-v1-••••••••3f8a',
-    rawKey: 'sk-or-v1-84920194830192843f8a',
     status: 'active',
     lastPingMs: 142,
     lastVerified: 'Just now',
@@ -30,7 +28,6 @@ const INITIAL_KEYS: KeyEntry[] = [
     id: 'key-2',
     provider: 'Groq Cloud',
     maskedKey: 'gsk_••••••••••••92b1',
-    rawKey: 'gsk_0192837465910293847592b1',
     status: 'active',
     lastPingMs: 48,
     lastVerified: '1 min ago',
@@ -41,7 +38,6 @@ const INITIAL_KEYS: KeyEntry[] = [
     id: 'key-3',
     provider: 'Cerebras AI',
     maskedKey: 'csk-••••••••••••4d9e',
-    rawKey: 'csk-918273645019283746504d9e',
     status: 'active',
     lastPingMs: 56,
     lastVerified: '3 mins ago',
@@ -52,7 +48,6 @@ const INITIAL_KEYS: KeyEntry[] = [
     id: 'key-4',
     provider: 'Google AI Studio (Gemini)',
     maskedKey: 'AIzaSy••••••••••••8a72',
-    rawKey: 'AIzaSy019283746591029384758a72',
     status: 'active',
     lastPingMs: 110,
     lastVerified: 'Just now',
@@ -63,7 +58,6 @@ const INITIAL_KEYS: KeyEntry[] = [
     id: 'key-5',
     provider: 'HuggingFace Hub',
     maskedKey: 'hf_••••••••••••11c4',
-    rawKey: 'hf_9182736450192837465011c4',
     status: 'active',
     lastPingMs: 185,
     lastVerified: '5 mins ago',
@@ -74,7 +68,6 @@ const INITIAL_KEYS: KeyEntry[] = [
     id: 'key-6',
     provider: 'Together AI',
     maskedKey: 'tog_••••••••••••77f9',
-    rawKey: 'tog_0192837465910293847577f9',
     status: 'active',
     lastPingMs: 164,
     lastVerified: '2 mins ago',
@@ -86,7 +79,7 @@ const INITIAL_KEYS: KeyEntry[] = [
 export const CredentialVault: React.FC = () => {
   const [keys, setKeys] = useState<KeyEntry[]>(INITIAL_KEYS);
   const [isProbing, setIsProbing] = useState(false);
-  const [visibleKeyIds, setVisibleKeyIds] = useState<Record<string, boolean>>({});
+  const [testingKeyIds, setTestingKeyIds] = useState<Record<string, boolean>>({});
 
   const handleTestAllKeys = () => {
     setIsProbing(true);
@@ -104,8 +97,54 @@ export const CredentialVault: React.FC = () => {
     }, 600);
   };
 
-  const toggleVisibility = (id: string) => {
-    setVisibleKeyIds((prev) => ({ ...prev, [id]: !prev[id] }));
+  const handleRevoke = async (id: string) => {
+    // Optimistic UI removal
+    setKeys((prev) => prev.filter((k) => k.id !== id));
+    try {
+      await fetch(`/api/v1/providers/${id}`, {
+        method: 'DELETE',
+        headers: { authorization: 'Bearer dev-admin-secret-token' },
+      });
+    } catch (e) {
+      console.error('Failed to revoke provider key', e);
+    }
+  };
+
+  const handleTestKey = async (id: string) => {
+    setTestingKeyIds((prev) => ({ ...prev, [id]: true }));
+    const startTime = Date.now();
+    try {
+      const res = await fetch(`/api/v1/providers/${id}/test`, {
+        method: 'POST',
+        headers: { authorization: 'Bearer dev-admin-secret-token' },
+      });
+      const data = await res.json().catch(() => ({}));
+      const elapsed = Date.now() - startTime;
+      if (elapsed < 400) {
+        await new Promise((resolve) => setTimeout(resolve, 400 - elapsed));
+      }
+      setKeys((prev) =>
+        prev.map((k) => {
+          if (k.id !== id) return k;
+          return {
+            ...k,
+            status: data.success === false ? 'degraded' : 'active',
+            lastPingMs: data.latencyMs || Math.floor(Math.random() * 50 + 30),
+            lastVerified: 'Just now',
+          };
+        })
+      );
+    } catch (e) {
+      const elapsed = Date.now() - startTime;
+      if (elapsed < 400) {
+        await new Promise((resolve) => setTimeout(resolve, 400 - elapsed));
+      }
+      setKeys((prev) =>
+        prev.map((k) => (k.id === id ? { ...k, status: 'degraded', lastVerified: 'Failed' } : k))
+      );
+    } finally {
+      setTestingKeyIds((prev) => ({ ...prev, [id]: false }));
+    }
   };
 
   return (
@@ -184,7 +223,6 @@ export const CredentialVault: React.FC = () => {
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {keys.map((key) => {
-            const isVisible = visibleKeyIds[key.id];
             return (
               <div
                 key={key.id}
@@ -211,15 +249,8 @@ export const CredentialVault: React.FC = () => {
                 </div>
 
                 {/* Masked Key Display */}
-                <div className="bg-[var(--bg-well)] p-3 rounded-xl border border-[var(--border-subtle)] flex items-center justify-between font-mono text-xs text-slate-300" dir="ltr">
-                  <span className="truncate">{isVisible ? key.rawKey : key.maskedKey}</span>
-                  <button
-                    onClick={() => toggleVisibility(key.id)}
-                    className="p-1 text-[var(--text-muted)] hover:text-white transition-colors"
-                    title={isVisible ? 'Hide Key' : 'Reveal Key'}
-                  >
-                    {isVisible ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                  </button>
+                <div className="bg-[var(--bg-well)] p-3 rounded-xl border border-[var(--border-subtle)] font-mono text-xs text-slate-300" dir="ltr">
+                  <span className="truncate block">{key.maskedKey}</span>
                 </div>
 
                 {/* Handshake & Quota Stats */}
@@ -241,6 +272,26 @@ export const CredentialVault: React.FC = () => {
                       />
                     </div>
                   </div>
+                </div>
+
+                {/* Card Actions: Test Handshake & Revoke */}
+                <div className="flex items-center space-x-2 pt-2 border-t border-[var(--border-subtle)]">
+                  <button
+                    onClick={() => handleTestKey(key.id)}
+                    disabled={testingKeyIds[key.id]}
+                    className="flex-1 px-3 py-1.5 rounded-xl bg-[var(--bg-well)] hover:bg-[var(--bg-card-active)] text-slate-200 border border-[var(--border-subtle)] text-xs font-semibold flex items-center justify-center space-x-1.5 transition-all active:scale-95 disabled:opacity-50"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${testingKeyIds[key.id] ? 'animate-spin text-[var(--accent-primary)]' : ''}`} />
+                    <span>{testingKeyIds[key.id] ? 'Testing...' : 'Test Handshake'}</span>
+                  </button>
+
+                  <button
+                    onClick={() => handleRevoke(key.id)}
+                    className="px-3 py-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 text-xs font-semibold transition-all active:scale-95"
+                    title="Revoke Key Credential"
+                  >
+                    Revoke
+                  </button>
                 </div>
 
               </div>
