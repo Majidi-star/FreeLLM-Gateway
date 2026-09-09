@@ -398,7 +398,12 @@ program
   .description('Start the GoalRoute Fastify HTTP Server and Gateway endpoint')
   .option('--port <port>', 'Port to listen on', (v) => parseInt(v), 8787)
   .action(async (options) => {
-    await startServer(options.port);
+    try {
+      await startServer(options.port);
+    } catch (err) {
+      console.error('Fatal boot failure:', err);
+      process.exit(1);
+    }
   });
 
 program.parse(process.argv);

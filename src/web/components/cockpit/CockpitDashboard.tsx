@@ -97,12 +97,20 @@ function convertSseEventToDecisionTrace(evt: any): DecisionTrace {
   };
 }
 
+type StreamStatus = 'connecting' | 'live' | 'unauthorized' | 'closed';
+
+const getAdminToken = () =>
+  sessionStorage.getItem('goalroute_admin_token') ||
+  localStorage.getItem('goalroute_admin_token') ||
+  '';
+
 export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalStudio, onSelectTrace }) => {
   const [activeSetupPreset, setActiveSetupPreset] = useState<'standard' | 'high_perf' | 'cost_saver' | 'reasoning'>('standard');
   const [traces, setTraces] = useState<DecisionTrace[]>(SAMPLE_TRACES);
+  const [streamStatus, setStreamStatus] = useState<StreamStatus>('connecting');
 
   React.useEffect(() => {
-    const adminToken = (import.meta.env.VITE_ADMIN_TOKEN as string) || '';
+    const adminToken = getAdminToken();
     const controller = new AbortController();
 
     // Preload recent logs from API
@@ -111,7 +119,12 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
       signal: controller.signal,
     })
       .then((res) => {
+        if (res.status === 401) {
+          setStreamStatus('unauthorized');
+          throw new Error('Unauthorized');
+        }
         if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+        setStreamStatus('live');
         return res.json();
       })
       .then((logs) => {
@@ -147,8 +160,13 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
     const es = new EventSource(sseUrl);
     let reconnectCount = 0;
 
+    es.onopen = () => {
+      setStreamStatus('live');
+    };
+
     es.onmessage = (event) => {
       reconnectCount = 0;
+      setStreamStatus('live');
       try {
         const parsed = JSON.parse(event.data);
         if (parsed && (parsed.traceId || parsed.provider)) {
@@ -162,6 +180,7 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
       reconnectCount += 1;
       if (reconnectCount >= 5) {
         es.close();
+        setStreamStatus((prev) => (prev === 'unauthorized' ? 'unauthorized' : 'closed'));
       }
     };
 
@@ -421,9 +440,26 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
             <h2 className="text-sm font-bold text-white uppercase tracking-wider">Live Traffic & Routing Decision Stream</h2>
             <p className="text-xs text-[var(--text-muted)]">Click "Why? →" on any request log to inspect full decision evaluation steps.</p>
           </div>
-          <span className="text-xs font-mono text-[var(--signal-mint)] bg-[var(--signal-mint)]/10 px-2.5 py-1 rounded-full border border-[var(--signal-mint)]/20">
-            Streaming Real-time
-          </span>
+          {streamStatus === 'live' && (
+            <span className="text-xs font-mono text-[var(--signal-mint)] bg-[var(--signal-mint)]/10 px-2.5 py-1 rounded-full border border-[var(--signal-mint)]/20">
+              Live
+            </span>
+          )}
+          {streamStatus === 'connecting' && (
+            <span className="text-xs font-mono text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20">
+              Connecting
+            </span>
+          )}
+          {streamStatus === 'unauthorized' && (
+            <span className="text-xs font-mono text-red-400 bg-red-500/10 px-2.5 py-1 rounded-full border border-red-500/20">
+              Unauthorized (Set Token in Settings)
+            </span>
+          )}
+          {streamStatus === 'closed' && (
+            <span className="text-xs font-mono text-red-400 bg-red-500/10 px-2.5 py-1 rounded-full border border-red-500/20">
+              Closed
+            </span>
+          )}
         </div>
 
         <div className="rounded-[24px] bg-[var(--bg-card)] border border-[var(--border-subtle)] overflow-hidden shadow-xl">

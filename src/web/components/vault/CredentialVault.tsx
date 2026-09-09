@@ -76,12 +76,17 @@ const INITIAL_KEYS: KeyEntry[] = [
   },
 ];
 
+const getAdminToken = () =>
+  sessionStorage.getItem('goalroute_admin_token') ||
+  localStorage.getItem('goalroute_admin_token') ||
+  '';
+
 export const CredentialVault: React.FC = () => {
   const [keys, setKeys] = useState<KeyEntry[]>(INITIAL_KEYS);
   const [isProbing, setIsProbing] = useState(false);
   const [testingKeyIds, setTestingKeyIds] = useState<Record<string, boolean>>({});
 
-  const adminToken = (import.meta.env.VITE_ADMIN_TOKEN as string) || '';
+  const adminToken = getAdminToken();
   const activeTimers = React.useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
 
   React.useEffect(() => {

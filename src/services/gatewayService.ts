@@ -634,6 +634,7 @@ export class GatewayService extends EventEmitter {
       }
 
       // Quota Gate (Atomic Reservation)
+      let hasReservedQuota = false;
       let quotaExceeded = false;
       const estimatedTokens = request.max_tokens || 1000;
       let currentWindowStart = Date.now();
@@ -650,6 +651,8 @@ export class GatewayService extends EventEmitter {
           );
           if (!reserved) {
             quotaExceeded = true;
+          } else {
+            hasReservedQuota = true;
           }
         }
       } catch (quotaErr: any) {
@@ -668,6 +671,13 @@ export class GatewayService extends EventEmitter {
         });
         continue;
       }
+
+      let quotaSettled = false;
+      const settleQuotaDelta = (delta: number) => {
+        if (quotaSettled || !hasReservedQuota) return;
+        quotaSettled = true;
+        this.quotaRepo.recordUsage(conn.id, 'daily_tokens', currentWindowStart, delta);
+      };
 
       try {
         const apiKey = decryptCredential({
@@ -707,10 +717,7 @@ export class GatewayService extends EventEmitter {
           step.modelName,
           (usage) => {
             try {
-              const deltaTokens = usage.totalTokens - estimatedTokens;
-              if (deltaTokens !== 0) {
-                this.quotaRepo.recordUsage(conn.id, 'daily_tokens', currentWindowStart, deltaTokens);
-              }
+              settleQuotaDelta(usage.totalTokens - estimatedTokens);
               this.quotaRepo.recordUsage(conn.id, 'daily_requests', currentWindowStart, 1);
             } catch (recErr: any) {
               logger.warn({ connectionId: conn.id, error: recErr.message }, 'Failed to record quota usage');
@@ -759,8 +766,11 @@ export class GatewayService extends EventEmitter {
           },
           (err) => {
             try {
-              this.quotaRepo.recordUsage(conn.id, 'daily_tokens', currentWindowStart, -estimatedTokens);
+              settleQuotaDelta(-estimatedTokens);
             } catch {}
+            if (signal?.aborted) {
+              return;
+            }
             const prov = this.providerRepo.findById(conn.provider_id);
             const authType = prov?.auth_type || 'api_key';
             cb.recordFailure();
@@ -786,7 +796,7 @@ export class GatewayService extends EventEmitter {
         };
       } catch (err: any) {
         try {
-          this.quotaRepo.recordUsage(conn.id, 'daily_tokens', currentWindowStart, -estimatedTokens);
+          settleQuotaDelta(-estimatedTokens);
         } catch {}
         const statusCode = err.statusCode;
         const prov = this.providerRepo.findById(conn.provider_id);

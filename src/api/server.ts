@@ -1,6 +1,7 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import { once } from 'events';
+import crypto from 'node:crypto';
 import { getConfig } from '../infra/config.js';
 import { logger } from '../infra/logger.js';
 import { getDatabase } from '../infra/db/client.js';
@@ -20,6 +21,13 @@ import { PoolService } from '../services/poolService.js';
 import { GatewayService } from '../services/gatewayService.js';
 import { generateId } from '../shared/ids.js';
 import { AppError } from '../shared/errors.js';
+
+function safeCompareTokens(provided: string, expected: string): boolean {
+  if (!provided || !expected) return false;
+  const hashA = crypto.createHash('sha256').update(provided).digest();
+  const hashB = crypto.createHash('sha256').update(expected).digest();
+  return crypto.timingSafeEqual(hashA, hashB);
+}
 
 export async function buildApp() {
   const config = getConfig();
@@ -76,7 +84,7 @@ export async function buildApp() {
       if (url.startsWith('/api/v1/health')) {
         return;
       }
-      if (url.startsWith('/api/v1/request-logs/stream') && (req.query as any)?.token === config.ADMIN_API_TOKEN) {
+      if (url.startsWith('/api/v1/request-logs/stream') && safeCompareTokens((req.query as any)?.token, config.ADMIN_API_TOKEN)) {
         return;
       }
       const authHeader = req.headers['authorization'];
@@ -84,18 +92,18 @@ export async function buildApp() {
         return reply.status(401).send({ error: { message: 'Unauthorized', type: 'authentication_error' } });
       }
       const token = authHeader.replace(/^Bearer\s+/i, '').trim();
-      if (token !== config.ADMIN_API_TOKEN) {
+      if (!safeCompareTokens(token, config.ADMIN_API_TOKEN)) {
         return reply.status(401).send({ error: { message: 'Unauthorized', type: 'authentication_error' } });
       }
     } else if (url.startsWith('/v1/chat/completions')) {
       const authHeader = req.headers['authorization'];
       if (authHeader) {
         const token = authHeader.replace(/^Bearer\s+/i, '').trim();
-        if (token !== config.ADMIN_API_TOKEN) {
+        if (!safeCompareTokens(token, config.ADMIN_API_TOKEN)) {
           return reply.status(401).send({ error: { message: 'Unauthorized', type: 'authentication_error' } });
         }
       } else {
-        const isDevAllowed = config.NODE_ENV === 'development' && (config.ADMIN_API_TOKEN === 'dev-admin-secret-token' || process.env.ALLOW_ANONYMOUS_DEV === 'true');
+        const isDevAllowed = config.NODE_ENV === 'development' && (safeCompareTokens(config.ADMIN_API_TOKEN, 'dev-admin-secret-token') || process.env.ALLOW_ANONYMOUS_DEV === 'true');
         if (!isDevAllowed) {
           return reply.status(401).send({ error: { message: 'Unauthorized', type: 'authentication_error' } });
         }
@@ -106,6 +114,9 @@ export async function buildApp() {
   // Centralized Error Handler (Principle 2: Never fail-opaque)
   fastify.setErrorHandler((error, req, reply) => {
     if (reply.raw.headersSent) {
+      if (!reply.raw.writableEnded && !reply.raw.destroyed) {
+        reply.raw.end();
+      }
       return;
     }
 
@@ -135,7 +146,7 @@ export async function buildApp() {
   fastify.get('/api/v1/health', async (req) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader ? authHeader.replace(/^Bearer\s+/i, '').trim() : '';
-    const isAuthenticated = token === config.ADMIN_API_TOKEN;
+    const isAuthenticated = safeCompareTokens(token, config.ADMIN_API_TOKEN);
 
     if (!isAuthenticated) {
       return { status: 'ok', timestamp: Date.now() };
@@ -300,9 +311,9 @@ export async function buildApp() {
 export async function startServer(port?: number) {
   const config = getConfig();
   const listenPort = port || config.PORT;
-  const app = await buildApp();
 
   try {
+    const app = await buildApp();
     const address = await app.listen({ port: listenPort, host: '0.0.0.0' });
     logger.info({ address, port: listenPort }, 'GoalRoute HTTP server listening');
     return app;

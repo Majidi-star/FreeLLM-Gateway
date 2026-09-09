@@ -279,9 +279,30 @@ export async function callProviderEndpointStream(options: ProviderRequestOptions
       throw new AppError('Provider response body is empty', 'PROVIDER_FETCH_FAILED', 502);
     }
 
+    const IDLE_TIMEOUT_MS = 30_000;
+    let idleTimer: NodeJS.Timeout | undefined;
+    const resetIdleWatchdog = () => {
+      if (idleTimer) clearTimeout(idleTimer);
+      idleTimer = setTimeout(() => {
+        controller.abort(new Error('Upstream stream stalled: no chunks received for 30s'));
+      }, IDLE_TIMEOUT_MS);
+    };
+
+    const guardedBody = async function* (body: AsyncIterable<Uint8Array>) {
+      try {
+        resetIdleWatchdog();
+        for await (const chunk of body) {
+          resetIdleWatchdog();
+          yield chunk;
+        }
+      } finally {
+        if (idleTimer) clearTimeout(idleTimer);
+      }
+    }(response.body as any);
+
     return {
       statusCode: response.status,
-      stream: response.body as unknown as AsyncIterable<Uint8Array>,
+      stream: guardedBody,
       latencyMs,
     };
   } catch (err: any) {

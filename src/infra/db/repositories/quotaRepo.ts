@@ -66,7 +66,7 @@ export class QuotaRepository {
       INSERT INTO quota_usage (connection_id, dimension, window_start, used_value)
       VALUES (?, ?, ?, ?)
       ON CONFLICT(connection_id, dimension, window_start) DO UPDATE SET
-        used_value = used_value + excluded.used_value
+        used_value = MAX(0, used_value + excluded.used_value)
     `);
     stmt.run(connectionId, dimension, windowStart, amount);
   }
@@ -78,6 +78,7 @@ export class QuotaRepository {
     amount: number,
     limitValue: number
   ): boolean {
+    if (amount > limitValue) return false;
     const stmt = this.db.prepare(`
       INSERT INTO quota_usage (connection_id, dimension, window_start, used_value)
       VALUES (?, ?, ?, ?)
