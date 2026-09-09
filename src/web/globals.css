@@ -2,9 +2,30 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --bg-obsidian: #090a0f;
+  --bg-rail: #0d1017;
+  --bg-card: #121622;
+  --bg-card-active: #161b28;
+  --bg-well: #090d14;
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-hover: rgba(255, 255, 255, 0.18);
+  --accent-primary: #7c9cff;
+  --accent-primary-hover: #9bb3ff;
+  --signal-mint: #00f5a0;
+  --signal-amber: #ffb800;
+  --signal-coral: #f55036;
+  --text-primary: #ffffff;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+}
+
 @layer base {
   body {
-    @apply bg-obsidian text-slate-200 font-sans antialiased;
+    background-color: var(--bg-obsidian);
+    color: var(--text-primary);
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    -webkit-font-smoothing: antialiased;
   }
 }
 

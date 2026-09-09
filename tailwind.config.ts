@@ -8,13 +8,33 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        obsidian: '#090a0f',
-        rail: '#0d1017',
-        card: '#121622',
-        cardActive: '#161b28',
-        accent: '#7c9cff',
-        mint: '#00f5a0',
-        amber: '#ffb800',
+        // Semantic Token Names
+        'bg-obsidian': 'var(--bg-obsidian)',
+        'bg-rail': 'var(--bg-rail)',
+        'bg-card': 'var(--bg-card)',
+        'bg-card-active': 'var(--bg-card-active)',
+        'bg-well': 'var(--bg-well)',
+        'border-subtle': 'var(--border-subtle)',
+        'border-hover': 'var(--border-hover)',
+        'accent-primary': 'var(--accent-primary)',
+        'accent-primary-hover': 'var(--accent-primary-hover)',
+        'signal-mint': 'var(--signal-mint)',
+        'signal-amber': 'var(--signal-amber)',
+        'signal-coral': 'var(--signal-coral)',
+        'text-primary': 'var(--text-primary)',
+        'text-secondary': 'var(--text-secondary)',
+        'text-muted': 'var(--text-muted)',
+
+        // Backwards-Compatible Short Aliases
+        obsidian: 'var(--bg-obsidian)',
+        rail: 'var(--bg-rail)',
+        card: 'var(--bg-card)',
+        cardActive: 'var(--bg-card-active)',
+        well: 'var(--bg-well)',
+        accent: 'var(--accent-primary)',
+        mint: 'var(--signal-mint)',
+        amber: 'var(--signal-amber)',
+        coral: 'var(--signal-coral)',
       },
       fontFamily: {
         sans: ['"Plus Jakarta Sans"', 'sans-serif'],
