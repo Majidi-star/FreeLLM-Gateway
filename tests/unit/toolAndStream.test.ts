@@ -468,5 +468,33 @@ describe('Tool & Function Calling and SSE Streaming Suite', () => {
       expect(reportedUsage).not.toBeNull();
       expect(reportedUsage.totalTokens).toBeGreaterThanOrEqual(1);
     });
+
+    it('5. Single Accounting Error Guard Test: mid-stream error fires onError but suppresses onUsage', async () => {
+      async function* throwingStream() {
+        yield 'data: {"candidates":[{"content":{"parts":[{"text":"Partial text"}]}}]}\n\n';
+        throw new Error('connection reset mid-stream');
+      }
+
+      let onErrorCalled = false;
+      let onUsageCalled = false;
+
+      try {
+        for await (const _ of transformToOpenAISSEStream(
+          throwingStream(),
+          'gemini',
+          'gemini-1.5-pro',
+          () => { onUsageCalled = true; },
+          undefined,
+          () => { onErrorCalled = true; }
+        )) {
+          // consume stream until error
+        }
+      } catch {
+        // Expected stream failure
+      }
+
+      expect(onErrorCalled).toBe(true);
+      expect(onUsageCalled).toBe(false);
+    });
   });
 });
