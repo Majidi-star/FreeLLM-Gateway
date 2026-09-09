@@ -1,0 +1,99 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-obsidian text-slate-200 font-sans antialiased;
+  }
+}
+
+/* Custom subtle scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 9999px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+/* Squircle radii utilities */
+.squircle-card {
+  border-radius: 24px;
+}
+
+.squircle-capsule {
+  border-radius: 16px;
+}
+
+/* Interactive Glossary Term Tooltips */
+.glossary-term {
+  border-bottom: 1px dotted rgba(255, 255, 255, 0.45);
+  cursor: help;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.glossary-term:hover::after {
+  content: attr(title);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #0d1017;
+  color: #e2e8f0;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 6px 10px;
+  font-size: 11px;
+  line-height: 1.35;
+  font-family: "JetBrains Mono", monospace;
+  border-radius: 8px;
+  white-space: normal;
+  width: 220px;
+  text-align: center;
+  z-index: 70;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.7), 0 0 1px rgba(255, 255, 255, 0.2);
+  pointer-events: none;
+}
+
+.glossary-term:hover::before {
+  content: "";
+  position: absolute;
+  bottom: calc(100% + 2px);
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 5px;
+  border-style: solid;
+  border-color: #0d1017 transparent transparent transparent;
+  z-index: 70;
+  pointer-events: none;
+}
