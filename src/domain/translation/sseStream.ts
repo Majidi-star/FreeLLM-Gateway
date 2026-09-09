@@ -315,6 +315,10 @@ export async function* transformToOpenAISSEStream(
     reportUsage();
     if (onDone) onDone();
   } catch (err: any) {
+    // The stream failed: onError performs the failure accounting (e.g. quota
+    // refund). Suppress the finally-block report so one failed stream is not
+    // also reported to onUsage as a successful (partial) usage event.
+    usageReported = true;
     if (onError) onError(err);
     throw err;
   } finally {
