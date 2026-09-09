@@ -406,4 +406,7 @@ program
     }
   });
 
-program.parse(process.argv);
+program.parseAsync(process.argv).catch((err) => {
+  console.error('Fatal CLI error:', err.message || err);
+  process.exit(1);
+});

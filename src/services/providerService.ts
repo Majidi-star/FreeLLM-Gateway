@@ -119,6 +119,8 @@ export class ProviderService {
       throw new NotFoundError(`Connection '${connectionId}' not found`);
     }
     this.connectionRepo.delete(connectionId);
+    breakerRegistry.delete(connectionId);
+    locallyExpiredConnectionIds.delete(connectionId);
     logger.info({ connectionId }, 'Removed provider connection');
   }
 

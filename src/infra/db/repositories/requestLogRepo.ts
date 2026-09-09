@@ -1,5 +1,6 @@
 import Database from 'better-sqlite3';
 import { generateId } from '../../../shared/ids.js';
+import { redactSensitiveData } from '../../logger.js';
 
 export interface RequestLogRecord {
   id: string;
@@ -40,7 +41,7 @@ export class RequestLogRepository {
       entry.tokens_out || null,
       entry.cost_usd || null,
       entry.error_code || null,
-      entry.decision_trace || null,
+      entry.decision_trace ? redactSensitiveData(entry.decision_trace) : null,
       now
     );
 

@@ -264,6 +264,7 @@ export class GatewayService extends EventEmitter {
       }
 
       // 3. Quota Gate (Atomic Reservation)
+      let hasReservedQuota = false;
       let quotaExceeded = false;
       const estimatedTokens = request.max_tokens || 1000;
       let currentWindowStart = Date.now();
@@ -280,6 +281,8 @@ export class GatewayService extends EventEmitter {
           );
           if (!reserved) {
             quotaExceeded = true;
+          } else {
+            hasReservedQuota = true;
           }
         }
       } catch (quotaErr: any) {
@@ -407,10 +410,12 @@ export class GatewayService extends EventEmitter {
         };
       } catch (err: any) {
         // Refund pre-reserved tokens on dispatch failure
-        try {
-          this.quotaRepo.recordUsage(conn.id, 'daily_tokens', currentWindowStart, -estimatedTokens);
-        } catch (refundErr: any) {
-          logger.warn({ connectionId: conn.id, error: refundErr.message }, 'Failed to refund pre-reserved quota');
+        if (hasReservedQuota) {
+          try {
+            this.quotaRepo.recordUsage(conn.id, 'daily_tokens', currentWindowStart, -estimatedTokens);
+          } catch (refundErr: any) {
+            logger.warn({ connectionId: conn.id, error: refundErr.message }, 'Failed to refund pre-reserved quota');
+          }
         }
         const statusCode = err.statusCode;
         const prov = this.providerRepo.findById(conn.provider_id);
@@ -769,6 +774,7 @@ export class GatewayService extends EventEmitter {
               settleQuotaDelta(-estimatedTokens);
             } catch {}
             if (signal?.aborted) {
+              cb.releaseProbe();
               return;
             }
             const prov = this.providerRepo.findById(conn.provider_id);

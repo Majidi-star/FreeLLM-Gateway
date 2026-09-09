@@ -54,7 +54,7 @@ export async function readBoundedBody(response: Response, maxBytes: number = 15 
   if (!response.body) {
     if (typeof response.text === 'function') {
       const text = await response.text();
-      if (text.length > maxBytes) {
+      if (Buffer.byteLength(text) > maxBytes) {
         throw new AppError('Upstream payload exceeds maximum safety limit (15MB)', 'PAYLOAD_TOO_LARGE', 502);
       }
       return text;
