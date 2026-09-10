@@ -9,6 +9,9 @@ export const App: React.FC = () => {
     if (!localStorage.getItem('goalroute_admin_token')) {
       localStorage.setItem('goalroute_admin_token', 'dev-admin-secret-token');
     }
+    if (!sessionStorage.getItem('goalroute_admin_token')) {
+      sessionStorage.setItem('goalroute_admin_token', 'dev-admin-secret-token');
+    }
   }, []);
 
   return (
