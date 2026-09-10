@@ -142,6 +142,11 @@ export const CredentialVault: React.FC = () => {
   };
 
   const probeKey = async (id: string) => {
+    // Skip unconfigured providers — never run handshake probes on keys that aren't set up
+    const targetKey = keys.find((k) => k.id === id);
+    if (!targetKey || targetKey.hasKey === false || targetKey.status === 'unconfigured') {
+      return;
+    }
     try {
       const res = await fetch(`/api/v1/providers/${id}/test`, {
         method: 'POST',
@@ -162,8 +167,10 @@ export const CredentialVault: React.FC = () => {
 
   const handleTestAllKeys = async () => {
     setIsProbing(true);
-    // Real concurrent handshake probes against every configured key via the backend test endpoint.
-    await Promise.all(keys.filter((k) => k.hasKey !== false).map((k) => probeKey(k.id)));
+    // Real concurrent handshake probes against every configured, non-unconfigured key via the backend test endpoint.
+    await Promise.all(
+      keys.filter((k) => k.hasKey !== false && k.status !== 'unconfigured').map((k) => probeKey(k.id))
+    );
     setIsProbing(false);
   };
 
@@ -181,6 +188,11 @@ export const CredentialVault: React.FC = () => {
   };
 
   const handleTestKey = async (id: string) => {
+    // Skip unconfigured providers — never run handshake probes on keys that aren't set up
+    const targetKey = keys.find((k) => k.id === id);
+    if (!targetKey || targetKey.hasKey === false || targetKey.status === 'unconfigured') {
+      return;
+    }
     setTestingKeyIds((prev) => ({ ...prev, [id]: true }));
     const startTime = Date.now();
     try {
@@ -221,6 +233,7 @@ export const CredentialVault: React.FC = () => {
 
   // Real telemetry capsules derived from keys loaded from GET /api/v1/providers.
   const configuredKeys = keys.filter((k) => k.hasKey !== false);
+  const activeKeys = keys.filter((k) => k.hasKey && k.status === 'active');
   const healthyKeys = configuredKeys.filter((k) => k.status === 'active');
   const healthySlaPct = configuredKeys.length
     ? Math.round((healthyKeys.length / configuredKeys.length) * 100)
@@ -278,7 +291,7 @@ export const CredentialVault: React.FC = () => {
         {/* Capsule 1 */}
         <div className="p-4 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-subtle)] space-y-1 squircle-capsule">
           <div className="text-[11px] text-[var(--text-muted)] font-medium uppercase">Active Enclave Keys</div>
-          <div className="text-xl font-bold text-white font-mono" dir="ltr">{healthyKeys.length} / {configuredKeys.length}</div>
+          <div className="text-xl font-bold text-white font-mono" dir="ltr">{activeKeys.length} / {keys.length}</div>
           <div className="text-[10px] text-[var(--signal-mint)] font-mono flex items-center gap-1">
             <CheckCircle2 className="w-3 h-3" /> {configuredKeys.length > 0 ? 'All providers ready' : 'No keys configured'}
           </div>

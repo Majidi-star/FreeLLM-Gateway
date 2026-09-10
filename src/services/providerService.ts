@@ -102,6 +102,9 @@ export class ProviderService {
 
     return catalogProviders.map((p) => {
       const conn = connByProvId.get(p.id);
+      // A connection is truly configured only if it exists AND has a non-empty credential
+      const hasValidCredential = Boolean(conn && conn.credential_enc && conn.credential_enc.length > 0);
+      const isUnconfigured = !hasValidCredential;
       return {
         id: conn ? conn.id : `prov-${p.slug}`,
         providerId: p.id,
@@ -111,13 +114,13 @@ export class ProviderService {
         baseUrl: p.base_url,
         protocol: p.protocol,
         docsUrl: p.docs_url,
-        hasKey: Boolean(conn),
-        maskedKey: conn ? `sk-••••••••${conn.credential_enc.substring(0, 4)}` : 'Not Configured',
-        status: conn ? (conn.status === 'degraded' ? 'degraded' : 'active') : 'unconfigured',
-        lastPingMs: 0,
-        lastVerified: conn?.last_tested_at ? new Date(conn.last_tested_at).toLocaleTimeString() : 'Never',
-        dailyQuotaUsedPct: this.computeDailyQuotaUsedPct(conn),
-        tier: (conn?.tier === 'pro' ? 'Pro Enclave' : 'Free Tier') as 'Free Tier' | 'Pro Enclave',
+        hasKey: hasValidCredential,
+        maskedKey: hasValidCredential ? `sk-••••••••${conn.credential_enc.substring(0, 4)}` : 'Not Configured',
+        status: isUnconfigured ? 'unconfigured' : (conn.status === 'degraded' ? 'degraded' : 'active'),
+        lastPingMs: isUnconfigured ? 0 : 0,
+        lastVerified: isUnconfigured ? 'Never' : (conn?.last_tested_at ? new Date(conn.last_tested_at).toLocaleTimeString() : 'Never'),
+        dailyQuotaUsedPct: isUnconfigured ? 0 : this.computeDailyQuotaUsedPct(conn),
+        tier: (hasValidCredential && conn?.tier === 'pro' ? 'Pro Enclave' : 'Free Tier') as 'Free Tier' | 'Pro Enclave',
       };
     });
   }
@@ -134,6 +137,11 @@ export class ProviderService {
     const conn = this.connectionRepo.findById(connectionId);
     if (!conn) {
       throw new NotFoundError(`Connection '${connectionId}' not found`);
+    }
+
+    // If the connection has no valid credential, do not probe — return unconfigured status
+    if (!conn.credential_enc || conn.credential_enc.length === 0) {
+      return { success: false, error: 'Connection is unconfigured — no credential present' };
     }
 
     const provider = this.providerRepo.findById(conn.provider_id);
