@@ -15,6 +15,7 @@ export interface AddConnectionInput {
   label?: string;
   apiKey: string;
   tier?: ConnectionTier;
+  baseUrl?: string;
 }
 
 export interface ConnectionDTO {
@@ -37,13 +38,21 @@ export class ProviderService {
   ) {}
 
   public addConnection(input: AddConnectionInput): ConnectionDTO {
-    const provider = this.providerRepo.findBySlug(input.providerSlug);
+    let provider = this.providerRepo.findBySlug(input.providerSlug);
     if (!provider) {
       throw new NotFoundError(`Provider with slug '${input.providerSlug}' not found. Check catalog or seed data.`);
     }
 
     if (!input.apiKey || input.apiKey.trim().length === 0) {
       throw new ValidationError('API key cannot be empty');
+    }
+
+    // Optional Base URL override (e.g. enterprise proxies / local gateways).
+    // Only persists when non-empty and different from the catalog default.
+    const trimmedBaseUrl = input.baseUrl?.trim();
+    if (trimmedBaseUrl && trimmedBaseUrl !== provider.base_url) {
+      provider = this.providerRepo.upsert({ ...provider, base_url: trimmedBaseUrl });
+      logger.info({ providerSlug: provider.slug, baseUrl: trimmedBaseUrl }, 'Provider base URL overridden');
     }
 
     const encrypted = encryptCredential(input.apiKey);

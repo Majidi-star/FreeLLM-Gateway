@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Key, ShieldCheck, RefreshCw, CheckCircle2, AlertTriangle, Cpu, Lock, Terminal, Activity, Zap, Check, Plus, X } from 'lucide-react';
+import { Key, ShieldCheck, RefreshCw, CheckCircle2, AlertTriangle, Cpu, Lock, Terminal, Activity, Zap, Check, ChevronDown, Plus, X } from 'lucide-react';
 import { GlossaryTerm } from '../common/GlossaryTerm.js';
 
 export interface KeyEntry {
@@ -16,18 +16,18 @@ export interface KeyEntry {
 }
 
 const CATALOG_OPTIONS = [
-  { slug: 'openai', displayName: 'OpenAI' },
-  { slug: 'anthropic', displayName: 'Anthropic Claude' },
-  { slug: 'gemini', displayName: 'Google Gemini' },
-  { slug: 'groq', displayName: 'Groq Cloud' },
-  { slug: 'openrouter', displayName: 'OpenRouter' },
-  { slug: 'together', displayName: 'Together AI' },
-  { slug: 'cerebras', displayName: 'Cerebras' },
-  { slug: 'sambanova', displayName: 'SambaNova Cloud' },
-  { slug: 'deepseek', displayName: 'DeepSeek' },
-  { slug: 'mistral', displayName: 'Mistral AI' },
-  { slug: 'fireworks', displayName: 'Fireworks AI' },
-  { slug: 'deepinfra', displayName: 'DeepInfra' },
+  { slug: 'openai', displayName: 'OpenAI', keyUrl: 'https://platform.openai.com/api-keys', baseUrl: 'https://api.openai.com/v1' },
+  { slug: 'anthropic', displayName: 'Anthropic Claude', keyUrl: 'https://console.anthropic.com/', baseUrl: 'https://api.anthropic.com/v1' },
+  { slug: 'gemini', displayName: 'Google Gemini', keyUrl: 'https://aistudio.google.com/app/apikey', baseUrl: 'https://generativelanguage.googleapis.com/v1beta' },
+  { slug: 'groq', displayName: 'Groq Cloud', keyUrl: 'https://console.groq.com/keys', baseUrl: 'https://api.groq.com/openai/v1' },
+  { slug: 'openrouter', displayName: 'OpenRouter', keyUrl: 'https://openrouter.ai/keys', baseUrl: 'https://openrouter.ai/api/v1' },
+  { slug: 'together', displayName: 'Together AI', keyUrl: 'https://api.together.ai/settings/api-keys', baseUrl: 'https://api.together.xyz/v1' },
+  { slug: 'cerebras', displayName: 'Cerebras', keyUrl: 'https://cloud.cerebras.ai/', baseUrl: 'https://api.cerebras.ai/v1' },
+  { slug: 'sambanova', displayName: 'SambaNova Cloud', keyUrl: 'https://cloud.sambanova.ai/', baseUrl: 'https://api.sambanova.ai/v1' },
+  { slug: 'deepseek', displayName: 'DeepSeek', keyUrl: 'https://platform.deepseek.com/api_keys', baseUrl: 'https://api.deepseek.com/v1' },
+  { slug: 'mistral', displayName: 'Mistral AI', keyUrl: 'https://console.mistral.ai/api-keys/', baseUrl: 'https://api.mistral.ai/v1' },
+  { slug: 'fireworks', displayName: 'Fireworks AI', keyUrl: 'https://fireworks.ai/account/api-keys', baseUrl: 'https://api.fireworks.ai/inference/v1' },
+  { slug: 'deepinfra', displayName: 'DeepInfra', keyUrl: 'https://deepinfra.com/dash/api_keys', baseUrl: 'https://api.deepinfra.com/v1' },
 ];
 
 const getAdminToken = () =>
@@ -47,6 +47,18 @@ export const CredentialVault: React.FC = () => {
   const [inputApiKey, setInputApiKey] = useState('');
   const [isSavingKey, setIsSavingKey] = useState(false);
   const [connectError, setConnectError] = useState<string | null>(null);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [customBaseUrl, setCustomBaseUrl] = useState('https://api.openai.com/v1');
+
+  const currentProvider = CATALOG_OPTIONS.find((p) => p.slug === selectedProviderSlug) || CATALOG_OPTIONS[0];
+
+  const selectProvider = (slug: string) => {
+    setSelectedProviderSlug(slug);
+    const prov = CATALOG_OPTIONS.find((p) => p.slug === slug);
+    if (prov) setCustomBaseUrl(prov.baseUrl);
+    setIsDropdownOpen(false);
+  };
 
   const adminToken = getAdminToken();
   const activeTimers = React.useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
@@ -101,6 +113,7 @@ export const CredentialVault: React.FC = () => {
         body: JSON.stringify({
           providerSlug: selectedProviderSlug,
           apiKey: inputApiKey.trim(),
+          baseUrl: customBaseUrl.trim(),
         }),
       });
       if (!res.ok) {
@@ -456,19 +469,36 @@ export const CredentialVault: React.FC = () => {
             )}
 
             <div className="space-y-4 text-xs">
-              <div className="space-y-1.5">
+              <div className="space-y-1.5 relative">
                 <label className="font-semibold text-slate-300">Select Provider</label>
-                <select
-                  value={selectedProviderSlug}
-                  onChange={(e) => setSelectedProviderSlug(e.target.value)}
-                  className="w-full p-3 bg-[var(--bg-well)] border border-[var(--border-subtle)] focus:border-[var(--signal-mint)] rounded-xl text-white font-medium focus:outline-none cursor-pointer"
+                <button
+                  type="button"
+                  onClick={() => setIsDropdownOpen((o) => !o)}
+                  className="w-full p-3 bg-[var(--bg-well)] border border-[var(--border-subtle)] focus:border-[var(--signal-mint)] rounded-xl text-white font-medium focus:outline-none cursor-pointer flex items-center justify-between transition-colors"
                 >
-                  {CATALOG_OPTIONS.map((opt) => (
-                    <option key={opt.slug} value={opt.slug} className="bg-[var(--bg-card)] text-white">
-                      {opt.displayName} ({opt.slug})
-                    </option>
-                  ))}
-                </select>
+                  <span>{currentProvider.displayName}</span>
+                  <ChevronDown className={`w-4 h-4 text-[var(--text-muted)] transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {isDropdownOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setIsDropdownOpen(false)} />
+                    <div className="absolute z-50 w-full mt-1 bg-[var(--bg-well)] border border-[var(--border-subtle)] rounded-xl shadow-2xl overflow-hidden max-h-64 overflow-y-auto">
+                      {CATALOG_OPTIONS.map((opt) => (
+                        <button
+                          key={opt.slug}
+                          type="button"
+                          onClick={() => selectProvider(opt.slug)}
+                          className={`w-full px-3 py-2.5 text-left text-white font-medium flex items-center justify-between transition-colors ${
+                            opt.slug === selectedProviderSlug ? 'bg-[var(--bg-card-active)]' : 'hover:bg-[var(--bg-card-active)]'
+                          }`}
+                        >
+                          <span>{opt.displayName}</span>
+                          {opt.slug === selectedProviderSlug && <Check className="w-3.5 h-3.5 text-[var(--signal-mint)]" />}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
               </div>
 
               <div className="space-y-1.5">
@@ -481,6 +511,41 @@ export const CredentialVault: React.FC = () => {
                   className="w-full p-3 bg-[var(--bg-well)] border border-[var(--border-subtle)] focus:border-[var(--signal-mint)] rounded-xl text-white font-mono focus:outline-none"
                   dir="ltr"
                 />
+                <a
+                  href={currentProvider.keyUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-[var(--accent-primary)] hover:underline flex items-center gap-1 font-medium"
+                >
+                  Get {currentProvider.displayName} API Key ↗
+                </a>
+              </div>
+
+              <div className="border-t border-[var(--border-subtle)] pt-3">
+                <button
+                  type="button"
+                  onClick={() => setShowAdvanced((s) => !s)}
+                  className="flex items-center gap-1.5 text-[var(--text-muted)] hover:text-white font-medium transition-colors"
+                >
+                  <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} />
+                  Advanced Settings (Base URL Override)
+                </button>
+                {showAdvanced && (
+                  <div className="mt-3 space-y-1.5">
+                    <label className="font-semibold text-slate-300">Endpoint Base URL</label>
+                    <input
+                      type="text"
+                      value={customBaseUrl}
+                      onChange={(e) => setCustomBaseUrl(e.target.value)}
+                      placeholder={currentProvider.baseUrl}
+                      className="w-full p-3 bg-[var(--bg-well)] border border-[var(--border-subtle)] focus:border-[var(--signal-mint)] rounded-xl text-white font-mono focus:outline-none"
+                      dir="ltr"
+                    />
+                    <p className="text-[var(--text-muted)] leading-relaxed">
+                      Default endpoint used for API requests. Modify only if using custom proxies or local models.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
 
