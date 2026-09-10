@@ -8,62 +8,7 @@ interface CockpitDashboardProps {
   onSelectTrace: (trace: DecisionTrace) => void;
 }
 
-const SAMPLE_TRACES: DecisionTrace[] = [
-  {
-    id: 'tr-94a20f18',
-    timestamp: '14:28:42.102',
-    promptSnippet: 'def generate_set_cover_algorithm(candidates, constraints): ...',
-    selectedModel: 'DeepSeek-R1',
-    selectedProvider: 'OpenRouter',
-    latencyMs: 42,
-    tokens: { prompt: 142, completion: 380, total: 522 },
-    routingPolicy: 'Greedy Set-Cover',
-    heuristicScore: 98,
-    verdict: 'Selected DeepSeek-R1 via OpenRouter due to 42ms TTFT advantage over Gemini Flash while satisfying 98% reasoning accuracy constraint.',
-    candidates: [
-      { name: 'DeepSeek-R1', provider: 'OpenRouter', latencyMs: 42, score: 98, status: 'selected' },
-      { name: 'Qwen 2.5 Coder 32B', provider: 'HuggingFace', latencyMs: 88, score: 86, status: 'evaluated', reason: 'Higher latency than DeepSeek-R1' },
-      { name: 'Gemini 2.5 Flash', provider: 'Google AI', latencyMs: 110, score: 82, status: 'evaluated', reason: 'Lower math reasoning score' },
-      { name: 'Llama 3.3 70B', provider: 'Groq', latencyMs: 195, score: 78, status: 'filtered', reason: 'Exceeded 150ms target threshold' },
-    ],
-    factors: { latency: 95, cost: 100, capability: 98, health: 100 },
-  },
-  {
-    id: 'tr-88c11b02',
-    timestamp: '14:28:38.991',
-    promptSnippet: 'Explain quantum entanglement spin conservation principles...',
-    selectedModel: 'Gemini 2.5 Flash',
-    selectedProvider: 'Google AI Studio',
-    latencyMs: 85,
-    tokens: { prompt: 98, completion: 210, total: 308 },
-    routingPolicy: 'Balanced Pareto',
-    heuristicScore: 92,
-    verdict: 'Selected Gemini 2.5 Flash for optimal throughput and zero latency jitter under high concurrent load.',
-    candidates: [
-      { name: 'Gemini 2.5 Flash', provider: 'Google AI', latencyMs: 85, score: 92, status: 'selected' },
-      { name: 'DeepSeek-R1', provider: 'OpenRouter', latencyMs: 140, score: 89, status: 'evaluated', reason: 'Slightly higher TTFT' },
-      { name: 'Llama 3.3 70B', provider: 'Cerebras', latencyMs: 62, score: 84, status: 'evaluated', reason: 'Lower scientific context score' },
-    ],
-    factors: { latency: 88, cost: 100, capability: 92, health: 98 },
-  },
-  {
-    id: 'tr-71e99d44',
-    timestamp: '14:28:31.450',
-    promptSnippet: 'Write unit tests for Fastify JWT auth middleware...',
-    selectedModel: 'Qwen 2.5 Coder 32B',
-    selectedProvider: 'HuggingFace Hub',
-    latencyMs: 64,
-    tokens: { prompt: 215, completion: 490, total: 705 },
-    routingPolicy: 'High-Speed Code',
-    heuristicScore: 96,
-    verdict: 'Selected Qwen 2.5 Coder 32B via HuggingFace for 100% code syntax compliance and sub-70ms response.',
-    candidates: [
-      { name: 'Qwen 2.5 Coder 32B', provider: 'HuggingFace', latencyMs: 64, score: 96, status: 'selected' },
-      { name: 'Llama 3.3 70B', provider: 'Groq', latencyMs: 58, score: 91, status: 'evaluated', reason: 'Slightly lower code pass-rate' },
-    ],
-    factors: { latency: 96, cost: 100, capability: 95, health: 100 },
-  },
-];
+let traceIdCounter = 0;
 
 function convertSseEventToDecisionTrace(evt: any): DecisionTrace {
   const dateStr = evt.timestamp ? new Date(evt.timestamp).toLocaleTimeString() : new Date().toLocaleTimeString();
@@ -77,7 +22,7 @@ function convertSseEventToDecisionTrace(evt: any): DecisionTrace {
   }));
 
   return {
-    id: evt.traceId || evt.id || `tr-${Math.random().toString(36).substring(2, 9)}`,
+    id: evt.traceId || evt.id || `tr-live-${Date.now().toString(36)}-${(traceIdCounter = (traceIdCounter + 1) % 1e6).toString(36)}`,
     timestamp: dateStr,
     promptSnippet: evt.promptSnippet || `${evt.clientName || 'Client'} request -> ${evt.provider || 'Gateway'}/${evt.model || 'LLM'}`,
     selectedModel: evt.model || 'Unknown Model',
@@ -131,14 +76,12 @@ const formatContextWindow = (cw: number): string => {
 
 export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalStudio, onSelectTrace }) => {
   const [activeSetupPreset, setActiveSetupPreset] = useState<'standard' | 'high_perf' | 'cost_saver' | 'reasoning'>('standard');
-  const [traces, setTraces] = useState<DecisionTrace[]>(SAMPLE_TRACES);
+  const [traces, setTraces] = useState<DecisionTrace[]>([]);
+  const [activePools, setActivePools] = useState(0);
+  const [presetError, setPresetError] = useState<string | null>(null);
+  const [savingPreset, setSavingPreset] = useState(false);
   const [streamStatus, setStreamStatus] = useState<StreamStatus>('connecting');
-  const [catalogModels, setCatalogModels] = useState<CatalogModelItem[]>([
-    { id: '1', modelName: 'gemini-2.5-flash', displayName: 'Gemini 2.5 Flash', contextWindow: 1000000, supportsTools: true, supportsVision: true, costInputPer1k: 0, costOutputPer1k: 0, benchTps: 120, benchTtftMs: 85, providerSlug: 'gemini', providerDisplayName: 'Google Gemini' },
-    { id: '2', modelName: 'deepseek-r1', displayName: 'DeepSeek-R1', contextWindow: 128000, supportsTools: true, supportsVision: false, costInputPer1k: 0, costOutputPer1k: 0, benchTps: 90, benchTtftMs: 42, providerSlug: 'deepseek', providerDisplayName: 'DeepSeek' },
-    { id: '3', modelName: 'llama-3.3-70b', displayName: 'Llama 3.3 70B', contextWindow: 128000, supportsTools: true, supportsVision: false, costInputPer1k: 0, costOutputPer1k: 0, benchTps: 200, benchTtftMs: 48, providerSlug: 'sambanova', providerDisplayName: 'SambaNova Cloud' },
-    { id: '4', modelName: 'qwen-2.5-coder-32b', displayName: 'Qwen 2.5 Coder 32B', contextWindow: 128000, supportsTools: true, supportsVision: false, costInputPer1k: 0, costOutputPer1k: 0, benchTps: 110, benchTtftMs: 64, providerSlug: 'groq', providerDisplayName: 'Groq Cloud' },
-  ]);
+  const [catalogModels, setCatalogModels] = useState<CatalogModelItem[]>([]);
 
   React.useEffect(() => {
     const adminToken = getAdminToken();
@@ -153,6 +96,69 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
       })
       .catch(() => {});
   }, []);
+
+  React.useEffect(() => {
+    const adminToken = getAdminToken();
+    fetch('/api/v1/pools', {
+      headers: adminToken ? { authorization: `Bearer ${adminToken}` } : {},
+    })
+      .then((res) => (res.ok ? res.json() : []))
+      .then((pools) => {
+        if (Array.isArray(pools)) {
+          setActivePools(pools.filter((p: any) => p && (p.is_active === undefined || p.is_active === 1 || p.is_active === true)).length);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  // Real telemetry aggregates computed from live traces loaded from SQLite / SSE.
+  const completedTraces = traces.filter((t) => t.latencyMs > 0);
+  const avgLatencyMs = completedTraces.length
+    ? Math.round(completedTraces.reduce((sum, t) => sum + t.latencyMs, 0) / completedTraces.length)
+    : 0;
+  const successPct = traces.length
+    ? Math.round((traces.filter((t) => !t.isFallback).length / traces.length) * 1000) / 10
+    : null;
+
+  const PRESET_GOAL_PARAMS: Record<typeof activeSetupPreset, { label: string; taskType: string; latencyPref: string; reliabilityPref: string }> = {
+    standard: { label: 'Standard Balanced', taskType: 'general', latencyPref: 'relaxed', reliabilityPref: 'standard' },
+    high_perf: { label: 'Ultra Low Latency', taskType: 'chatbot', latencyPref: 'instant', reliabilityPref: 'standard' },
+    cost_saver: { label: 'Maximum Free Quota', taskType: 'batch', latencyPref: 'relaxed', reliabilityPref: 'standard' },
+    reasoning: { label: 'Deep Reasoning', taskType: 'research', latencyPref: 'relaxed', reliabilityPref: 'maximum' },
+  };
+
+  const handleSetupPreset = async (preset: 'standard' | 'high_perf' | 'cost_saver' | 'reasoning') => {
+    setActiveSetupPreset(preset);
+    const params = PRESET_GOAL_PARAMS[preset];
+    setSavingPreset(true);
+    setPresetError(null);
+    try {
+      const adminToken = getAdminToken();
+      const res = await fetch('/api/v1/goals', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(adminToken ? { authorization: `Bearer ${adminToken}` } : {}),
+        },
+        body: JSON.stringify({
+          name: `Goal - ${params.label}`,
+          task_type: params.taskType,
+          latency_pref: params.latencyPref,
+          budget_pref: 'free',
+          reliability_pref: params.reliabilityPref,
+          exhaustion_pref: preset === 'cost_saver' ? 'fill_first' : 'preserve_backup',
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || `Failed to persist goal (HTTP ${res.status})`);
+      }
+    } catch (e: any) {
+      setPresetError(e.message || 'Failed to persist goal');
+    } finally {
+      setSavingPreset(false);
+    }
+  };
 
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
@@ -294,7 +300,7 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
               </span>
             </div>
             <div className="text-xs text-[var(--text-muted)] mt-0.5">
-              6/6 Free Enclave Provider Connections Active
+              {activePools} Active Routing Pool{activePools === 1 ? '' : 's'} (SQLite)
             </div>
           </div>
         </div>
@@ -302,22 +308,22 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
         {/* Live Metrics Ribbon */}
         <div className="flex items-center space-x-6 text-xs font-mono" dir="ltr">
           <div className="text-right">
-            <div className="text-[var(--text-muted)] text-[10px] uppercase">Throughput</div>
-            <div className="font-bold text-white text-sm">14,280 <span className="text-[10px] text-slate-400">req/m</span></div>
+            <div className="text-[var(--text-muted)] text-[10px] uppercase">Requests Logged</div>
+            <div className="font-bold text-white text-sm">{traces.length} <span className="text-[10px] text-slate-400">in stream</span></div>
           </div>
 
           <div className="h-8 w-px bg-[var(--border-subtle)]" />
 
           <div className="text-right">
             <div className="text-[var(--text-muted)] text-[10px] uppercase">Avg Latency</div>
-            <div className="font-bold text-[var(--signal-mint)] text-sm">142 ms</div>
+            <div className="font-bold text-[var(--signal-mint)] text-sm">{avgLatencyMs > 0 ? `${avgLatencyMs} ms` : '—'}</div>
           </div>
 
           <div className="h-8 w-px bg-[var(--border-subtle)]" />
 
           <div className="text-right">
             <div className="text-[var(--text-muted)] text-[10px] uppercase">Success Rate</div>
-            <div className="font-bold text-white text-sm">99.8%</div>
+            <div className="font-bold text-white text-sm">{successPct !== null ? `${successPct}%` : '—'}</div>
           </div>
 
           <div className="h-8 w-px bg-[var(--border-subtle)]" />
@@ -343,8 +349,12 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {presetError && (
+            <div className="col-span-2 sm:col-span-4 text-[10px] font-mono text-red-400">{presetError}</div>
+          )}
           <button
-            onClick={() => setActiveSetupPreset('standard')}
+            onClick={() => handleSetupPreset('standard')}
+            disabled={savingPreset}
             className={`p-3.5 rounded-2xl border text-left transition-all ${
               activeSetupPreset === 'standard'
                 ? 'bg-[var(--bg-card-active)] border-[var(--accent-primary)] shadow-md shadow-[var(--accent-primary)]/10'
@@ -356,7 +366,8 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
           </button>
 
           <button
-            onClick={() => setActiveSetupPreset('high_perf')}
+            onClick={() => handleSetupPreset('high_perf')}
+            disabled={savingPreset}
             className={`p-3.5 rounded-2xl border text-left transition-all ${
               activeSetupPreset === 'high_perf'
                 ? 'bg-[var(--bg-card-active)] border-[var(--accent-primary)] shadow-md shadow-[var(--accent-primary)]/10'
@@ -368,7 +379,8 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
           </button>
 
           <button
-            onClick={() => setActiveSetupPreset('cost_saver')}
+            onClick={() => handleSetupPreset('cost_saver')}
+            disabled={savingPreset}
             className={`p-3.5 rounded-2xl border text-left transition-all ${
               activeSetupPreset === 'cost_saver'
                 ? 'bg-[var(--bg-card-active)] border-[var(--accent-primary)] shadow-md shadow-[var(--accent-primary)]/10'
@@ -376,11 +388,12 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
             }`}
           >
             <div className="font-bold text-xs text-white">Maximum Free Quota</div>
-            <div className="text-[11px] text-[var(--text-muted)] mt-0.5">Distributes across all 6 keys</div>
+            <div className="text-[11px] text-[var(--text-muted)] mt-0.5">Distributes across all keys</div>
           </button>
 
           <button
-            onClick={() => setActiveSetupPreset('reasoning')}
+            onClick={() => handleSetupPreset('reasoning')}
+            disabled={savingPreset}
             className={`p-3.5 rounded-2xl border text-left transition-all ${
               activeSetupPreset === 'reasoning'
                 ? 'bg-[var(--bg-card-active)] border-[var(--accent-primary)] shadow-md shadow-[var(--accent-primary)]/10'
@@ -415,7 +428,12 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {catalogModels.slice(0, 8).map((model) => (
+          {catalogModels.length === 0 ? (
+            <div className="col-span-full p-8 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-subtle)] text-center text-xs text-[var(--text-secondary)]">
+              No catalog models discovered yet. Connect a provider key in the Credential Vault and run model sync.
+            </div>
+          ) : (
+          catalogModels.slice(0, 8).map((model) => (
             <div
               key={model.id || model.modelName}
               className="squircle-card p-4 bg-[var(--bg-card)] border border-[var(--border-subtle)] hover:border-[var(--border-hover)] hover:bg-[var(--bg-card-active)] transition-all space-y-3"
@@ -453,7 +471,8 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
                 </div>
               </div>
             </div>
-          ))}
+          ))
+          )}
         </div>
       </div>
 
@@ -487,6 +506,14 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
         </div>
 
         <div className="rounded-[24px] bg-[var(--bg-card)] border border-[var(--border-subtle)] overflow-hidden shadow-xl">
+          {traces.length === 0 ? (
+            <div className="p-10 text-center space-y-2">
+              <Activity className="w-6 h-6 text-[var(--text-muted)] mx-auto" />
+              <p className="text-xs text-[var(--text-secondary)]">
+                No live traffic routed yet. Send an HTTP request via the gateway or run a pool test to see real-time decision logs.
+              </p>
+            </div>
+          ) : (
           <div className="divide-y divide-[var(--border-subtle)]">
             {traces.map((tr) => (
               <div key={tr.id} className="p-4 hover:bg-[var(--bg-card-active)] transition-colors flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -534,6 +561,7 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
               </div>
             ))}
           </div>
+          )}
         </div>
       </div>
 

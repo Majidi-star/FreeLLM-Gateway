@@ -15,21 +15,6 @@ export interface KeyEntry {
   hasKey?: boolean;
 }
 
-const INITIAL_KEYS: KeyEntry[] = [
-  { id: 'key-1', provider: 'OpenAI', slug: 'openai', maskedKey: 'sk-••••••••3f8a', status: 'active', lastPingMs: 142, lastVerified: 'Just now', dailyQuotaUsedPct: 35, tier: 'Free Tier', hasKey: true },
-  { id: 'key-2', provider: 'Anthropic Claude', slug: 'anthropic', maskedKey: 'sk-ant-••••••••92b1', status: 'active', lastPingMs: 48, lastVerified: '1 min ago', dailyQuotaUsedPct: 18, tier: 'Free Tier', hasKey: true },
-  { id: 'key-3', provider: 'Google Gemini', slug: 'gemini', maskedKey: 'AIzaSy••••••••8a72', status: 'active', lastPingMs: 110, lastVerified: 'Just now', dailyQuotaUsedPct: 60, tier: 'Free Tier', hasKey: true },
-  { id: 'key-4', provider: 'Groq Cloud', slug: 'groq', maskedKey: 'gsk_••••••••••••92b1', status: 'active', lastPingMs: 48, lastVerified: '1 min ago', dailyQuotaUsedPct: 18, tier: 'Free Tier', hasKey: true },
-  { id: 'key-5', provider: 'OpenRouter', slug: 'openrouter', maskedKey: 'sk-or-v1-••••••••3f8a', status: 'active', lastPingMs: 142, lastVerified: 'Just now', dailyQuotaUsedPct: 35, tier: 'Free Tier', hasKey: true },
-  { id: 'key-6', provider: 'Together AI', slug: 'together', maskedKey: 'tog_••••••••••••77f9', status: 'active', lastPingMs: 164, lastVerified: '2 mins ago', dailyQuotaUsedPct: 29, tier: 'Free Tier', hasKey: true },
-  { id: 'key-7', provider: 'Cerebras', slug: 'cerebras', maskedKey: 'csk-••••••••••••4d9e', status: 'active', lastPingMs: 56, lastVerified: '3 mins ago', dailyQuotaUsedPct: 42, tier: 'Free Tier', hasKey: true },
-  { id: 'key-8', provider: 'SambaNova Cloud', slug: 'sambanova', maskedKey: 'Not Configured', status: 'unconfigured', lastPingMs: 0, lastVerified: 'Never', dailyQuotaUsedPct: 0, tier: 'Free Tier', hasKey: false },
-  { id: 'key-9', provider: 'DeepSeek', slug: 'deepseek', maskedKey: 'Not Configured', status: 'unconfigured', lastPingMs: 0, lastVerified: 'Never', dailyQuotaUsedPct: 0, tier: 'Free Tier', hasKey: false },
-  { id: 'key-10', provider: 'Mistral AI', slug: 'mistral', maskedKey: 'Not Configured', status: 'unconfigured', lastPingMs: 0, lastVerified: 'Never', dailyQuotaUsedPct: 0, tier: 'Free Tier', hasKey: false },
-  { id: 'key-11', provider: 'Fireworks AI', slug: 'fireworks', maskedKey: 'Not Configured', status: 'unconfigured', lastPingMs: 0, lastVerified: 'Never', dailyQuotaUsedPct: 0, tier: 'Free Tier', hasKey: false },
-  { id: 'key-12', provider: 'DeepInfra', slug: 'deepinfra', maskedKey: 'Not Configured', status: 'unconfigured', lastPingMs: 0, lastVerified: 'Never', dailyQuotaUsedPct: 0, tier: 'Free Tier', hasKey: false },
-];
-
 const CATALOG_OPTIONS = [
   { slug: 'openai', displayName: 'OpenAI' },
   { slug: 'anthropic', displayName: 'Anthropic Claude' },
@@ -52,7 +37,7 @@ const getAdminToken = () =>
   'dev-admin-secret-token';
 
 export const CredentialVault: React.FC = () => {
-  const [keys, setKeys] = useState<KeyEntry[]>(INITIAL_KEYS);
+  const [keys, setKeys] = useState<KeyEntry[]>([]);
   const [isProbing, setIsProbing] = useState(false);
   const [testingKeyIds, setTestingKeyIds] = useState<Record<string, boolean>>({});
   
@@ -73,7 +58,7 @@ export const CredentialVault: React.FC = () => {
       });
       if (res.ok) {
         const data = await res.json();
-        if (Array.isArray(data) && data.length > 0) {
+        if (Array.isArray(data)) {
           setKeys(data);
         }
       }
@@ -143,19 +128,30 @@ export const CredentialVault: React.FC = () => {
     }
   };
 
-  const handleTestAllKeys = () => {
-    setIsProbing(true);
-    safeTimeout(() => {
+  const probeKey = async (id: string) => {
+    try {
+      const res = await fetch(`/api/v1/providers/${id}/test`, {
+        method: 'POST',
+        headers: adminToken ? { authorization: `Bearer ${adminToken}` } : {},
+      });
+      const data = await res.json().catch(() => ({}));
+      const latencyMs = typeof data.latencyMs === 'number' ? data.latencyMs : 0;
+      const success = res.ok && data.success !== false;
       setKeys((prev) =>
-        prev.map((k) => ({
-          ...k,
-          lastPingMs: k.status === 'unconfigured' ? 0 : Math.floor(Math.random() * 80 + 35),
-          lastVerified: k.status === 'unconfigured' ? 'Never' : 'Just now',
-          status: k.status === 'unconfigured' ? 'unconfigured' : 'active',
-        }))
+        prev.map((k) => (k.id === id ? { ...k, status: success ? 'active' : 'degraded', lastPingMs: latencyMs, lastVerified: success ? 'Just now' : 'Failed' } : k))
       );
-      setIsProbing(false);
-    }, 600);
+    } catch {
+      setKeys((prev) =>
+        prev.map((k) => (k.id === id ? { ...k, status: 'degraded', lastVerified: 'Failed' } : k))
+      );
+    }
+  };
+
+  const handleTestAllKeys = async () => {
+    setIsProbing(true);
+    // Real concurrent handshake probes against every configured key via the backend test endpoint.
+    await Promise.all(keys.filter((k) => k.hasKey !== false).map((k) => probeKey(k.id)));
+    setIsProbing(false);
   };
 
   const handleRevoke = async (id: string) => {
@@ -184,18 +180,20 @@ export const CredentialVault: React.FC = () => {
       if (elapsed < 400) {
         await new Promise<void>((resolve) => safeTimeout(resolve, 400 - elapsed));
       }
+      const success = res.ok && data.success !== false;
+      const latencyMs = typeof data.latencyMs === 'number' ? data.latencyMs : 0;
       setKeys((prev) =>
         prev.map((k) => {
           if (k.id !== id) return k;
           return {
             ...k,
-            status: data.success === false ? 'degraded' : 'active',
-            lastPingMs: data.latencyMs || Math.floor(Math.random() * 50 + 30),
-            lastVerified: 'Just now',
+            status: success ? 'active' : 'degraded',
+            lastPingMs: latencyMs,
+            lastVerified: success ? 'Just now' : 'Failed',
           };
         })
       );
-    } catch (e) {
+    } catch {
       const elapsed = Date.now() - startTime;
       if (elapsed < 400) {
         await new Promise<void>((resolve) => safeTimeout(resolve, 400 - elapsed));
@@ -207,6 +205,24 @@ export const CredentialVault: React.FC = () => {
       setTestingKeyIds((prev) => ({ ...prev, [id]: false }));
     }
   };
+
+  // Real telemetry capsules derived from keys loaded from GET /api/v1/providers.
+  const configuredKeys = keys.filter((k) => k.hasKey !== false);
+  const healthyKeys = configuredKeys.filter((k) => k.status === 'active');
+  const healthySlaPct = configuredKeys.length
+    ? Math.round((healthyKeys.length / configuredKeys.length) * 100)
+    : 0;
+  const quotaErrors = configuredKeys.filter((k) => k.status === 'degraded').length;
+  const pingValues = configuredKeys.map((k) => k.lastPingMs).filter((ms) => ms > 0);
+  const avgPingMs = pingValues.length
+    ? Math.round(pingValues.reduce((sum, ms) => sum + ms, 0) / pingValues.length)
+    : 0;
+  const fastestPing = pingValues.length ? Math.min(...pingValues) : 0;
+  const quotaAvailablePct = configuredKeys.length
+    ? Math.round(
+        configuredKeys.reduce((sum, k) => sum + Math.max(0, 100 - (k.dailyQuotaUsedPct || 0)), 0) / configuredKeys.length
+      )
+    : 0;
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
@@ -249,30 +265,32 @@ export const CredentialVault: React.FC = () => {
         {/* Capsule 1 */}
         <div className="p-4 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-subtle)] space-y-1 squircle-capsule">
           <div className="text-[11px] text-[var(--text-muted)] font-medium uppercase">Active Enclave Keys</div>
-          <div className="text-xl font-bold text-white font-mono" dir="ltr">{keys.length} / {keys.length}</div>
+          <div className="text-xl font-bold text-white font-mono" dir="ltr">{healthyKeys.length} / {configuredKeys.length}</div>
           <div className="text-[10px] text-[var(--signal-mint)] font-mono flex items-center gap-1">
-            <CheckCircle2 className="w-3 h-3" /> All providers ready
+            <CheckCircle2 className="w-3 h-3" /> {configuredKeys.length > 0 ? 'All providers ready' : 'No keys configured'}
           </div>
         </div>
 
         {/* Capsule 2 */}
         <div className="p-4 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-subtle)] space-y-1 squircle-capsule">
           <div className="text-[11px] text-[var(--text-muted)] font-medium uppercase">Healthy Handshake SLA</div>
-          <div className="text-xl font-bold text-[var(--signal-mint)] font-mono" dir="ltr">100% Verified</div>
-          <div className="text-[10px] text-[var(--text-secondary)] font-mono">0 quota errors</div>
+          <div className="text-xl font-bold text-[var(--signal-mint)] font-mono" dir="ltr">{healthySlaPct}% Verified</div>
+          <div className="text-[10px] text-[var(--text-secondary)] font-mono">{quotaErrors} quota errors</div>
         </div>
 
         {/* Capsule 3 */}
         <div className="p-4 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-subtle)] space-y-1 squircle-capsule">
           <div className="text-[11px] text-[var(--text-muted)] font-medium uppercase">Avg Handshake Ping</div>
-          <div className="text-xl font-bold text-white font-mono" dir="ltr">104 ms</div>
-          <div className="text-[10px] text-[var(--signal-mint)] font-mono">Fastest: 35ms (Groq)</div>
+          <div className="text-xl font-bold text-white font-mono" dir="ltr">{avgPingMs > 0 ? `${avgPingMs} ms` : '—'}</div>
+          <div className="text-[10px] text-[var(--signal-mint)] font-mono">
+            {fastestPing > 0 ? `Fastest: ${fastestPing}ms` : 'Run a handshake probe'}
+          </div>
         </div>
 
         {/* Capsule 4 */}
         <div className="p-4 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-subtle)] space-y-1 squircle-capsule">
           <div className="text-[11px] text-[var(--text-muted)] font-medium uppercase">Free Daily Quota Available</div>
-          <div className="text-xl font-bold text-[var(--signal-mint)] font-mono" dir="ltr">81.4%</div>
+          <div className="text-xl font-bold text-[var(--signal-mint)] font-mono" dir="ltr">{quotaAvailablePct}%</div>
           <div className="text-[10px] text-[var(--text-secondary)] font-mono">Resets at midnight UTC</div>
         </div>
       </div>
@@ -283,7 +301,7 @@ export const CredentialVault: React.FC = () => {
         <div className="space-y-0.5">
           <div className="font-semibold text-white">Vault Watchdog Guard Active</div>
           <div className="text-[var(--text-secondary)] leading-relaxed">
-            All 6 provider keys are isolated inside local web application memory using standard zero-trust encryption primitives. Credentials are never written to disk or transmitted to third-party tracking servers.
+            All provider keys are isolated inside local web application memory using standard zero-trust encryption primitives. Credentials are never written to disk or transmitted to third-party tracking servers.
           </div>
         </div>
       </div>
@@ -293,6 +311,11 @@ export const CredentialVault: React.FC = () => {
         <div className="text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">Provider Key Gallery Cards</div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {keys.length === 0 && (
+            <div className="col-span-full p-8 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-subtle)] text-center text-xs text-[var(--text-secondary)]">
+              No provider keys connected yet. Click "+ Connect Provider Key" to add your first credential.
+            </div>
+          )}
           {keys.map((key) => {
             return (
               <div
@@ -313,9 +336,17 @@ export const CredentialVault: React.FC = () => {
                     </div>
                   </div>
 
-                  <span className="flex items-center gap-1.5 text-[11px] font-mono text-[var(--signal-mint)] bg-[var(--signal-mint)]/10 px-2.5 py-1 rounded-full border border-[var(--signal-mint)]/20">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[var(--signal-mint)] animate-pulse" />
-                    Verified
+                  <span
+                    className={`flex items-center gap-1.5 text-[11px] font-mono px-2.5 py-1 rounded-full border ${
+                      key.status === 'degraded'
+                        ? 'text-amber-400 bg-amber-500/10 border-amber-500/20'
+                        : key.status === 'unconfigured'
+                        ? 'text-[var(--text-muted)] bg-[var(--bg-well)] border-[var(--border-subtle)]'
+                        : 'text-[var(--signal-mint)] bg-[var(--signal-mint)]/10 border-[var(--signal-mint)]/20'
+                    }`}
+                  >
+                    <span className={`w-1.5 h-1.5 rounded-full ${key.status === 'degraded' ? 'bg-amber-400' : key.status === 'unconfigured' ? 'bg-[var(--text-muted)]' : 'bg-[var(--signal-mint)] animate-pulse'}`} />
+                    {key.status === 'degraded' ? 'Degraded' : key.status === 'unconfigured' ? 'Unconfigured' : key.status === 'testing' ? 'Testing' : 'Verified'}
                   </span>
                 </div>
 

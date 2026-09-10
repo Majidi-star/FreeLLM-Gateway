@@ -47,7 +47,7 @@ export async function buildApp() {
   const logRepo = new RequestLogRepository(db);
 
   // Initialize Services
-  const providerService = new ProviderService(providerRepo, connectionRepo);
+  const providerService = new ProviderService(providerRepo, connectionRepo, quotaRepo);
   const catalogService = new CatalogService(providerRepo, modelRepo);
   const modelSyncService = new ModelSyncService(providerRepo, connectionRepo, modelRepo);
   const goalService = new GoalService(goalRepo, connectionRepo, providerRepo, modelRepo, healthRepo, quotaRepo);

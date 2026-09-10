@@ -1,12 +1,14 @@
 import { ProviderRepository } from '../infra/db/repositories/providerRepo.js';
 import { ConnectionRepository, ProviderConnectionRecord } from '../infra/db/repositories/connectionRepo.js';
 import { HealthRepository } from '../infra/db/repositories/healthRepo.js';
+import { QuotaRepository } from '../infra/db/repositories/quotaRepo.js';
 import { breakerRegistry, getSharedCircuitBreaker, locallyExpiredConnectionIds } from './gatewayService.js';
 import { encryptCredential, decryptCredential } from '../infra/security/vault.js';
 import { callProviderEndpoint } from '../infra/http/providerClient.js';
 import { NotFoundError, ValidationError } from '../shared/errors.js';
 import { ConnectionStatus, ConnectionTier } from '../shared/types.js';
 import { logger } from '../infra/logger.js';
+import { getWindowStart, computeSlidingWindowUsage } from '../domain/quota/slidingWindow.js';
 
 export interface AddConnectionInput {
   providerSlug: string;
@@ -30,7 +32,8 @@ export interface ConnectionDTO {
 export class ProviderService {
   constructor(
     private providerRepo: ProviderRepository,
-    private connectionRepo: ConnectionRepository
+    private connectionRepo: ConnectionRepository,
+    private quotaRepo?: QuotaRepository
   ) {}
 
   public addConnection(input: AddConnectionInput): ConnectionDTO {
@@ -63,6 +66,23 @@ export class ProviderService {
     return this.toDTO(record, provider.slug, provider.display_name);
   }
 
+  private computeDailyQuotaUsedPct(conn: ProviderConnectionRecord | undefined): number {
+    if (!conn || !this.quotaRepo) return 0;
+    try {
+      const policy = this.quotaRepo.getPolicy(conn.id, 'daily_tokens');
+      if (!policy || policy.limit_value <= 0 || policy.window_seconds <= 0) return 0;
+      const now = Date.now();
+      const windowStart = getWindowStart(now, policy.window_seconds);
+      const currentUsage = this.quotaRepo.getUsage(conn.id, 'daily_tokens', windowStart);
+      const prevUsage = this.quotaRepo.getUsage(conn.id, 'daily_tokens', windowStart - policy.window_seconds * 1000);
+      const usage = computeSlidingWindowUsage({ currentUsage, previousUsage: prevUsage, windowSeconds: policy.window_seconds, nowMs: now });
+      return Math.min(100, Math.round((usage / policy.limit_value) * 100));
+    } catch (err: any) {
+      logger.warn({ connectionId: conn.id, error: err?.message }, 'Failed to compute quota usage for provider DTO; reporting 0%');
+      return 0;
+    }
+  }
+
   public getProvidersWithConnections() {
     const catalogProviders = this.providerRepo.listAll(true);
     const connections = this.connectionRepo.listAll();
@@ -85,9 +105,9 @@ export class ProviderService {
         hasKey: Boolean(conn),
         maskedKey: conn ? `sk-••••••••${conn.credential_enc.substring(0, 4)}` : 'Not Configured',
         status: conn ? (conn.status === 'degraded' ? 'degraded' : 'active') : 'unconfigured',
-        lastPingMs: conn ? 45 : 0,
-        lastVerified: conn ? 'Verified' : 'Not Connected',
-        dailyQuotaUsedPct: conn ? 25 : 0,
+        lastPingMs: 0,
+        lastVerified: conn?.last_tested_at ? new Date(conn.last_tested_at).toLocaleTimeString() : 'Never',
+        dailyQuotaUsedPct: this.computeDailyQuotaUsedPct(conn),
         tier: (conn?.tier === 'pro' ? 'Pro Enclave' : 'Free Tier') as 'Free Tier' | 'Pro Enclave',
       };
     });

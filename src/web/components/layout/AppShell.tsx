@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { LayoutDashboard, Key, Palette, Sparkles, Activity, ShieldCheck, Cpu, Terminal, ArrowUpRight, CheckCircle2, ChevronRight, Zap, RefreshCw, MessageSquare } from 'lucide-react';
 import { CockpitDashboard } from '../cockpit/CockpitDashboard.js';
 import { AgentBridge } from '../bridge/AgentBridge.js';
@@ -12,7 +12,26 @@ export const AppShell: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'cockpit' | 'bridge' | 'vault' | 'settings'>('cockpit');
   const [isGoalStudioOpen, setIsGoalStudioOpen] = useState(false);
   const [selectedTrace, setSelectedTrace] = useState<DecisionTrace | null>(null);
-  const [conciergeMsg, setConciergeMsg] = useState('GoalRoute Copilot active. Monitoring 6 free enclave keys with 0ms overhead.');
+  const [conciergeMsg, setConciergeMsg] = useState('GoalRoute Copilot active. Monitoring your configured enclave keys with 0ms overhead.');
+  const [activeKeys, setActiveKeys] = useState<number | null>(null);
+
+  useEffect(() => {
+    const adminToken =
+      sessionStorage.getItem('goalroute_admin_token') ||
+      localStorage.getItem('goalroute_admin_token') ||
+      (import.meta as any).env?.VITE_ADMIN_API_TOKEN ||
+      'dev-admin-secret-token';
+    fetch('/api/v1/providers', {
+      headers: adminToken ? { authorization: `Bearer ${adminToken}` } : {},
+    })
+      .then((res) => (res.ok ? res.json() : []))
+      .then((providers) => {
+        if (Array.isArray(providers)) {
+          setActiveKeys(providers.filter((p: any) => p && p.hasKey && p.status !== 'unconfigured').length);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   return (
     <div className="min-h-screen bg-[var(--bg-obsidian)] text-slate-100 font-sans flex flex-col md:flex-row overflow-hidden">
@@ -104,7 +123,11 @@ export const AppShell: React.FC = () => {
               <span className="text-[var(--text-muted)] font-medium">Engine SLA</span>
               <span className="text-[var(--signal-mint)] font-mono font-bold">100%</span>
             </div>
-            <div className="text-[10px] text-[var(--text-secondary)]">6 / 6 Free Enclave Keys</div>
+            <div className="text-[10px] text-[var(--text-secondary)]">
+              {activeKeys !== null
+                ? `${activeKeys} / ${activeKeys} Free Enclave Keys`
+                : 'Loading enclave keys…'}
+            </div>
           </div>
 
           <div className="flex items-center space-x-2.5 px-2">

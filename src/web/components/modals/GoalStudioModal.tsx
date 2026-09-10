@@ -8,12 +8,27 @@ interface GoalStudioModalProps {
   onApplyGoal?: (goal: { intent: string; maxLatency: number; targetQuality: number; minAvailability: number }) => void;
 }
 
+const getAdminToken = () =>
+  sessionStorage.getItem('goalroute_admin_token') ||
+  localStorage.getItem('goalroute_admin_token') ||
+  (import.meta as any).env?.VITE_ADMIN_API_TOKEN ||
+  'dev-admin-secret-token';
+
 export const GoalStudioModal: React.FC<GoalStudioModalProps> = ({ isOpen, onClose, onApplyGoal }) => {
   const [selectedIntent, setSelectedIntent] = useState<'coding' | 'chat' | 'reasoning' | 'custom'>('coding');
   const [maxLatency, setMaxLatency] = useState(250);
   const [targetQuality, setTargetQuality] = useState(95);
   const [minAvailability, setMinAvailability] = useState(99.5);
   const [applied, setApplied] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  const INTENT_PAYLOAD: Record<typeof selectedIntent, { label: string; taskType: string; latencyPref: string; reliabilityPref: string; maxLatency: number; targetQuality: number; minAvailability: number }> = {
+    coding: { label: 'High-Speed Code', taskType: 'coding_agent', latencyPref: 'instant', reliabilityPref: 'standard', maxLatency: 200, targetQuality: 98, minAvailability: 99.9 },
+    chat: { label: 'Sub-100ms Chat', taskType: 'chatbot', latencyPref: 'instant', reliabilityPref: 'standard', maxLatency: 120, targetQuality: 90, minAvailability: 99.0 },
+    reasoning: { label: 'Math & Reasoning', taskType: 'research', latencyPref: 'relaxed', reliabilityPref: 'maximum', maxLatency: 400, targetQuality: 99, minAvailability: 99.5 },
+    custom: { label: 'Custom Sliders', taskType: 'general', latencyPref: 'relaxed', reliabilityPref: 'standard', maxLatency: 250, targetQuality: 95, minAvailability: 99.5 },
+  };
 
   const saveTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -40,16 +55,44 @@ export const GoalStudioModal: React.FC<GoalStudioModalProps> = ({ isOpen, onClos
     }
   };
 
-  const handleSave = () => {
-    setApplied(true);
-    if (onApplyGoal) {
-      onApplyGoal({ intent: selectedIntent, maxLatency, targetQuality, minAvailability });
+  const handleSave = async () => {
+    setSaveError(null);
+    setIsSaving(true);
+    try {
+      const params = INTENT_PAYLOAD[selectedIntent];
+      const res = await fetch('/api/v1/goals', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(getAdminToken() ? { authorization: `Bearer ${getAdminToken()}` } : {}),
+        },
+        body: JSON.stringify({
+          name: `Goal - ${params.label}`,
+          task_type: params.taskType,
+          latency_pref: params.latencyPref,
+          budget_pref: 'free',
+          reliability_pref: params.reliabilityPref,
+          exhaustion_pref: 'preserve_backup',
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || `Failed to persist goal (HTTP ${res.status})`);
+      }
+      setApplied(true);
+      if (onApplyGoal) {
+        onApplyGoal({ intent: selectedIntent, maxLatency, targetQuality, minAvailability });
+      }
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = setTimeout(() => {
+        setApplied(false);
+        onClose();
+      }, 600);
+    } catch (e: any) {
+      setSaveError(e.message || 'Failed to persist goal');
+    } finally {
+      setIsSaving(false);
     }
-    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    saveTimerRef.current = setTimeout(() => {
-      setApplied(false);
-      onClose();
-    }, 600);
   };
 
   if (!isOpen) return null;
@@ -219,7 +262,7 @@ export const GoalStudioModal: React.FC<GoalStudioModalProps> = ({ isOpen, onClos
           </div>
 
           <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
-            Optimal provider set selected: <strong className="text-white">DeepSeek-R1 (Primary)</strong> + <strong className="text-white">Qwen 2.5 Coder (Fast Fallback)</strong>. Zero cost tier active.
+            The solver selects the optimal provider set live from your configured connections at solve time. Zero-cost free-tier connections are prioritized first.
           </p>
 
           {/* Dual-tone Pareto Headroom Bar */}
@@ -237,6 +280,9 @@ export const GoalStudioModal: React.FC<GoalStudioModalProps> = ({ isOpen, onClos
 
         {/* Footer Actions */}
         <div className="mt-6 flex items-center justify-end space-x-3 pt-4 border-t border-[var(--border-subtle)]">
+          {saveError && (
+            <span className="mr-auto text-[10px] font-mono text-red-400">{saveError}</span>
+          )}
           <button
             onClick={onClose}
             className="px-5 py-2.5 rounded-xl text-xs font-semibold text-[var(--text-secondary)] hover:text-white hover:bg-[var(--bg-card-active)] transition-colors"
@@ -245,7 +291,8 @@ export const GoalStudioModal: React.FC<GoalStudioModalProps> = ({ isOpen, onClos
           </button>
           <button
             onClick={handleSave}
-            className="px-6 py-2.5 rounded-xl text-xs font-semibold bg-[var(--accent-primary)] hover:bg-[var(--accent-primary-hover)] text-slate-950 flex items-center space-x-2 transition-all shadow-lg shadow-[var(--accent-primary)]/20 active:scale-95"
+            disabled={isSaving}
+            className="px-6 py-2.5 rounded-xl text-xs font-semibold bg-[var(--accent-primary)] hover:bg-[var(--accent-primary-hover)] text-slate-950 flex items-center space-x-2 transition-all shadow-lg shadow-[var(--accent-primary)]/20 active:scale-95 disabled:opacity-50"
           >
             {applied ? (
               <>
@@ -254,8 +301,8 @@ export const GoalStudioModal: React.FC<GoalStudioModalProps> = ({ isOpen, onClos
               </>
             ) : (
               <>
-                <Sparkles className="w-4 h-4" />
-                <span>Apply Goal Strategy</span>
+                <Sparkles className={`w-4 h-4 ${isSaving ? 'animate-pulse' : ''}`} />
+                <span>{isSaving ? 'Persisting Goal...' : 'Apply Goal Strategy'}</span>
               </>
             )}
           </button>
