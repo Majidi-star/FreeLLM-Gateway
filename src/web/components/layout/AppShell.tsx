@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { LayoutDashboard, Key, Palette, Sparkles, Activity, ShieldCheck, Cpu, Terminal, ArrowUpRight, CheckCircle2, ChevronRight, Zap, RefreshCw, MessageSquare } from 'lucide-react';
 import { CockpitDashboard } from '../cockpit/CockpitDashboard.js';
+import { AgentBridge } from '../bridge/AgentBridge.js';
 import { CredentialVault } from '../vault/CredentialVault.js';
 import { SettingsAppearanceStudio } from '../settings/SettingsAppearanceStudio.js';
 import { GoalStudioModal } from '../modals/GoalStudioModal.js';
@@ -8,7 +9,7 @@ import { DecisionInspectorDrawer, DecisionTrace } from '../drawers/DecisionInspe
 import { GlossaryTerm } from '../common/GlossaryTerm.js';
 
 export const AppShell: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'cockpit' | 'vault' | 'settings'>('cockpit');
+  const [activeTab, setActiveTab] = useState<'cockpit' | 'bridge' | 'vault' | 'settings'>('cockpit');
   const [isGoalStudioOpen, setIsGoalStudioOpen] = useState(false);
   const [selectedTrace, setSelectedTrace] = useState<DecisionTrace | null>(null);
   const [conciergeMsg, setConciergeMsg] = useState('GoalRoute Copilot active. Monitoring 6 free enclave keys with 0ms overhead.');
@@ -56,6 +57,18 @@ export const AppShell: React.FC = () => {
             >
               <LayoutDashboard className={`w-4 h-4 ${activeTab === 'cockpit' ? 'text-[var(--accent-primary)]' : ''}`} />
               <span>Cockpit Dashboard</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('bridge')}
+              className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                activeTab === 'bridge'
+                  ? 'bg-[var(--bg-card-active)] text-white border border-[var(--accent-primary)]/40 shadow-md'
+                  : 'text-[var(--text-secondary)] hover:text-white hover:bg-[var(--bg-card)]'
+              }`}
+            >
+              <Zap className={`w-4 h-4 ${activeTab === 'bridge' ? 'text-[var(--accent-primary)]' : ''}`} />
+              <span>Agent Bridge</span>
             </button>
 
             <button
@@ -114,6 +127,7 @@ export const AppShell: React.FC = () => {
             onSelectTrace={(trace) => setSelectedTrace(trace)}
           />
         )}
+        {activeTab === 'bridge' && <AgentBridge />}
         {activeTab === 'vault' && <CredentialVault />}
         {activeTab === 'settings' && <SettingsAppearanceStudio />}
       </main>
