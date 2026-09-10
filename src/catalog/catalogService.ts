@@ -84,4 +84,27 @@ export class CatalogService {
     if (!prov) return [];
     return this.modelRepo.listByProviderId(prov.id);
   }
+
+  public getAllModels() {
+    const models = this.modelRepo.listAll();
+    return models.map((m) => {
+      const prov = this.providerRepo.findById(m.provider_id);
+      return {
+        id: m.id,
+        modelName: m.model_name,
+        displayName: m.display_name,
+        contextWindow: m.context_window,
+        supportsTools: Boolean(m.supports_tools),
+        supportsVision: Boolean(m.supports_vision),
+        costInputPer1k: m.cost_input_per_1k,
+        costOutputPer1k: m.cost_output_per_1k,
+        benchTps: m.bench_tps,
+        benchTtftMs: m.bench_ttft_ms,
+        benchP95LatencyMs: m.bench_p95_latency_ms,
+        isActive: Boolean(m.is_active),
+        providerSlug: prov?.slug || 'unknown',
+        providerDisplayName: prov?.display_name || 'Unknown Provider',
+      };
+    });
+  }
 }

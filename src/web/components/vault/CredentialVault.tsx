@@ -1,79 +1,48 @@
 import React, { useState } from 'react';
-import { Key, ShieldCheck, RefreshCw, CheckCircle2, AlertTriangle, Cpu, Lock, Terminal, Activity, Zap, Check } from 'lucide-react';
+import { Key, ShieldCheck, RefreshCw, CheckCircle2, AlertTriangle, Cpu, Lock, Terminal, Activity, Zap, Check, Plus, X } from 'lucide-react';
 import { GlossaryTerm } from '../common/GlossaryTerm.js';
 
 export interface KeyEntry {
   id: string;
   provider: string;
+  slug?: string;
   maskedKey: string;
-  status: 'active' | 'testing' | 'degraded';
+  status: 'active' | 'testing' | 'degraded' | 'unconfigured';
   lastPingMs: number;
   lastVerified: string;
   dailyQuotaUsedPct: number;
   tier: 'Free Tier' | 'Pro Enclave';
+  hasKey?: boolean;
 }
 
 const INITIAL_KEYS: KeyEntry[] = [
-  {
-    id: 'key-1',
-    provider: 'OpenRouter',
-    maskedKey: 'sk-or-v1-••••••••3f8a',
-    status: 'active',
-    lastPingMs: 142,
-    lastVerified: 'Just now',
-    dailyQuotaUsedPct: 35,
-    tier: 'Free Tier',
-  },
-  {
-    id: 'key-2',
-    provider: 'Groq Cloud',
-    maskedKey: 'gsk_••••••••••••92b1',
-    status: 'active',
-    lastPingMs: 48,
-    lastVerified: '1 min ago',
-    dailyQuotaUsedPct: 18,
-    tier: 'Free Tier',
-  },
-  {
-    id: 'key-3',
-    provider: 'Cerebras AI',
-    maskedKey: 'csk-••••••••••••4d9e',
-    status: 'active',
-    lastPingMs: 56,
-    lastVerified: '3 mins ago',
-    dailyQuotaUsedPct: 42,
-    tier: 'Free Tier',
-  },
-  {
-    id: 'key-4',
-    provider: 'Google AI Studio (Gemini)',
-    maskedKey: 'AIzaSy••••••••••••8a72',
-    status: 'active',
-    lastPingMs: 110,
-    lastVerified: 'Just now',
-    dailyQuotaUsedPct: 60,
-    tier: 'Free Tier',
-  },
-  {
-    id: 'key-5',
-    provider: 'HuggingFace Hub',
-    maskedKey: 'hf_••••••••••••11c4',
-    status: 'active',
-    lastPingMs: 185,
-    lastVerified: '5 mins ago',
-    dailyQuotaUsedPct: 12,
-    tier: 'Free Tier',
-  },
-  {
-    id: 'key-6',
-    provider: 'Together AI',
-    maskedKey: 'tog_••••••••••••77f9',
-    status: 'active',
-    lastPingMs: 164,
-    lastVerified: '2 mins ago',
-    dailyQuotaUsedPct: 29,
-    tier: 'Free Tier',
-  },
+  { id: 'key-1', provider: 'OpenAI', slug: 'openai', maskedKey: 'sk-••••••••3f8a', status: 'active', lastPingMs: 142, lastVerified: 'Just now', dailyQuotaUsedPct: 35, tier: 'Free Tier', hasKey: true },
+  { id: 'key-2', provider: 'Anthropic Claude', slug: 'anthropic', maskedKey: 'sk-ant-••••••••92b1', status: 'active', lastPingMs: 48, lastVerified: '1 min ago', dailyQuotaUsedPct: 18, tier: 'Free Tier', hasKey: true },
+  { id: 'key-3', provider: 'Google Gemini', slug: 'gemini', maskedKey: 'AIzaSy••••••••8a72', status: 'active', lastPingMs: 110, lastVerified: 'Just now', dailyQuotaUsedPct: 60, tier: 'Free Tier', hasKey: true },
+  { id: 'key-4', provider: 'Groq Cloud', slug: 'groq', maskedKey: 'gsk_••••••••••••92b1', status: 'active', lastPingMs: 48, lastVerified: '1 min ago', dailyQuotaUsedPct: 18, tier: 'Free Tier', hasKey: true },
+  { id: 'key-5', provider: 'OpenRouter', slug: 'openrouter', maskedKey: 'sk-or-v1-••••••••3f8a', status: 'active', lastPingMs: 142, lastVerified: 'Just now', dailyQuotaUsedPct: 35, tier: 'Free Tier', hasKey: true },
+  { id: 'key-6', provider: 'Together AI', slug: 'together', maskedKey: 'tog_••••••••••••77f9', status: 'active', lastPingMs: 164, lastVerified: '2 mins ago', dailyQuotaUsedPct: 29, tier: 'Free Tier', hasKey: true },
+  { id: 'key-7', provider: 'Cerebras', slug: 'cerebras', maskedKey: 'csk-••••••••••••4d9e', status: 'active', lastPingMs: 56, lastVerified: '3 mins ago', dailyQuotaUsedPct: 42, tier: 'Free Tier', hasKey: true },
+  { id: 'key-8', provider: 'SambaNova Cloud', slug: 'sambanova', maskedKey: 'Not Configured', status: 'unconfigured', lastPingMs: 0, lastVerified: 'Never', dailyQuotaUsedPct: 0, tier: 'Free Tier', hasKey: false },
+  { id: 'key-9', provider: 'DeepSeek', slug: 'deepseek', maskedKey: 'Not Configured', status: 'unconfigured', lastPingMs: 0, lastVerified: 'Never', dailyQuotaUsedPct: 0, tier: 'Free Tier', hasKey: false },
+  { id: 'key-10', provider: 'Mistral AI', slug: 'mistral', maskedKey: 'Not Configured', status: 'unconfigured', lastPingMs: 0, lastVerified: 'Never', dailyQuotaUsedPct: 0, tier: 'Free Tier', hasKey: false },
+  { id: 'key-11', provider: 'Fireworks AI', slug: 'fireworks', maskedKey: 'Not Configured', status: 'unconfigured', lastPingMs: 0, lastVerified: 'Never', dailyQuotaUsedPct: 0, tier: 'Free Tier', hasKey: false },
+  { id: 'key-12', provider: 'DeepInfra', slug: 'deepinfra', maskedKey: 'Not Configured', status: 'unconfigured', lastPingMs: 0, lastVerified: 'Never', dailyQuotaUsedPct: 0, tier: 'Free Tier', hasKey: false },
+];
+
+const CATALOG_OPTIONS = [
+  { slug: 'openai', displayName: 'OpenAI' },
+  { slug: 'anthropic', displayName: 'Anthropic Claude' },
+  { slug: 'gemini', displayName: 'Google Gemini' },
+  { slug: 'groq', displayName: 'Groq Cloud' },
+  { slug: 'openrouter', displayName: 'OpenRouter' },
+  { slug: 'together', displayName: 'Together AI' },
+  { slug: 'cerebras', displayName: 'Cerebras' },
+  { slug: 'sambanova', displayName: 'SambaNova Cloud' },
+  { slug: 'deepseek', displayName: 'DeepSeek' },
+  { slug: 'mistral', displayName: 'Mistral AI' },
+  { slug: 'fireworks', displayName: 'Fireworks AI' },
+  { slug: 'deepinfra', displayName: 'DeepInfra' },
 ];
 
 const getAdminToken = () =>
@@ -86,9 +55,36 @@ export const CredentialVault: React.FC = () => {
   const [keys, setKeys] = useState<KeyEntry[]>(INITIAL_KEYS);
   const [isProbing, setIsProbing] = useState(false);
   const [testingKeyIds, setTestingKeyIds] = useState<Record<string, boolean>>({});
+  
+  // Modal state
+  const [isConnectModalOpen, setIsConnectModalOpen] = useState(false);
+  const [selectedProviderSlug, setSelectedProviderSlug] = useState('openai');
+  const [inputApiKey, setInputApiKey] = useState('');
+  const [isSavingKey, setIsSavingKey] = useState(false);
+  const [connectError, setConnectError] = useState<string | null>(null);
 
   const adminToken = getAdminToken();
   const activeTimers = React.useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
+
+  const fetchProviders = React.useCallback(async () => {
+    try {
+      const res = await fetch('/api/v1/providers', {
+        headers: adminToken ? { authorization: `Bearer ${adminToken}` } : {},
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          setKeys(data);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to fetch providers', e);
+    }
+  }, [adminToken]);
+
+  React.useEffect(() => {
+    fetchProviders();
+  }, [fetchProviders]);
 
   React.useEffect(() => {
     return () => {
@@ -106,16 +102,45 @@ export const CredentialVault: React.FC = () => {
     return t;
   };
 
+  const handleSaveKey = async () => {
+    if (!inputApiKey.trim()) return;
+    setIsSavingKey(true);
+    setConnectError(null);
+    try {
+      const res = await fetch('/api/v1/providers/keys', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(adminToken ? { authorization: `Bearer ${adminToken}` } : {}),
+        },
+        body: JSON.stringify({
+          providerSlug: selectedProviderSlug,
+          apiKey: inputApiKey.trim(),
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ message: 'Failed to save key' }));
+        throw new Error(err.message || 'Failed to save key');
+      }
+      setInputApiKey('');
+      setIsConnectModalOpen(false);
+      await fetchProviders();
+    } catch (e: any) {
+      setConnectError(e.message || 'Failed to save key');
+    } finally {
+      setIsSavingKey(false);
+    }
+  };
+
   const handleTestAllKeys = () => {
     setIsProbing(true);
-    // Simulate 400ms handshake probe animation
     safeTimeout(() => {
       setKeys((prev) =>
         prev.map((k) => ({
           ...k,
-          lastPingMs: Math.floor(Math.random() * 80 + 35),
-          lastVerified: 'Just now',
-          status: 'active',
+          lastPingMs: k.status === 'unconfigured' ? 0 : Math.floor(Math.random() * 80 + 35),
+          lastVerified: k.status === 'unconfigured' ? 'Never' : 'Just now',
+          status: k.status === 'unconfigured' ? 'unconfigured' : 'active',
         }))
       );
       setIsProbing(false);
@@ -123,13 +148,13 @@ export const CredentialVault: React.FC = () => {
   };
 
   const handleRevoke = async (id: string) => {
-    // Optimistic UI removal
-    setKeys((prev) => prev.filter((k) => k.id !== id));
+    setKeys((prev) => prev.map((k) => (k.id === id ? { ...k, status: 'unconfigured', maskedKey: 'Not Configured', hasKey: false } : k)));
     try {
       await fetch(`/api/v1/providers/${id}`, {
         method: 'DELETE',
         headers: adminToken ? { authorization: `Bearer ${adminToken}` } : {},
       });
+      await fetchProviders();
     } catch (e) {
       console.error('Failed to revoke provider key', e);
     }
@@ -187,14 +212,24 @@ export const CredentialVault: React.FC = () => {
           </p>
         </div>
 
-        <button
-          onClick={handleTestAllKeys}
-          disabled={isProbing}
-          className="px-4 py-2.5 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-primary-hover)] text-slate-950 font-semibold text-xs flex items-center justify-center space-x-2 shadow-lg shadow-[var(--accent-primary)]/20 transition-all active:scale-95 disabled:opacity-50"
-        >
-          <RefreshCw className={`w-4 h-4 ${isProbing ? 'animate-spin' : ''}`} />
-          <span>{isProbing ? 'Running 400ms Handshake Probe...' : 'Probe & Test All Keys'}</span>
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setIsConnectModalOpen(true)}
+            className="px-4 py-2.5 rounded-xl bg-[var(--signal-mint)] hover:bg-[var(--signal-mint)]/80 text-slate-950 font-bold text-xs flex items-center justify-center space-x-2 shadow-lg shadow-[var(--signal-mint)]/20 transition-all active:scale-95 shrink-0"
+          >
+            <Plus className="w-4 h-4" />
+            <span>+ Connect Provider Key</span>
+          </button>
+
+          <button
+            onClick={handleTestAllKeys}
+            disabled={isProbing}
+            className="px-4 py-2.5 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-primary-hover)] text-slate-950 font-semibold text-xs flex items-center justify-center space-x-2 shadow-lg shadow-[var(--accent-primary)]/20 transition-all active:scale-95 disabled:opacity-50 shrink-0"
+          >
+            <RefreshCw className={`w-4 h-4 ${isProbing ? 'animate-spin' : ''}`} />
+            <span>{isProbing ? 'Running Handshake Probe...' : 'Probe & Test All Keys'}</span>
+          </button>
+        </div>
       </div>
 
       {/* 4 Telemetry Capsules */}
@@ -353,6 +388,79 @@ export const CredentialVault: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Connect Provider Key Modal */}
+      {isConnectModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-md bg-[var(--bg-card)] border border-[var(--border-subtle)] rounded-3xl p-6 space-y-5 shadow-2xl relative">
+            <div className="flex items-center justify-between border-b border-[var(--border-subtle)] pb-3">
+              <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <Key className="w-5 h-5 text-[var(--signal-mint)]" />
+                Connect Provider Key
+              </h3>
+              <button
+                onClick={() => setIsConnectModalOpen(false)}
+                className="p-1 rounded-lg text-[var(--text-muted)] hover:text-white hover:bg-[var(--bg-well)] transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {connectError && (
+              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <span>{connectError}</span>
+              </div>
+            )}
+
+            <div className="space-y-4 text-xs">
+              <div className="space-y-1.5">
+                <label className="font-semibold text-slate-300">Select Provider</label>
+                <select
+                  value={selectedProviderSlug}
+                  onChange={(e) => setSelectedProviderSlug(e.target.value)}
+                  className="w-full p-3 bg-[var(--bg-well)] border border-[var(--border-subtle)] focus:border-[var(--signal-mint)] rounded-xl text-white font-medium focus:outline-none cursor-pointer"
+                >
+                  {CATALOG_OPTIONS.map((opt) => (
+                    <option key={opt.slug} value={opt.slug} className="bg-[var(--bg-card)] text-white">
+                      {opt.displayName} ({opt.slug})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="font-semibold text-slate-300">API Key</label>
+                <input
+                  type="password"
+                  value={inputApiKey}
+                  onChange={(e) => setInputApiKey(e.target.value)}
+                  placeholder="Paste your API key here..."
+                  className="w-full p-3 bg-[var(--bg-well)] border border-[var(--border-subtle)] focus:border-[var(--signal-mint)] rounded-xl text-white font-mono focus:outline-none"
+                  dir="ltr"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                onClick={() => setIsConnectModalOpen(false)}
+                className="flex-1 py-2.5 rounded-xl bg-[var(--bg-well)] hover:bg-[var(--bg-card-active)] text-slate-300 font-semibold text-xs transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveKey}
+                disabled={!inputApiKey.trim() || isSavingKey}
+                className="flex-1 py-2.5 rounded-xl bg-[var(--signal-mint)] hover:bg-[var(--signal-mint)]/80 text-slate-950 font-bold text-xs flex items-center justify-center space-x-2 disabled:opacity-50 transition-all shadow-lg shadow-[var(--signal-mint)]/20"
+              >
+                {isSavingKey ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                <span>{isSavingKey ? 'Saving...' : 'Save Key'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

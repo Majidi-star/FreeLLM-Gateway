@@ -105,10 +105,54 @@ const getAdminToken = () =>
   (import.meta as any).env?.VITE_ADMIN_API_TOKEN ||
   'dev-admin-secret-token';
 
+interface CatalogModelItem {
+  id: string;
+  modelName: string;
+  displayName: string;
+  contextWindow: number;
+  supportsTools: boolean;
+  supportsVision: boolean;
+  costInputPer1k: number;
+  costOutputPer1k: number;
+  benchTps: number | null;
+  benchTtftMs: number | null;
+  providerSlug: string;
+  providerDisplayName: string;
+}
+
+const formatContextWindow = (cw: number): string => {
+  if (!cw) return '128k';
+  if (cw >= 1000000) {
+    const val = cw / 1000000;
+    return `${val % 1 === 0 ? val : val.toFixed(2)}M`;
+  }
+  return `${Math.round(cw / 1000)}k`;
+};
+
 export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalStudio, onSelectTrace }) => {
   const [activeSetupPreset, setActiveSetupPreset] = useState<'standard' | 'high_perf' | 'cost_saver' | 'reasoning'>('standard');
   const [traces, setTraces] = useState<DecisionTrace[]>(SAMPLE_TRACES);
   const [streamStatus, setStreamStatus] = useState<StreamStatus>('connecting');
+  const [catalogModels, setCatalogModels] = useState<CatalogModelItem[]>([
+    { id: '1', modelName: 'gemini-2.5-flash', displayName: 'Gemini 2.5 Flash', contextWindow: 1000000, supportsTools: true, supportsVision: true, costInputPer1k: 0, costOutputPer1k: 0, benchTps: 120, benchTtftMs: 85, providerSlug: 'gemini', providerDisplayName: 'Google Gemini' },
+    { id: '2', modelName: 'deepseek-r1', displayName: 'DeepSeek-R1', contextWindow: 128000, supportsTools: true, supportsVision: false, costInputPer1k: 0, costOutputPer1k: 0, benchTps: 90, benchTtftMs: 42, providerSlug: 'deepseek', providerDisplayName: 'DeepSeek' },
+    { id: '3', modelName: 'llama-3.3-70b', displayName: 'Llama 3.3 70B', contextWindow: 128000, supportsTools: true, supportsVision: false, costInputPer1k: 0, costOutputPer1k: 0, benchTps: 200, benchTtftMs: 48, providerSlug: 'sambanova', providerDisplayName: 'SambaNova Cloud' },
+    { id: '4', modelName: 'qwen-2.5-coder-32b', displayName: 'Qwen 2.5 Coder 32B', contextWindow: 128000, supportsTools: true, supportsVision: false, costInputPer1k: 0, costOutputPer1k: 0, benchTps: 110, benchTtftMs: 64, providerSlug: 'groq', providerDisplayName: 'Groq Cloud' },
+  ]);
+
+  React.useEffect(() => {
+    const adminToken = getAdminToken();
+    fetch('/api/v1/catalog/models', {
+      headers: adminToken ? { authorization: `Bearer ${adminToken}` } : {},
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setCatalogModels(data);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   React.useEffect(() => {
     const adminToken = getAdminToken();
@@ -314,123 +358,49 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <label className="text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">Active Free Routing Team Models</label>
-          <span className="text-xs text-[var(--text-muted)]">4 High-Priority Free Tier Models Active</span>
+          <span className="text-xs text-[var(--text-muted)]">{catalogModels.length} Active Catalog Models</span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          
-          {/* Model Card 1 */}
-          <div className="squircle-card p-4 bg-[var(--bg-card)] border border-[var(--border-subtle)] hover:border-[var(--border-hover)] hover:bg-[var(--bg-card-active)] transition-all space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] rounded-md border border-[var(--accent-primary)]/20">
-                Reasoning Leader
-              </span>
-              <span className="text-[10px] font-mono text-[var(--signal-mint)]" dir="ltr">42ms TTFT</span>
-            </div>
-            <div>
-              <h3 className="font-bold text-sm text-white">DeepSeek-R1</h3>
-              <p className="text-[11px] text-[var(--text-muted)] font-mono" dir="ltr">OpenRouter Free Tier</p>
-            </div>
-            <div className="space-y-1 text-xs font-mono" dir="ltr">
-              <div className="flex justify-between text-[11px]">
-                <span className="text-[var(--text-muted)]">Reliability:</span>
-                <span className="text-[var(--signal-mint)] font-bold">99.9%</span>
+          {catalogModels.slice(0, 8).map((model) => (
+            <div
+              key={model.id || model.modelName}
+              className="squircle-card p-4 bg-[var(--bg-card)] border border-[var(--border-subtle)] hover:border-[var(--border-hover)] hover:bg-[var(--bg-card-active)] transition-all space-y-3"
+            >
+              <div className="flex items-center justify-between">
+                <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] rounded-md border border-[var(--accent-primary)]/20 truncate max-w-[120px]">
+                  {model.providerDisplayName}
+                </span>
+                <span className="text-[10px] font-mono text-[var(--signal-mint)]" dir="ltr">
+                  {model.benchTtftMs ? `${model.benchTtftMs}ms TTFT` : 'Active'}
+                </span>
               </div>
-              <div className="flex justify-between text-[11px]">
-                <span className="text-[var(--text-muted)]">Daily Quota:</span>
-                <span className="text-white">65% left</span>
+              <div>
+                <h3 className="font-bold text-sm text-white truncate">{model.displayName}</h3>
+                <p className="text-[11px] text-[var(--text-muted)] font-mono truncate" dir="ltr">
+                  {model.modelName}
+                </p>
               </div>
-              <div className="flex justify-between text-[11px]">
-                <span className="text-[var(--text-muted)]">Cost / 1M:</span>
-                <span className="text-[var(--signal-mint)] font-bold">$0.00 FREE</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Model Card 2 */}
-          <div className="squircle-card p-4 bg-[var(--bg-card)] border border-[var(--border-subtle)] hover:border-[var(--border-hover)] hover:bg-[var(--bg-card-active)] transition-all space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-[var(--signal-mint)]/10 text-[var(--signal-mint)] rounded-md border border-[var(--signal-mint)]/20">
-                Multimodal Fast
-              </span>
-              <span className="text-[10px] font-mono text-[var(--signal-mint)]" dir="ltr">85ms TTFT</span>
-            </div>
-            <div>
-              <h3 className="font-bold text-sm text-white">Gemini 2.5 Flash</h3>
-              <p className="text-[11px] text-[var(--text-muted)] font-mono" dir="ltr">Google AI Studio</p>
-            </div>
-            <div className="space-y-1 text-xs font-mono" dir="ltr">
-              <div className="flex justify-between text-[11px]">
-                <span className="text-[var(--text-muted)]">Reliability:</span>
-                <span className="text-[var(--signal-mint)] font-bold">100%</span>
-              </div>
-              <div className="flex justify-between text-[11px]">
-                <span className="text-[var(--text-muted)]">Daily Quota:</span>
-                <span className="text-white">40% left</span>
-              </div>
-              <div className="flex justify-between text-[11px]">
-                <span className="text-[var(--text-muted)]">Cost / 1M:</span>
-                <span className="text-[var(--signal-mint)] font-bold">$0.00 FREE</span>
+              <div className="space-y-1 text-xs font-mono" dir="ltr">
+                <div className="flex justify-between text-[11px]">
+                  <span className="text-[var(--text-muted)]">Context Window:</span>
+                  <span className="text-[var(--signal-mint)] font-bold">{formatContextWindow(model.contextWindow)}</span>
+                </div>
+                <div className="flex justify-between text-[11px]">
+                  <span className="text-[var(--text-muted)]">Capabilities:</span>
+                  <span className="text-white">
+                    {model.supportsVision ? 'Vision + Tools' : model.supportsTools ? 'Tools' : 'Text'}
+                  </span>
+                </div>
+                <div className="flex justify-between text-[11px]">
+                  <span className="text-[var(--text-muted)]">Cost / 1M:</span>
+                  <span className="text-[var(--signal-mint)] font-bold">
+                    {model.costInputPer1k === 0 ? '$0.00 FREE' : `$${(model.costInputPer1k * 1000).toFixed(2)}`}
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
-
-          {/* Model Card 3 */}
-          <div className="squircle-card p-4 bg-[var(--bg-card)] border border-[var(--border-subtle)] hover:border-[var(--border-hover)] hover:bg-[var(--bg-card-active)] transition-all space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-amber-500/10 text-amber-400 rounded-md border border-amber-500/20">
-                Code Specialist
-              </span>
-              <span className="text-[10px] font-mono text-[var(--signal-mint)]" dir="ltr">64ms TTFT</span>
-            </div>
-            <div>
-              <h3 className="font-bold text-sm text-white">Qwen 2.5 Coder 32B</h3>
-              <p className="text-[11px] text-[var(--text-muted)] font-mono" dir="ltr">HuggingFace Hub</p>
-            </div>
-            <div className="space-y-1 text-xs font-mono" dir="ltr">
-              <div className="flex justify-between text-[11px]">
-                <span className="text-[var(--text-muted)]">Reliability:</span>
-                <span className="text-[var(--signal-mint)] font-bold">99.7%</span>
-              </div>
-              <div className="flex justify-between text-[11px]">
-                <span className="text-[var(--text-muted)]">Daily Quota:</span>
-                <span className="text-white">88% left</span>
-              </div>
-              <div className="flex justify-between text-[11px]">
-                <span className="text-[var(--text-muted)]">Cost / 1M:</span>
-                <span className="text-[var(--signal-mint)] font-bold">$0.00 FREE</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Model Card 4 */}
-          <div className="squircle-card p-4 bg-[var(--bg-card)] border border-[var(--border-subtle)] hover:border-[var(--border-hover)] hover:bg-[var(--bg-card-active)] transition-all space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-purple-500/10 text-purple-400 rounded-md border border-purple-500/20">
-                Llama Power
-              </span>
-              <span className="text-[10px] font-mono text-[var(--signal-mint)]" dir="ltr">48ms TTFT</span>
-            </div>
-            <div>
-              <h3 className="font-bold text-sm text-white">Llama 3.3 70B</h3>
-              <p className="text-[11px] text-[var(--text-muted)] font-mono" dir="ltr">Groq / Cerebras</p>
-            </div>
-            <div className="space-y-1 text-xs font-mono" dir="ltr">
-              <div className="flex justify-between text-[11px]">
-                <span className="text-[var(--text-muted)]">Reliability:</span>
-                <span className="text-[var(--signal-mint)] font-bold">100%</span>
-              </div>
-              <div className="flex justify-between text-[11px]">
-                <span className="text-[var(--text-muted)]">Daily Quota:</span>
-                <span className="text-white">82% left</span>
-              </div>
-              <div className="flex justify-between text-[11px]">
-                <span className="text-[var(--text-muted)]">Cost / 1M:</span>
-                <span className="text-[var(--signal-mint)] font-bold">$0.00 FREE</span>
-              </div>
-            </div>
-          </div>
-
+          ))}
         </div>
       </div>
 

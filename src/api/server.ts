@@ -256,10 +256,13 @@ export async function buildApp() {
   });
 
   // Management Routes
-  fastify.get('/api/v1/providers', async () => providerService.listConnections());
+  fastify.get('/api/v1/providers', async () => providerService.getProvidersWithConnections());
   fastify.post('/api/v1/providers', async (req) => providerService.addConnection(req.body as any));
+  fastify.post('/api/v1/providers/keys', async (req) => providerService.addConnection(req.body as any));
   fastify.post('/api/v1/providers/:id/test', async (req) => providerService.testConnection((req.params as any).id));
   fastify.delete('/api/v1/providers/:id', async (req) => providerService.revokeConnection((req.params as any).id, healthRepo));
+
+  fastify.get('/api/v1/catalog/models', async () => catalogService.getAllModels());
 
   fastify.get('/api/v1/goals', async () => goalService.listGoals());
   fastify.post('/api/v1/goals', async (req) => goalService.createGoal(req.body as any));

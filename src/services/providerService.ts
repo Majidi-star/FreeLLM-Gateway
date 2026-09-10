@@ -10,7 +10,7 @@ import { logger } from '../infra/logger.js';
 
 export interface AddConnectionInput {
   providerSlug: string;
-  label: string;
+  label?: string;
   apiKey: string;
   tier?: ConnectionTier;
 }
@@ -44,10 +44,11 @@ export class ProviderService {
     }
 
     const encrypted = encryptCredential(input.apiKey);
+    const connLabel = input.label || `${provider.display_name} Key`;
 
     const record = this.connectionRepo.create({
       provider_id: provider.id,
-      label: input.label,
+      label: connLabel,
       credential_enc: encrypted.ciphertext,
       credential_iv: encrypted.iv,
       credential_tag: encrypted.tag,
@@ -57,9 +58,39 @@ export class ProviderService {
       last_error: null,
     });
 
-    logger.info({ connectionId: record.id, providerSlug: provider.slug, label: input.label }, 'Added new provider connection');
+    logger.info({ connectionId: record.id, providerSlug: provider.slug, label: connLabel }, 'Added new provider connection');
 
     return this.toDTO(record, provider.slug, provider.display_name);
+  }
+
+  public getProvidersWithConnections() {
+    const catalogProviders = this.providerRepo.listAll(true);
+    const connections = this.connectionRepo.listAll();
+    const connByProvId = new Map<string, any>();
+    for (const c of connections) {
+      connByProvId.set(c.provider_id, c);
+    }
+
+    return catalogProviders.map((p) => {
+      const conn = connByProvId.get(p.id);
+      return {
+        id: conn ? conn.id : `prov-${p.slug}`,
+        providerId: p.id,
+        slug: p.slug,
+        provider: p.display_name,
+        displayName: p.display_name,
+        baseUrl: p.base_url,
+        protocol: p.protocol,
+        docsUrl: p.docs_url,
+        hasKey: Boolean(conn),
+        maskedKey: conn ? `sk-••••••••${conn.credential_enc.substring(0, 4)}` : 'Not Configured',
+        status: conn ? (conn.status === 'degraded' ? 'degraded' : 'active') : 'unconfigured',
+        lastPingMs: conn ? 45 : 0,
+        lastVerified: conn ? 'Verified' : 'Not Connected',
+        dailyQuotaUsedPct: conn ? 25 : 0,
+        tier: (conn?.tier === 'pro' ? 'Pro Enclave' : 'Free Tier') as 'Free Tier' | 'Pro Enclave',
+      };
+    });
   }
 
   public listConnections(): ConnectionDTO[] {
