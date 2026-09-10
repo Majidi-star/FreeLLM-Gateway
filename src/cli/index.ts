@@ -393,6 +393,13 @@ program
     }
   });
 
+import { runMcp } from './commands/mcp.js';
+
+program
+  .command('mcp')
+  .description('Start GoalRoute MCP server over stdio')
+  .action(runMcp);
+
 program
   .command('serve')
   .description('Start the GoalRoute Fastify HTTP Server and Gateway endpoint')

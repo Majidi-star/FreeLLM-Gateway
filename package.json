@@ -5,7 +5,7 @@
   "main": "dist/cli/index.js",
   "type": "module",
   "bin": {
-    "goalroute": "dist/cli/index.js"
+    "goalroute": "./dist/cli/index.js"
   },
   "scripts": {
     "build": "tsc",
@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@fastify/cors": "^10.0.2",
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "@tanstack/react-query": "^5.66.9",
     "better-sqlite3": "^11.8.1",
     "commander": "^13.1.0",

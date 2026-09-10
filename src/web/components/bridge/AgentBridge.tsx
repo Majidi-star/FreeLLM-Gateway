@@ -11,13 +11,13 @@ import {
   AlertTriangle,
   ChevronDown,
   Lock,
-  ArrowRight,
-  Server,
-  MousePointer
+  MousePointer,
+  Cpu,
+  Globe,
 } from 'lucide-react';
 import { sanitizeForClipboard } from '../../utils/clipboardSanitizer.js';
 
-type Assistant = 'cline' | 'claude' | 'cursor';
+type Assistant = 'qwen' | 'cline' | 'claude' | 'cursor';
 type OS = 'windows' | 'macos' | 'linux';
 type SecurityMode = 'safe' | 'full';
 type Transport = 'stdio' | 'sse';
@@ -57,6 +57,11 @@ const TOOL_PERMISSIONS: ToolPermission[] = [
 ];
 
 const PATH_MAP: Record<Assistant, Record<OS, string>> = {
+  qwen: {
+    windows: '%USERPROFILE%\\.qwen\\mcp.json or Qwen App Settings',
+    macos: '~/.qwen/mcp.json or Qwen App Settings',
+    linux: '~/.qwen/mcp.json or Qwen App Settings',
+  },
   cline: {
     windows: '%APPDATA%\\Code\\User\\globalStorage\\saoudrizwan.claude-dev\\settings\\cline_mcp_settings.json',
     macos: '~/Library/Application Support/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json',
@@ -75,13 +80,13 @@ const PATH_MAP: Record<Assistant, Record<OS, string>> = {
 };
 
 export const AgentBridge: React.FC = () => {
-  const [selectedAssistant, setSelectedAssistant] = useState<Assistant>('cline');
+  const [selectedAssistant, setSelectedAssistant] = useState<Assistant>('qwen');
   const [selectedOs, setSelectedOs] = useState<OS>('windows');
   const [copiedConfig, setCopiedConfig] = useState(false);
   const [copiedPath, setCopiedPath] = useState(false);
   const [securityMode, setSecurityMode] = useState<SecurityMode>('safe');
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [transport, setTransport] = useState<Transport>('stdio');
+  const [transport, setTransport] = useState<Transport>('sse');
   const [toolsState, setToolsState] = useState<Record<string, boolean>>({
     check_quota: true,
     solve_routing_goal: true,
@@ -89,7 +94,7 @@ export const AgentBridge: React.FC = () => {
     mutate_pools: false,
   });
 
-  // Auto-detect OS on mount
+  // Auto-detect OS on mount & sync safe mode from backend daemon
   useEffect(() => {
     if (typeof navigator !== 'undefined' && navigator.userAgent) {
       const ua = navigator.userAgent.toLowerCase();
@@ -101,27 +106,59 @@ export const AgentBridge: React.FC = () => {
         setSelectedOs('windows');
       }
     }
+
+    fetch('/api/v1/mcp/settings')
+      .then((res) => res.json())
+      .then((data) => {
+        if (typeof data.isSafeMode === 'boolean') {
+          setSecurityMode(data.isSafeMode ? 'safe' : 'full');
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const configPath = PATH_MAP[selectedAssistant][selectedOs];
 
-  const configText = JSON.stringify(
-    {
+  // Dynamic JSON Configuration object based on Assistant, Transport, and OS
+  const getConfigObject = () => {
+    if (transport === 'sse') {
+      return {
+        mcpServers: {
+          goalroute: {
+            url: 'http://127.0.0.1:8787/mcp/sse',
+          },
+        },
+      };
+    }
+
+    if (selectedAssistant === 'qwen') {
+      return {
+        mcpServers: {
+          goalroute: {
+            command: 'npx',
+            args: ['-y', 'goalroute', 'mcp'],
+          },
+        },
+      };
+    }
+
+    const cliPath =
+      selectedOs === 'windows'
+        ? 'D:\\FreeLLM-Gateway\\dist\\cli\\index.js'
+        : '/usr/local/lib/node_modules/goalroute/dist/cli/index.js';
+
+    return {
       mcpServers: {
         goalroute: {
           command: 'node',
-          args: [
-            selectedOs === 'windows'
-              ? 'D:\\FreeLLM-Gateway\\dist\\cli\\index.js'
-              : '/usr/local/lib/node_modules/goalroute/dist/cli/index.js',
-            'mcp',
-          ],
+          args: [cliPath, 'mcp'],
         },
       },
-    },
-    null,
-    2
-  );
+    };
+  };
+
+  const configObject = getConfigObject();
+  const configText = JSON.stringify(configObject, null, 2);
 
   const handleCopyConfig = () => {
     if (navigator.clipboard) {
@@ -137,6 +174,20 @@ export const AgentBridge: React.FC = () => {
     }
     setCopiedPath(true);
     setTimeout(() => setCopiedPath(false), 1800);
+  };
+
+  const handleSecurityModeChange = async (mode: SecurityMode) => {
+    setSecurityMode(mode);
+    const isSafe = mode === 'safe';
+    try {
+      await fetch('/api/v1/mcp/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isSafeMode: isSafe }),
+      });
+    } catch (e) {
+      console.error('Failed to sync security mode with daemon', e);
+    }
   };
 
   const toggleTool = (toolId: string) => {
@@ -179,20 +230,57 @@ export const AgentBridge: React.FC = () => {
           </p>
         </div>
 
-        {/* Assistant Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {/* Assistant Cards Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+          {/* Qwen / Tongyi */}
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedAssistant('qwen');
+              setTransport('sse');
+            }}
+            className={`rounded-2xl border p-3.5 flex flex-col items-center gap-2 text-center transition-all duration-200 cursor-pointer ${
+              selectedAssistant === 'qwen'
+                ? 'bg-[var(--bg-card-active)] border-[var(--accent-primary)] shadow-[0_0_0_1px_rgba(124,156,255,0.4),0_0_24px_-8px_rgba(124,156,255,0.5)]'
+                : 'bg-[var(--bg-well)]/40 border-[var(--border-subtle)] hover:bg-white/[0.03]'
+            }`}
+          >
+            <div
+              className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors ${
+                selectedAssistant === 'qwen'
+                  ? 'bg-[var(--accent-primary)]/15 border border-[var(--accent-primary)]/30 text-[var(--accent-primary)]'
+                  : 'bg-white/[0.05] border border-white/[0.08] text-[var(--text-secondary)]'
+              }`}
+            >
+              <Cpu className="w-5 h-5" />
+            </div>
+            <span
+              className={`text-xs font-semibold ${
+                selectedAssistant === 'qwen' ? 'text-white' : 'text-slate-300'
+              }`}
+            >
+              Qwen / Tongyi
+            </span>
+            <span className="text-[10px] text-[var(--text-muted)] -mt-1">
+              Alibaba / Remote
+            </span>
+          </button>
+
           {/* Cline */}
           <button
             type="button"
-            onClick={() => setSelectedAssistant('cline')}
-            className={`rounded-2xl border p-4 flex flex-col items-center gap-2.5 text-center transition-all duration-200 cursor-pointer ${
+            onClick={() => {
+              setSelectedAssistant('cline');
+              setTransport('stdio');
+            }}
+            className={`rounded-2xl border p-3.5 flex flex-col items-center gap-2 text-center transition-all duration-200 cursor-pointer ${
               selectedAssistant === 'cline'
                 ? 'bg-[var(--bg-card-active)] border-[var(--accent-primary)] shadow-[0_0_0_1px_rgba(124,156,255,0.4),0_0_24px_-8px_rgba(124,156,255,0.5)]'
                 : 'bg-[var(--bg-well)]/40 border-[var(--border-subtle)] hover:bg-white/[0.03]'
             }`}
           >
             <div
-              className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
+              className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors ${
                 selectedAssistant === 'cline'
                   ? 'bg-[var(--accent-primary)]/15 border border-[var(--accent-primary)]/30 text-[var(--accent-primary)]'
                   : 'bg-white/[0.05] border border-white/[0.08] text-[var(--text-secondary)]'
@@ -201,13 +289,13 @@ export const AgentBridge: React.FC = () => {
               <Code2 className="w-5 h-5" />
             </div>
             <span
-              className={`text-sm font-semibold ${
+              className={`text-xs font-semibold ${
                 selectedAssistant === 'cline' ? 'text-white' : 'text-slate-300'
               }`}
             >
               Cline
             </span>
-            <span className="text-[11px] text-[var(--text-muted)] -mt-1.5">
+            <span className="text-[10px] text-[var(--text-muted)] -mt-1">
               VS Code
             </span>
           </button>
@@ -215,15 +303,18 @@ export const AgentBridge: React.FC = () => {
           {/* Claude Desktop */}
           <button
             type="button"
-            onClick={() => setSelectedAssistant('claude')}
-            className={`rounded-2xl border p-4 flex flex-col items-center gap-2.5 text-center transition-all duration-200 cursor-pointer ${
+            onClick={() => {
+              setSelectedAssistant('claude');
+              setTransport('stdio');
+            }}
+            className={`rounded-2xl border p-3.5 flex flex-col items-center gap-2 text-center transition-all duration-200 cursor-pointer ${
               selectedAssistant === 'claude'
                 ? 'bg-[var(--bg-card-active)] border-[var(--accent-primary)] shadow-[0_0_0_1px_rgba(124,156,255,0.4),0_0_24px_-8px_rgba(124,156,255,0.5)]'
                 : 'bg-[var(--bg-well)]/40 border-[var(--border-subtle)] hover:bg-white/[0.03]'
             }`}
           >
             <div
-              className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
+              className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors ${
                 selectedAssistant === 'claude'
                   ? 'bg-[var(--accent-primary)]/15 border border-[var(--accent-primary)]/30 text-[var(--accent-primary)]'
                   : 'bg-white/[0.05] border border-white/[0.08] text-[var(--text-secondary)]'
@@ -232,13 +323,13 @@ export const AgentBridge: React.FC = () => {
               <Bot className="w-5 h-5" />
             </div>
             <span
-              className={`text-sm font-semibold ${
+              className={`text-xs font-semibold ${
                 selectedAssistant === 'claude' ? 'text-white' : 'text-slate-300'
               }`}
             >
               Claude Desktop
             </span>
-            <span className="text-[11px] text-[var(--text-muted)] -mt-1.5">
+            <span className="text-[10px] text-[var(--text-muted)] -mt-1">
               Anthropic
             </span>
           </button>
@@ -246,15 +337,18 @@ export const AgentBridge: React.FC = () => {
           {/* Cursor */}
           <button
             type="button"
-            onClick={() => setSelectedAssistant('cursor')}
-            className={`rounded-2xl border p-4 flex flex-col items-center gap-2.5 text-center transition-all duration-200 cursor-pointer ${
+            onClick={() => {
+              setSelectedAssistant('cursor');
+              setTransport('stdio');
+            }}
+            className={`rounded-2xl border p-3.5 flex flex-col items-center gap-2 text-center transition-all duration-200 cursor-pointer ${
               selectedAssistant === 'cursor'
                 ? 'bg-[var(--bg-card-active)] border-[var(--accent-primary)] shadow-[0_0_0_1px_rgba(124,156,255,0.4),0_0_24px_-8px_rgba(124,156,255,0.5)]'
                 : 'bg-[var(--bg-well)]/40 border-[var(--border-subtle)] hover:bg-white/[0.03]'
             }`}
           >
             <div
-              className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
+              className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors ${
                 selectedAssistant === 'cursor'
                   ? 'bg-[var(--accent-primary)]/15 border border-[var(--accent-primary)]/30 text-[var(--accent-primary)]'
                   : 'bg-white/[0.05] border border-white/[0.08] text-[var(--text-secondary)]'
@@ -263,13 +357,13 @@ export const AgentBridge: React.FC = () => {
               <MousePointer className="w-5 h-5" />
             </div>
             <span
-              className={`text-sm font-semibold ${
+              className={`text-xs font-semibold ${
                 selectedAssistant === 'cursor' ? 'text-white' : 'text-slate-300'
               }`}
             >
               Cursor
             </span>
-            <span className="text-[11px] text-[var(--text-muted)] -mt-1.5">
+            <span className="text-[10px] text-[var(--text-muted)] -mt-1">
               IDE
             </span>
           </button>
@@ -350,7 +444,7 @@ export const AgentBridge: React.FC = () => {
         <div className="bg-[var(--bg-well)] border border-[var(--border-subtle)] rounded-xl overflow-hidden shadow-inner">
           <div className="flex items-center justify-between px-4 py-2.5 border-b border-[var(--border-subtle)] bg-slate-950/40">
             <span className="text-[11px] font-mono text-[var(--text-muted)] uppercase tracking-wider font-semibold">
-              Configuration Code
+              Configuration Code ({transport.toUpperCase()})
             </span>
             <button
               type="button"
@@ -371,28 +465,7 @@ export const AgentBridge: React.FC = () => {
             </button>
           </div>
           <pre className="p-4 text-[13px] leading-relaxed font-mono overflow-x-auto text-slate-300">
-            <code>
-              <span className="text-slate-500 font-mono">&#123;</span>
-              {'\n'}  <span className="text-[var(--accent-primary)] font-mono">"mcpServers"</span>
-              <span className="text-slate-500 font-mono">: &#123;</span>
-              {'\n'}    <span className="text-[var(--accent-primary)] font-mono">"goalroute"</span>
-              <span className="text-slate-500 font-mono">: &#123;</span>
-              {'\n'}      <span className="text-[var(--accent-primary)] font-mono">"command"</span>
-              <span className="text-slate-500 font-mono">: </span>
-              <span className="text-[var(--signal-mint)] font-mono">"node"</span>
-              <span className="text-slate-500 font-mono">,</span>
-              {'\n'}      <span className="text-[var(--accent-primary)] font-mono">"args"</span>
-              <span className="text-slate-500 font-mono">: [</span>
-              <span className="text-[var(--signal-mint)] font-mono">
-                "{selectedOs === 'windows' ? 'D:\\\\FreeLLM-Gateway\\\\dist\\\\cli\\\\index.js' : '/usr/local/lib/node_modules/goalroute/dist/cli/index.js'}"
-              </span>
-              <span className="text-slate-500 font-mono">, </span>
-              <span className="text-[var(--signal-mint)] font-mono">"mcp"</span>
-              <span className="text-slate-500 font-mono">]</span>
-              {'\n'}    <span className="text-slate-500 font-mono">&#125;</span>
-              {'\n'}  <span className="text-slate-500 font-mono">&#125;</span>
-              {'\n'}<span className="text-slate-500 font-mono">&#125;</span>
-            </code>
+            <code>{configText}</code>
           </pre>
         </div>
 
@@ -436,7 +509,7 @@ export const AgentBridge: React.FC = () => {
           {/* Safe Mode */}
           <button
             type="button"
-            onClick={() => setSecurityMode('safe')}
+            onClick={() => handleSecurityModeChange('safe')}
             className={`text-left rounded-2xl border p-5 space-y-3 transition-all duration-200 cursor-pointer ${
               securityMode === 'safe'
                 ? 'border-[var(--accent-primary)]/50 bg-[var(--bg-card-active)] shadow-sm'
@@ -474,7 +547,7 @@ export const AgentBridge: React.FC = () => {
           {/* Full Superuser */}
           <button
             type="button"
-            onClick={() => setSecurityMode('full')}
+            onClick={() => handleSecurityModeChange('full')}
             className={`text-left rounded-2xl border p-5 space-y-3 transition-all duration-200 cursor-pointer ${
               securityMode === 'full'
                 ? 'border-[var(--signal-amber)]/50 bg-[var(--bg-card-active)] shadow-sm'

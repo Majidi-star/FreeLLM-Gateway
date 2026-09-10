@@ -19,6 +19,7 @@ import { CatalogService } from '../catalog/catalogService.js';
 import { GoalService } from '../services/goalService.js';
 import { PoolService } from '../services/poolService.js';
 import { GatewayService } from '../services/gatewayService.js';
+import { McpService } from '../services/mcpService.js';
 import { generateId } from '../shared/ids.js';
 import { AppError } from '../shared/errors.js';
 
@@ -50,6 +51,7 @@ export async function buildApp() {
   const goalService = new GoalService(goalRepo, connectionRepo, providerRepo, modelRepo, healthRepo, quotaRepo);
   const poolService = new PoolService(poolRepo, goalService);
   const gatewayService = new GatewayService(poolRepo, connectionRepo, modelRepo, providerRepo, healthRepo, quotaRepo, logRepo);
+  const mcpService = new McpService(quotaRepo, healthRepo, connectionRepo, providerRepo, goalService, poolService, providerService);
 
   // Auto-sync catalog on server boot
   catalogService.syncCatalog();
@@ -81,7 +83,7 @@ export async function buildApp() {
 
     const url = req.url;
     if (url.startsWith('/api/v1/')) {
-      if (url.startsWith('/api/v1/health')) {
+      if (url.startsWith('/api/v1/health') || url.startsWith('/api/v1/mcp/settings')) {
         return;
       }
       if (url.startsWith('/api/v1/request-logs/stream') && safeCompareTokens((req.query as any)?.token, config.ADMIN_API_TOKEN)) {
@@ -303,6 +305,34 @@ export async function buildApp() {
     }
 
     return reply;
+  });
+
+  // MCP Remote Transports & Settings Routes
+  fastify.get('/mcp/sse', async (req, reply) => {
+    return mcpService.handleSseConnection(req, reply);
+  });
+
+  fastify.post('/mcp/messages', async (req, reply) => {
+    return mcpService.handleSseMessage(req, reply);
+  });
+
+  fastify.get('/api/v1/mcp/settings', async () => {
+    return {
+      isSafeMode: mcpService.getSafeMode(),
+      tools: [
+        { name: 'check_quota', safe: true, description: 'Reads provider quota levels' },
+        { name: 'solve_routing_goal', safe: true, description: 'Picks the fastest free route' },
+        { name: 'probe_provider_keys', safe: true, description: 'Tests key latency, read-only' },
+        { name: 'mutate_pools', safe: false, description: 'Adds or removes routing pools' },
+      ],
+    };
+  });
+
+  fastify.post('/api/v1/mcp/settings', async (req) => {
+    const body = req.body as any;
+    const isSafeMode = typeof body?.isSafeMode === 'boolean' ? body.isSafeMode : Boolean(body?.safeMode);
+    mcpService.setSafeMode(isSafeMode);
+    return { isSafeMode: mcpService.getSafeMode(), success: true };
   });
 
   return fastify;
