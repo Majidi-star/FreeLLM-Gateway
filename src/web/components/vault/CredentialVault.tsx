@@ -125,6 +125,17 @@ export const CredentialVault: React.FC = () => {
       setInputApiKey('');
       setIsConnectModalOpen(false);
       await fetchProviders();
+
+      // Fire-and-forget background model sync for the newly verified provider.
+      // Errors are silent: the seeded catalog remains authoritative on failure.
+      const adminTokenBg = getAdminToken();
+      fetch('/api/v1/catalog/sync', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(adminTokenBg ? { authorization: `Bearer ${adminTokenBg}` } : {}),
+        },
+      }).catch(() => {});
     } catch (e: any) {
       setConnectError(e.message || 'Failed to save key');
     } finally {

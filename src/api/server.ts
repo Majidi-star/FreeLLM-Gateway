@@ -16,6 +16,7 @@ import { QuotaRepository } from '../infra/db/repositories/quotaRepo.js';
 import { RequestLogRepository } from '../infra/db/repositories/requestLogRepo.js';
 import { ProviderService } from '../services/providerService.js';
 import { CatalogService } from '../catalog/catalogService.js';
+import { ModelSyncService } from '../catalog/modelSyncService.js';
 import { GoalService } from '../services/goalService.js';
 import { PoolService } from '../services/poolService.js';
 import { GatewayService } from '../services/gatewayService.js';
@@ -48,6 +49,7 @@ export async function buildApp() {
   // Initialize Services
   const providerService = new ProviderService(providerRepo, connectionRepo);
   const catalogService = new CatalogService(providerRepo, modelRepo);
+  const modelSyncService = new ModelSyncService(providerRepo, connectionRepo, modelRepo);
   const goalService = new GoalService(goalRepo, connectionRepo, providerRepo, modelRepo, healthRepo, quotaRepo);
   const poolService = new PoolService(poolRepo, goalService);
   const gatewayService = new GatewayService(poolRepo, connectionRepo, modelRepo, providerRepo, healthRepo, quotaRepo, logRepo);
@@ -263,6 +265,11 @@ export async function buildApp() {
   fastify.delete('/api/v1/providers/:id', async (req) => providerService.revokeConnection((req.params as any).id, healthRepo));
 
   fastify.get('/api/v1/catalog/models', async () => catalogService.getAllModels());
+
+  fastify.post('/api/v1/catalog/sync', async () => {
+    const { syncedProviders, totalModels } = await modelSyncService.syncAllConfiguredProviders();
+    return { success: true, syncedProviders, totalModels };
+  });
 
   fastify.get('/api/v1/goals', async () => goalService.listGoals());
   fastify.post('/api/v1/goals', async (req) => goalService.createGoal(req.body as any));
