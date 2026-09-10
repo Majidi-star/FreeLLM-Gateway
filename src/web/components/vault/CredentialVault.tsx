@@ -7,7 +7,7 @@ export interface KeyEntry {
   provider: string;
   slug?: string;
   maskedKey: string;
-  status: 'active' | 'testing' | 'degraded' | 'unconfigured';
+  status: 'active' | 'testing' | 'degraded' | 'unavailable' | 'unconfigured';
   lastPingMs: number;
   lastVerified: string;
   dailyQuotaUsedPct: number;
@@ -124,6 +124,13 @@ export const CredentialVault: React.FC = () => {
       setIsConnectModalOpen(false);
       await fetchProviders();
 
+      // Immediately run handshake probe on the newly added provider key
+      const savedKey = (await res.json().catch(() => null)) || null;
+      const provKey = savedKey ? keys.find((k) => k.slug === savedKey.providerSlug) : undefined;
+      if (provKey) {
+        probeKey(provKey.id);
+      }
+
       // Fire-and-forget background model sync for the newly verified provider.
       // Errors are silent: the seeded catalog remains authoritative on failure.
       const adminTokenBg = getAdminToken();
@@ -133,6 +140,7 @@ export const CredentialVault: React.FC = () => {
           'Content-Type': 'application/json',
           ...(adminTokenBg ? { authorization: `Bearer ${adminTokenBg}` } : {}),
         },
+        body: JSON.stringify({}),
       }).catch(() => {});
     } catch (e: any) {
       setConnectError(e.message || 'Failed to save key');
@@ -171,6 +179,8 @@ export const CredentialVault: React.FC = () => {
     await Promise.all(
       keys.filter((k) => k.hasKey !== false && k.status !== 'unconfigured').map((k) => probeKey(k.id))
     );
+    // Re-fetch providers to ensure top capsules and card states align 100% with backend DB records
+    await fetchProviders();
     setIsProbing(false);
   };
 
@@ -364,15 +374,15 @@ export const CredentialVault: React.FC = () => {
 
                   <span
                     className={`flex items-center gap-1.5 text-[11px] font-mono px-2.5 py-1 rounded-full border ${
-                      key.status === 'degraded'
+                      key.status === 'degraded' || key.status === 'unavailable'
                         ? 'text-amber-400 bg-amber-500/10 border-amber-500/20'
                         : key.status === 'unconfigured'
                         ? 'text-[var(--text-muted)] bg-[var(--bg-well)] border-[var(--border-subtle)]'
                         : 'text-[var(--signal-mint)] bg-[var(--signal-mint)]/10 border-[var(--signal-mint)]/20'
                     }`}
                   >
-                    <span className={`w-1.5 h-1.5 rounded-full ${key.status === 'degraded' ? 'bg-amber-400' : key.status === 'unconfigured' ? 'bg-[var(--text-muted)]' : 'bg-[var(--signal-mint)] animate-pulse'}`} />
-                    {key.status === 'degraded' ? 'Degraded' : key.status === 'unconfigured' ? 'Unconfigured' : key.status === 'testing' ? 'Testing' : 'Verified'}
+                    <span className={`w-1.5 h-1.5 rounded-full ${key.status === 'degraded' || key.status === 'unavailable' ? 'bg-amber-400' : key.status === 'unconfigured' ? 'bg-[var(--text-muted)]' : 'bg-[var(--signal-mint)] animate-pulse'}`} />
+                    {key.status === 'degraded' || key.status === 'unavailable' ? 'Degraded' : key.status === 'unconfigured' ? 'Unconfigured' : key.status === 'testing' ? 'Testing' : 'Verified'}
                   </span>
                 </div>
 

@@ -154,6 +154,20 @@ export async function buildApp() {
       });
     }
 
+    const statusCode = (error as any).statusCode || 500;
+
+    if (statusCode < 500) {
+      const err = error as any;
+      logger.warn({ reqId: req.id, code: err.code || 'BAD_REQUEST', message: err.message }, 'Client request error');
+      return reply.status(statusCode).send({
+        error: {
+          message: err.message,
+          type: err.name || 'BadRequestError',
+          code: err.code || 'BAD_REQUEST',
+        },
+      });
+    }
+
     logger.error({ reqId: req.id, err: error }, 'Unhandled server error');
     return reply.status(500).send({
       error: {

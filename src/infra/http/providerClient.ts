@@ -89,7 +89,12 @@ export async function readBoundedBody(response: Response, maxBytes: number = 15 
 
 export async function callProviderEndpoint<T = unknown>(options: ProviderRequestOptions): Promise<ProviderResponse<T>> {
   const timeoutMs = options.timeoutMs || getConfig().DEFAULT_PROVIDER_TIMEOUT_MS;
-  const url = `${options.baseUrl.replace(/\/+$/, '')}/${options.endpoint.replace(/^\/+/, '')}`;
+  let baseUrl = options.baseUrl.replace(/\/+$/, '');
+  let endpoint = options.endpoint.replace(/^\/+/, '');
+  if (baseUrl.endsWith('/v1') && endpoint.startsWith('v1/')) {
+    endpoint = endpoint.slice(3);
+  }
+  const url = `${baseUrl}/${endpoint}`;
   const method = options.method || 'GET';
 
   const headers: Record<string, string> = {
@@ -199,7 +204,12 @@ export interface ProviderStreamResponse {
 
 export async function callProviderEndpointStream(options: ProviderRequestOptions): Promise<ProviderStreamResponse> {
   const timeoutMs = options.timeoutMs || getConfig().DEFAULT_PROVIDER_TIMEOUT_MS;
-  const url = `${options.baseUrl.replace(/\/+$/, '')}/${options.endpoint.replace(/^\/+/, '')}`;
+  let baseUrl = options.baseUrl.replace(/\/+$/, '');
+  let endpoint = options.endpoint.replace(/^\/+/, '');
+  if (baseUrl.endsWith('/v1') && endpoint.startsWith('v1/')) {
+    endpoint = endpoint.slice(3);
+  }
+  const url = `${baseUrl}/${endpoint}`;
   const method = options.method || 'POST';
 
   const headers: Record<string, string> = {

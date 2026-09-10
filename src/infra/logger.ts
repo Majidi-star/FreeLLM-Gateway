@@ -72,6 +72,17 @@ export function redactSensitiveData(obj: unknown, seen = new WeakSet()): unknown
     return obj.map((item) => redactSensitiveData(item, seen));
   }
 
+  if (obj instanceof Error) {
+    const errObj: Record<string, unknown> = {
+      name: obj.name,
+      message: redactSensitiveData(obj.message, seen),
+      stack: redactSensitiveData(obj.stack, seen),
+    };
+    if ('code' in obj) errObj.code = (obj as any).code;
+    if ('statusCode' in obj) errObj.statusCode = (obj as any).statusCode;
+    return errObj;
+  }
+
   const redacted: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
     const lowerKey = key.toLowerCase();

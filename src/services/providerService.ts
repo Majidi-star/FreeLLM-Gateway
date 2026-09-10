@@ -55,6 +55,12 @@ export class ProviderService {
       logger.info({ providerSlug: provider.slug, baseUrl: trimmedBaseUrl }, 'Provider base URL overridden');
     }
 
+    // Clean up existing connection(s) for the same provider to ensure a 1:1 active connection mapping
+    const existingConns = this.connectionRepo.listByProviderId(provider.id);
+    for (const oldConn of existingConns) {
+      this.removeConnection(oldConn.id);
+    }
+
     const encrypted = encryptCredential(input.apiKey);
     const connLabel = input.label || `${provider.display_name} Key`;
 
@@ -96,8 +102,11 @@ export class ProviderService {
     const catalogProviders = this.providerRepo.listAll(true);
     const connections = this.connectionRepo.listAll();
     const connByProvId = new Map<string, any>();
+    // listAll() returns connections ordered by created_at DESC, so keep the first (newest) per provider
     for (const c of connections) {
-      connByProvId.set(c.provider_id, c);
+      if (!connByProvId.has(c.provider_id)) {
+        connByProvId.set(c.provider_id, c);
+      }
     }
 
     return catalogProviders.map((p) => {
@@ -105,6 +114,14 @@ export class ProviderService {
       // A connection is truly configured only if it exists AND has a non-empty credential
       const hasValidCredential = Boolean(conn && conn.credential_enc && conn.credential_enc.length > 0);
       const isUnconfigured = !hasValidCredential;
+      // Safely convert credential_enc to string (may be Buffer or string depending on SQLite driver)
+      const encStr = conn && conn.credential_enc
+        ? (typeof conn.credential_enc === 'string'
+            ? conn.credential_enc
+            : Buffer.isBuffer(conn.credential_enc)
+              ? conn.credential_enc.toString('hex')
+              : String(conn.credential_enc))
+        : '';
       return {
         id: conn ? conn.id : `prov-${p.slug}`,
         providerId: p.id,
@@ -115,8 +132,11 @@ export class ProviderService {
         protocol: p.protocol,
         docsUrl: p.docs_url,
         hasKey: hasValidCredential,
-        maskedKey: hasValidCredential ? `sk-••••••••${conn.credential_enc.substring(0, 4)}` : 'Not Configured',
-        status: isUnconfigured ? 'unconfigured' : (conn.status === 'degraded' ? 'degraded' : 'active'),
+        maskedKey: hasValidCredential ? `sk-••••••••${encStr.substring(0, 4)}` : 'Not Configured',
+        // Treat any non-healthy status (unavailable, degraded, expired, banned, revoked) as 'degraded'
+        status: isUnconfigured
+          ? 'unconfigured'
+          : ((conn && (conn.status === 'healthy' || conn.status === 'active' || conn.status === 'untested')) ? 'active' : 'degraded'),
         lastPingMs: isUnconfigured ? 0 : 0,
         lastVerified: isUnconfigured ? 'Never' : (conn?.last_tested_at ? new Date(conn.last_tested_at).toLocaleTimeString() : 'Never'),
         dailyQuotaUsedPct: isUnconfigured ? 0 : this.computeDailyQuotaUsedPct(conn),
@@ -156,7 +176,7 @@ export class ProviderService {
         tag: conn.credential_tag,
       });
 
-      const probeEndpoint = provider.protocol === 'gemini' ? '/v1beta/models' : '/v1/models';
+      const probeEndpoint = provider.slug === 'openrouter' ? '/auth/key' : '/models';
 
       // Call models list endpoint as lightweight health check
       const response = await callProviderEndpoint({

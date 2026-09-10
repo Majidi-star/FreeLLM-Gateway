@@ -172,13 +172,13 @@ describe('Protocol Auth & Role Merging', () => {
       const providerService = new ProviderService(mockProviderRepo as any, mockConnRepo as any);
 
       await providerService.testConnection('gemini');
-      expect(fetchSpy).toHaveBeenLastCalledWith('https://gemini.api/v1beta/models', expect.anything());
+      expect(fetchSpy).toHaveBeenLastCalledWith('https://gemini.api/models', expect.anything());
 
       await providerService.testConnection('anthropic');
-      expect(fetchSpy).toHaveBeenLastCalledWith('https://anthropic.api/v1/models', expect.anything());
+      expect(fetchSpy).toHaveBeenLastCalledWith('https://anthropic.api/models', expect.anything());
 
       await providerService.testConnection('openai');
-      expect(fetchSpy).toHaveBeenLastCalledWith('https://openai.api/v1/models', expect.anything());
+      expect(fetchSpy).toHaveBeenLastCalledWith('https://openai.api/models', expect.anything());
     });
   });
 });

@@ -186,6 +186,7 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
           'Content-Type': 'application/json',
           ...(adminToken ? { authorization: `Bearer ${adminToken}` } : {}),
         },
+        body: JSON.stringify({}),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || data.success === false) {
