@@ -1,5 +1,50 @@
 [
   {
+    "slug": "openai",
+    "displayName": "OpenAI",
+    "baseUrl": "https://api.openai.com/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://platform.openai.com/docs",
+    "capabilities": {
+      "vision": true,
+      "tools": true,
+      "streaming": true,
+      "jsonMode": true
+    },
+    "isActive": true
+  },
+  {
+    "slug": "anthropic",
+    "displayName": "Anthropic Claude",
+    "baseUrl": "https://api.anthropic.com/v1",
+    "authType": "api_key",
+    "protocol": "anthropic",
+    "docsUrl": "https://docs.anthropic.com",
+    "capabilities": {
+      "vision": true,
+      "tools": true,
+      "streaming": true,
+      "jsonMode": true
+    },
+    "isActive": true
+  },
+  {
+    "slug": "gemini",
+    "displayName": "Google Gemini",
+    "baseUrl": "https://generativelanguage.googleapis.com/v1beta",
+    "authType": "api_key",
+    "protocol": "gemini",
+    "docsUrl": "https://ai.google.dev/gemini-api/docs",
+    "capabilities": {
+      "vision": true,
+      "tools": true,
+      "streaming": true,
+      "jsonMode": true
+    },
+    "isActive": true
+  },
+  {
     "slug": "groq",
     "displayName": "Groq Cloud",
     "baseUrl": "https://api.groq.com/openai/v1",
@@ -7,7 +52,7 @@
     "protocol": "openai",
     "docsUrl": "https://console.groq.com/docs",
     "capabilities": {
-      "vision": true,
+      "vision": false,
       "tools": true,
       "streaming": true,
       "jsonMode": true
@@ -30,36 +75,6 @@
     "isActive": true
   },
   {
-    "slug": "cerebras",
-    "displayName": "Cerebras Inference",
-    "baseUrl": "https://api.cerebras.ai/v1",
-    "authType": "api_key",
-    "protocol": "openai",
-    "docsUrl": "https://inference-docs.cerebras.ai",
-    "capabilities": {
-      "vision": false,
-      "tools": true,
-      "streaming": true,
-      "jsonMode": true
-    },
-    "isActive": true
-  },
-  {
-    "slug": "sambanova",
-    "displayName": "SambaNova Cloud",
-    "baseUrl": "https://api.sambanova.ai/v1",
-    "authType": "api_key",
-    "protocol": "openai",
-    "docsUrl": "https://cloud.sambanova.ai/docs",
-    "capabilities": {
-      "vision": false,
-      "tools": true,
-      "streaming": true,
-      "jsonMode": true
-    },
-    "isActive": true
-  },
-  {
     "slug": "together",
     "displayName": "Together AI",
     "baseUrl": "https://api.together.xyz/v1",
@@ -75,14 +90,89 @@
     "isActive": true
   },
   {
+    "slug": "cerebras",
+    "displayName": "Cerebras",
+    "baseUrl": "https://api.cerebras.ai/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://docs.cerebras.ai",
+    "capabilities": {
+      "vision": false,
+      "tools": true,
+      "streaming": true,
+      "jsonMode": true
+    },
+    "isActive": true
+  },
+  {
+    "slug": "sambanova",
+    "displayName": "SambaNova Cloud",
+    "baseUrl": "https://api.sambanova.ai/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://docs.sambanova.ai",
+    "capabilities": {
+      "vision": false,
+      "tools": true,
+      "streaming": true,
+      "jsonMode": true
+    },
+    "isActive": true
+  },
+  {
     "slug": "deepseek",
-    "displayName": "DeepSeek Platform",
+    "displayName": "DeepSeek",
     "baseUrl": "https://api.deepseek.com/v1",
     "authType": "api_key",
     "protocol": "openai",
-    "docsUrl": "https://platform.deepseek.com/api-docs",
+    "docsUrl": "https://api-docs.deepseek.com",
     "capabilities": {
       "vision": false,
+      "tools": true,
+      "streaming": true,
+      "jsonMode": true
+    },
+    "isActive": true
+  },
+  {
+    "slug": "mistral",
+    "displayName": "Mistral AI",
+    "baseUrl": "https://api.mistral.ai/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://docs.mistral.ai",
+    "capabilities": {
+      "vision": true,
+      "tools": true,
+      "streaming": true,
+      "jsonMode": true
+    },
+    "isActive": true
+  },
+  {
+    "slug": "fireworks",
+    "displayName": "Fireworks AI",
+    "baseUrl": "https://api.fireworks.ai/inference/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://docs.fireworks.ai",
+    "capabilities": {
+      "vision": true,
+      "tools": true,
+      "streaming": true,
+      "jsonMode": true
+    },
+    "isActive": true
+  },
+  {
+    "slug": "deepinfra",
+    "displayName": "DeepInfra",
+    "baseUrl": "https://api.deepinfra.com/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://deepinfra.com/docs",
+    "capabilities": {
+      "vision": true,
       "tools": true,
       "streaming": true,
       "jsonMode": true
