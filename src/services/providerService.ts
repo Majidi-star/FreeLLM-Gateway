@@ -111,8 +111,14 @@ export class ProviderService {
 
     return catalogProviders.map((p) => {
       const conn = connByProvId.get(p.id);
-      // A connection is truly configured only if it exists AND has a non-empty credential
-      const hasValidCredential = Boolean(conn && conn.credential_enc && conn.credential_enc.length > 0);
+      // A connection is truly configured only if it exists, has non-empty credential, and is not revoked/deleted
+      const hasValidCredential = Boolean(
+        conn &&
+        conn.credential_enc &&
+        conn.credential_enc.length > 0 &&
+        conn.status !== 'revoked' &&
+        conn.status !== 'deleted'
+      );
       const isUnconfigured = !hasValidCredential;
       // Safely convert credential_enc to string (may be Buffer or string depending on SQLite driver)
       const encStr = conn && conn.credential_enc
@@ -214,20 +220,27 @@ export class ProviderService {
   }
 
   public revokeConnection(id: string, healthRepo?: HealthRepository): { success: boolean; id: string; status: string } {
-    const conn = this.connectionRepo.findById(id);
     let connectionsToRevoke: ProviderConnectionRecord[] = [];
 
+    const conn = this.connectionRepo.findById(id);
     if (conn) {
       connectionsToRevoke.push(conn);
     } else {
-      const providerConns = this.connectionRepo.listByProviderId(id);
+      let providerConns = this.connectionRepo.listByProviderId(id);
+      if (providerConns.length === 0) {
+        const slug = id.startsWith('prov-') ? id.replace('prov-', '') : id;
+        const provider = this.providerRepo.findBySlug(slug);
+        if (provider) {
+          providerConns = this.connectionRepo.listByProviderId(provider.id);
+        }
+      }
       if (providerConns.length > 0) {
         connectionsToRevoke.push(...providerConns);
       }
     }
 
     if (connectionsToRevoke.length === 0) {
-      throw new NotFoundError(`Connection or provider with ID '${id}' not found`);
+      return { success: true, id, status: 'revoked' };
     }
 
     const now = Date.now();

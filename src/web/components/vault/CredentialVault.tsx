@@ -235,15 +235,21 @@ export const CredentialVault: React.FC = () => {
   };
 
   const handleRevoke = async (id: string) => {
-    setKeys((prev) => prev.map((k) => (k.id === id ? { ...k, status: 'unconfigured', maskedKey: 'Not Configured', hasKey: false } : k)));
+    setKeys((prev) =>
+      prev.map((k) => (k.id === id ? { ...k, status: 'unconfigured', maskedKey: 'Not Configured', hasKey: false } : k))
+    );
     try {
-      await fetch(`/api/v1/providers/${id}`, {
+      const res = await fetch(`/api/v1/providers/${id}`, {
         method: 'DELETE',
         headers: adminToken ? { authorization: `Bearer ${adminToken}` } : {},
       });
+      if (!res.ok) {
+        console.error(`Failed to revoke provider key: HTTP ${res.status}`);
+      }
       await fetchProviders();
     } catch (e) {
       console.error('Failed to revoke provider key', e);
+      await fetchProviders();
     }
   };
 
@@ -485,13 +491,15 @@ export const CredentialVault: React.FC = () => {
                     <span>{testingKeyIds[key.id] ? 'Testing...' : 'Test Handshake'}</span>
                   </button>
 
-                  <button
-                    onClick={() => handleRevoke(key.id)}
-                    className="px-3 py-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 text-xs font-semibold transition-all active:scale-95"
-                    title="Revoke Key Credential"
-                  >
-                    Revoke
-                  </button>
+                  {key.hasKey !== false && key.status !== 'unconfigured' && (
+                    <button
+                      onClick={() => handleRevoke(key.id)}
+                      className="px-3 py-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 text-xs font-semibold transition-all active:scale-95"
+                      title="Revoke Key Credential"
+                    >
+                      Revoke
+                    </button>
+                  )}
                 </div>
 
               </div>

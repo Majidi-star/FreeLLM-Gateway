@@ -154,6 +154,24 @@ describe('Backend Routes & Candidate Exclusion (REVOCATION, SSE, EXCLUSION)', ()
       expect(updated?.status).toBe('revoked');
       await app.close();
     });
+
+    it('revokes connection and verifies getProvidersWithConnections returns unconfigured state', () => {
+      const prov = provRepo.upsert({ slug: 'rev_sync_prov', display_name: 'Rev Sync Prov', base_url: 'https://revsync.api', protocol: 'openai', auth_type: 'api_key', is_active: 1 });
+      const enc = encryptCredential('secret');
+      const conn = connRepo.create({ provider_id: prov.id, label: 'Conn Sync Rev', credential_enc: enc.ciphertext, credential_iv: enc.iv, credential_tag: enc.tag, tier: 'free', status: 'healthy', last_tested_at: Date.now(), last_error: null });
+
+      expect(providerService.getProvidersWithConnections().find((p) => p.slug === 'rev_sync_prov')?.hasKey).toBe(true);
+
+      const revRes = providerService.revokeConnection(conn.id, healthRepo);
+      expect(revRes.success).toBe(true);
+
+      const providers = providerService.getProvidersWithConnections();
+      const target = providers.find((p) => p.slug === 'rev_sync_prov');
+      expect(target).toBeDefined();
+      expect(target?.hasKey).toBe(false);
+      expect(target?.status).toBe('unconfigured');
+      expect(target?.maskedKey).toBe('Not Configured');
+    });
   });
 
   describe('3. Real-Time Log Stream (SSE GET /api/v1/request-logs/stream)', () => {
