@@ -1,5 +1,5 @@
 ﻿import React, { useState } from 'react';
-import { Activity, Zap, Cpu, ArrowUpRight, CheckCircle2, AlertTriangle, Sparkles, Sliders, RefreshCw, ChevronRight } from 'lucide-react';
+import { Activity, Zap, Cpu, ArrowUpRight, CheckCircle2, AlertTriangle, Sparkles, Sliders, ChevronRight } from 'lucide-react';
 import { DecisionTrace } from '../drawers/DecisionInspectorDrawer.js';
 import { GlossaryTerm } from '../common/GlossaryTerm.js';
 
@@ -157,46 +157,6 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
       setPresetError(e.message || 'Failed to persist goal');
     } finally {
       setSavingPreset(false);
-    }
-  };
-
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [syncError, setSyncError] = useState<string | null>(null);
-
-  const fetchCatalogModels = async () => {
-    const adminToken = getAdminToken();
-    const res = await fetch('/api/v1/catalog/models', {
-      headers: adminToken ? { authorization: `Bearer ${adminToken}` } : {},
-    });
-    if (!res.ok) return;
-    const data = await res.json().catch(() => null);
-    if (Array.isArray(data) && data.length > 0) {
-      setCatalogModels(data);
-    }
-  };
-
-  const handleSyncModels = async () => {
-    setIsSyncing(true);
-    setSyncError(null);
-    try {
-      const adminToken = getAdminToken();
-      const res = await fetch('/api/v1/catalog/sync', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(adminToken ? { authorization: `Bearer ${adminToken}` } : {}),
-        },
-        body: JSON.stringify({}),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || data.success === false) {
-        throw new Error(data.message || `Sync failed (HTTP ${res.status})`);
-      }
-      await fetchCatalogModels();
-    } catch (e: any) {
-      setSyncError(e.message || 'Model sync failed');
-    } finally {
-      setIsSyncing(false);
     }
   };
 
@@ -412,18 +372,6 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <label className="text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">Active Free Routing Team Models</label>
-            <button
-              onClick={handleSyncModels}
-              disabled={isSyncing}
-              className="px-3 py-1.5 rounded-lg bg-[var(--bg-well)] hover:bg-[var(--bg-card-active)] border border-[var(--border-subtle)] hover:border-[var(--border-hover)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-[11px] font-semibold flex items-center gap-1.5 transition-all active:scale-95 disabled:opacity-50"
-              title="Discover and sync models from all providers with active keys"
-            >
-              <RefreshCw className={`w-3 h-3 ${isSyncing ? 'animate-spin' : ''}`} />
-              <span>{isSyncing ? 'Syncing…' : 'Sync Models'}</span>
-            </button>
-            {syncError && (
-              <span className="text-[10px] font-mono text-red-400">{syncError}</span>
-            )}
           </div>
           <span className="text-xs text-[var(--text-muted)]">{catalogModels.length} Active Catalog Models</span>
         </div>

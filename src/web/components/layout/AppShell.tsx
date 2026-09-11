@@ -79,6 +79,18 @@ export const AppShell: React.FC = () => {
             </button>
 
             <button
+              onClick={() => setActiveTab('vault')}
+              className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                activeTab === 'vault'
+                  ? 'bg-[var(--bg-card-active)] text-[var(--text-primary)] border border-[var(--accent-primary)]/40 shadow-md'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)]'
+              }`}
+            >
+              <Key className={`w-4 h-4 ${activeTab === 'vault' ? 'text-[var(--accent-primary)]' : ''}`} />
+              <span>Credential Vault</span>
+            </button>
+
+            <button
               onClick={() => setActiveTab('bridge')}
               className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
                 activeTab === 'bridge'
@@ -91,15 +103,11 @@ export const AppShell: React.FC = () => {
             </button>
 
             <button
-              onClick={() => setActiveTab('vault')}
-              className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
-                activeTab === 'vault'
-                  ? 'bg-[var(--bg-card-active)] text-[var(--text-primary)] border border-[var(--accent-primary)]/40 shadow-md'
-                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)]'
-              }`}
+              onClick={() => setIsGoalStudioOpen(true)}
+              className="w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)] transition-all cursor-pointer"
             >
-              <Key className={`w-4 h-4 ${activeTab === 'vault' ? 'text-[var(--accent-primary)]' : ''}`} />
-              <span>Credential Vault</span>
+              <Sparkles className="w-4 h-4 text-[var(--signal-amber)]" />
+              <span>Goal Studio</span>
             </button>
 
             <button

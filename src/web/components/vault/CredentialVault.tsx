@@ -1,5 +1,5 @@
 ﻿import React, { useState } from 'react';
-import { Key, ShieldCheck, RefreshCw, CheckCircle2, AlertTriangle, Cpu, Lock, Terminal, Activity, Zap, Check, ChevronDown, Plus, X } from 'lucide-react';
+import { Key, ShieldCheck, RefreshCw, CheckCircle2, AlertTriangle, Cpu, Lock, Terminal, Activity, Zap, Check, ChevronDown, Plus, X, ExternalLink } from 'lucide-react';
 import { GlossaryTerm } from '../common/GlossaryTerm.js';
 
 export function formatCleanError(rawErr: string | null | undefined): string {
@@ -84,6 +84,44 @@ export const CredentialVault: React.FC = () => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [customBaseUrl, setCustomBaseUrl] = useState('https://api.openai.com/v1');
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncFeedback, setSyncFeedback] = useState<{ type: 'success' | 'error' | 'warning'; message: string } | null>(null);
+
+  const handleSyncModels = async () => {
+    setIsSyncing(true);
+    setSyncFeedback(null);
+    try {
+      const res = await fetch('/api/v1/catalog/sync', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(adminToken ? { authorization: `Bearer ${adminToken}` } : {}),
+        },
+      });
+      const data = await res.json();
+      if (data.success) {
+        const syncedCount = data.syncedProviders?.length || 0;
+        const failedList = data.failedProviders || [];
+        if (failedList.length > 0) {
+          setSyncFeedback({
+            type: 'warning',
+            message: `Synced ${syncedCount} providers (${data.totalModels} models). Failed to sync: ${failedList.join(', ')}`,
+          });
+        } else {
+          setSyncFeedback({
+            type: 'success',
+            message: `Successfully synced ${data.totalModels} models across ${syncedCount} active providers!`,
+          });
+        }
+      } else {
+        setSyncFeedback({ type: 'error', message: data.error || 'Model sync failed' });
+      }
+    } catch (e: any) {
+      setSyncFeedback({ type: 'error', message: e.message || 'Model sync failed' });
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   const currentProvider = CATALOG_OPTIONS.find((p) => p.slug === selectedProviderSlug) || CATALOG_OPTIONS[0];
 
@@ -341,6 +379,15 @@ export const CredentialVault: React.FC = () => {
           </button>
 
           <button
+            onClick={handleSyncModels}
+            disabled={isSyncing}
+            className="px-3.5 py-2 rounded-xl bg-[var(--bg-well)] hover:bg-[var(--bg-card-active)] text-[var(--text-primary)] border border-[var(--border-subtle)] text-xs font-semibold flex items-center space-x-2 transition-all active:scale-95 disabled:opacity-50"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-[var(--accent-primary)]' : ''}`} />
+            <span>{isSyncing ? 'Syncing...' : 'Sync Models'}</span>
+          </button>
+
+          <button
             onClick={handleTestAllKeys}
             disabled={isProbing}
             className="px-4 py-2.5 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-primary-hover)] text-slate-950 font-semibold text-xs flex items-center justify-center space-x-2 shadow-lg shadow-[var(--accent-primary)]/20 transition-all active:scale-95 disabled:opacity-50 shrink-0"
@@ -350,6 +397,20 @@ export const CredentialVault: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Model Sync Feedback Banner */}
+      {syncFeedback && (
+        <div className={`p-3 rounded-xl border text-xs flex items-center justify-between transition-all ${
+          syncFeedback.type === 'success'
+            ? 'bg-[var(--signal-mint)]/10 border-[var(--signal-mint)]/30 text-[var(--signal-mint)]'
+            : syncFeedback.type === 'warning'
+            ? 'bg-[var(--signal-amber)]/10 border-[var(--signal-amber)]/30 text-[var(--signal-amber)]'
+            : 'bg-[var(--signal-coral)]/10 border-[var(--signal-coral)]/30 text-[var(--signal-coral)]'
+        }`}>
+          <span>{syncFeedback.message}</span>
+          <button onClick={() => setSyncFeedback(null)} className="text-xs opacity-70 hover:opacity-100 font-bold ml-2">✕</button>
+        </div>
+      )}
 
       {/* 4 Telemetry Capsules */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -610,7 +671,10 @@ export const CredentialVault: React.FC = () => {
                   rel="noopener noreferrer"
                   className="text-xs text-[var(--accent-primary)] hover:underline flex items-center gap-1 font-medium"
                 >
-                  Get {currentProvider.displayName} API Key â†—
+                  <span className="flex items-center gap-1.5">
+                    <span>Get {currentProvider.displayName} API Key</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </span>
                 </a>
               </div>
 

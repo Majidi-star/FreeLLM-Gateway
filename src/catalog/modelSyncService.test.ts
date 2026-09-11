@@ -99,6 +99,7 @@ describe('ModelSyncService', () => {
     const result = await service.syncAllConfiguredProviders();
 
     expect(result.syncedProviders).toEqual(['openai']);
+    expect(result.failedProviders).toEqual([]);
     expect(result.totalModels).toBe(3);
 
     const models = modelRepo.listByProviderId(prov.id);
@@ -126,6 +127,7 @@ describe('ModelSyncService', () => {
 
     const result = await service.syncAllConfiguredProviders();
     expect(result.syncedProviders).toEqual(['anthropic']);
+    expect(result.failedProviders).toEqual([]);
     expect(result.totalModels).toBe(1);
 
     const models = modelRepo.listByProviderId(prov.id);
@@ -149,6 +151,7 @@ describe('ModelSyncService', () => {
 
     const result = await service.syncAllConfiguredProviders();
     expect(result.syncedProviders).toEqual(['gemini']);
+    expect(result.failedProviders).toEqual([]);
     expect(result.totalModels).toBe(1);
 
     const models = modelRepo.listByProviderId(prov.id);
@@ -164,6 +167,7 @@ describe('ModelSyncService', () => {
 
     const result = await service.syncAllConfiguredProviders();
     expect(result.syncedProviders).toEqual([]);
+    expect(result.failedProviders).toEqual(['groq']);
     expect(result.totalModels).toBe(0);
 
     const models = modelRepo.listByProviderId(prov.id);
@@ -179,6 +183,7 @@ describe('ModelSyncService', () => {
 
     const result = await service.syncAllConfiguredProviders();
     expect(result.syncedProviders).toEqual([]);
+    expect(result.failedProviders).toEqual(['deepseek']);
 
     const models = modelRepo.listByProviderId(prov.id);
     expect(models.map((m) => m.model_name)).toEqual(['seeded-model']);
@@ -200,6 +205,7 @@ describe('ModelSyncService', () => {
 
     const result = await service.syncAllConfiguredProviders();
     expect(result.syncedProviders).toEqual([]);
+    expect(result.failedProviders).toEqual([]);
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 });

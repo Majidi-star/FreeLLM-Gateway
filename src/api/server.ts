@@ -299,8 +299,8 @@ export async function buildApp() {
   fastify.get('/api/v1/catalog/models', async () => catalogService.getAllModels());
 
   fastify.post('/api/v1/catalog/sync', async () => {
-    const { syncedProviders, totalModels } = await modelSyncService.syncAllConfiguredProviders();
-    return { success: true, syncedProviders, totalModels };
+    const { syncedProviders, failedProviders, totalModels } = await modelSyncService.syncAllConfiguredProviders();
+    return { success: true, syncedProviders, failedProviders, totalModels };
   });
 
   fastify.get('/api/v1/goals', async () => goalService.listGoals());

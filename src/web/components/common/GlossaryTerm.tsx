@@ -17,7 +17,7 @@ export const GLOSSARY_DEFINITIONS: Record<string, string> = {
 export const GlossaryTerm: React.FC<GlossaryTermProps> = ({ term, definition, children }) => {
   const tooltipText = definition || GLOSSARY_DEFINITIONS[term] || term;
   return (
-    <span className="glossary-term cursor-help border-b border-dashed border-slate-400 text-slate-200" title={tooltipText}>
+    <span className="glossary-term cursor-help border-b border-dashed border-[var(--border-hover)] text-[var(--text-primary)] hover:text-[var(--accent-primary)] transition-colors" title={tooltipText}>
       {children || term}
     </span>
   );

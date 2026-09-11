@@ -671,18 +671,20 @@ export const AgentBridge: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => toggleTool(tool.id)}
-                          className={`w-9 h-5 rounded-full relative transition-colors duration-200 ease-in-out cursor-pointer shrink-0 ${
-                            isOn ? 'bg-[var(--accent-primary)]' : 'bg-white/10'
+                          className={`w-9 h-5 rounded-full relative transition-colors duration-200 ease-in-out cursor-pointer shrink-0 border border-[var(--border-subtle)] ${
+                            isOn ? 'bg-[var(--accent-primary)] border-[var(--accent-primary)]' : 'bg-[var(--bg-card-active)]'
                           }`}
                         >
                           <span
-                            className={`w-4 h-4 rounded-full bg-white absolute top-0.5 left-0.5 transition-transform duration-200 ease-in-out shadow ${
+                            className={`w-4 h-4 rounded-full bg-[var(--text-bright)] absolute top-0.5 left-0.5 transition-transform duration-200 ease-in-out shadow-sm ${
                               isOn ? 'translate-x-4' : 'translate-x-0'
                             }`}
                           />
                         </button>
 
-                        <span className="text-sm font-mono text-[var(--text-secondary)]">
+                        <span className={`text-sm font-mono transition-colors ${
+                          isOn ? 'text-[var(--text-primary)] font-semibold' : 'text-[var(--text-muted)]'
+                        }`}>
                           {tool.name}
                         </span>
 

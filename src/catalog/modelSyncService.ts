@@ -31,6 +31,7 @@ export interface DiscoveredModel {
 
 export interface SyncResult {
   syncedProviders: string[];
+  failedProviders: string[];
   totalModels: number;
 }
 
@@ -55,6 +56,7 @@ export class ModelSyncService {
     }
 
     const syncedProviders: string[] = [];
+    const failedProviders: string[] = [];
     let totalModels = 0;
 
     for (const provider of providers) {
@@ -86,6 +88,7 @@ export class ModelSyncService {
           continue;
         }
       } catch (err: any) {
+        failedProviders.push(provider.display_name || provider.slug);
         const status = err instanceof AppError ? err.statusCode : err?.statusCode;
         if (status === 401 || status === 403) {
           logger.warn({ providerSlug: provider.slug, status }, 'Model sync rejected credentials; retaining existing seeded models');
@@ -118,7 +121,7 @@ export class ModelSyncService {
       logger.info({ providerSlug: provider.slug, modelCount: discovered.length }, 'Provider model catalog synced');
     }
 
-    return { syncedProviders, totalModels };
+    return { syncedProviders, failedProviders, totalModels };
   }
 
   /** GET ${baseUrl}/models with Bearer auth; parses `response.data[]`. */
