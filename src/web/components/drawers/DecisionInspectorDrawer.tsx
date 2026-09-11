@@ -73,11 +73,11 @@ export const DecisionInspectorDrawer: React.FC<DecisionInspectorDrawerProps> = (
                 </span>
                 <span className="text-xs font-mono text-[var(--text-secondary)]" dir="ltr">{trace.id}</span>
               </div>
-              <h2 className="text-lg font-bold text-white tracking-tight">Why This Route? Decision Inspector</h2>
+              <h2 className="text-lg font-bold text-[var(--text-bright)] tracking-tight">Why This Route? Decision Inspector</h2>
             </div>
             <button
               onClick={onClose}
-              className="p-2 rounded-xl text-[var(--text-muted)] hover:text-white hover:bg-[var(--bg-card-active)] transition-colors"
+              className="p-2 rounded-xl text-[var(--text-muted)] hover:text-[var(--text-bright)] hover:bg-[var(--bg-card-active)] transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
@@ -96,7 +96,7 @@ export const DecisionInspectorDrawer: React.FC<DecisionInspectorDrawerProps> = (
                 </span>
                 <span className="text-[11px] font-mono text-[var(--text-muted)]" dir="ltr">{trace.timestamp}</span>
               </div>
-              <p className="text-xs text-slate-200 leading-relaxed font-sans italic">
+              <p className="text-xs text-[var(--text-primary)] leading-relaxed font-sans italic">
                 "{trace.verdict}"
               </p>
             </div>
@@ -104,11 +104,11 @@ export const DecisionInspectorDrawer: React.FC<DecisionInspectorDrawerProps> = (
             {/* Prompt & Request Overview */}
             <div className="p-4 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-subtle)] space-y-2">
               <div className="text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">Target Prompt Context</div>
-              <p className="text-xs font-mono text-slate-300 bg-[var(--bg-well)] p-2.5 rounded-xl border border-[var(--border-subtle)] truncate" dir="ltr">
+              <p className="text-xs font-mono text-[var(--text-secondary)] bg-[var(--bg-well)] p-2.5 rounded-xl border border-[var(--border-subtle)] truncate" dir="ltr">
                 {trace.promptSnippet}
               </p>
               <div className="flex justify-between items-center text-xs text-[var(--text-muted)] pt-1">
-                <span>Policy Applied: <strong className="text-white">{trace.routingPolicy}</strong></span>
+                <span>Policy Applied: <strong className="text-[var(--text-bright)]">{trace.routingPolicy}</strong></span>
                 <span><GlossaryTerm term="Heuristic Score" />: <strong className="text-[var(--signal-mint)] font-mono">{trace.heuristicScore}/100</strong></span>
               </div>
             </div>
@@ -130,12 +130,12 @@ export const DecisionInspectorDrawer: React.FC<DecisionInspectorDrawerProps> = (
                   >
                     <div className="flex items-center space-x-3">
                       <div className={`p-1.5 rounded-lg ${
-                        cand.status === 'selected' ? 'bg-[var(--signal-mint)]/20 text-[var(--signal-mint)]' : 'bg-slate-800 text-slate-400'
+                        cand.status === 'selected' ? 'bg-[var(--signal-mint)]/20 text-[var(--signal-mint)]' : 'bg-[var(--bg-well)] text-[var(--text-muted)]'
                       }`}>
                         <Cpu className="w-4 h-4" />
                       </div>
                       <div>
-                        <div className="font-semibold text-white flex items-center gap-2">
+                        <div className="font-semibold text-[var(--text-bright)] flex items-center gap-2">
                           {cand.name}
                           <span className="text-[10px] text-[var(--text-muted)] font-mono" dir="ltr">({cand.provider})</span>
                         </div>
@@ -146,7 +146,7 @@ export const DecisionInspectorDrawer: React.FC<DecisionInspectorDrawerProps> = (
                     </div>
 
                     <div className="text-right font-mono" dir="ltr">
-                      <div className="font-bold text-slate-200">{cand.latencyMs}ms</div>
+                      <div className="font-bold text-[var(--text-primary)]">{cand.latencyMs}ms</div>
                       <div className="text-[10px] text-[var(--accent-primary)]">{cand.score} pts</div>
                     </div>
                   </div>
@@ -162,7 +162,7 @@ export const DecisionInspectorDrawer: React.FC<DecisionInspectorDrawerProps> = (
                 {/* Latency Factor */}
                 <div>
                   <div className="flex justify-between text-[11px] mb-1">
-                    <span className="text-slate-300">Latency Weight (35%)</span>
+                    <span className="text-[var(--text-secondary)]">Latency Weight (35%)</span>
                     <span className="font-mono text-[var(--signal-mint)]">{trace.factors.latency}%</span>
                   </div>
                   <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
@@ -173,7 +173,7 @@ export const DecisionInspectorDrawer: React.FC<DecisionInspectorDrawerProps> = (
                 {/* Cost Factor */}
                 <div>
                   <div className="flex justify-between text-[11px] mb-1">
-                    <span className="text-slate-300">Cost Preference (40%)</span>
+                    <span className="text-[var(--text-secondary)]">Cost Preference (40%)</span>
                     <span className="font-mono text-[var(--signal-mint)]">{trace.factors.cost}% ($0.00 FREE)</span>
                   </div>
                   <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
@@ -184,7 +184,7 @@ export const DecisionInspectorDrawer: React.FC<DecisionInspectorDrawerProps> = (
                 {/* Capability Factor */}
                 <div>
                   <div className="flex justify-between text-[11px] mb-1">
-                    <span className="text-slate-300">Model Capability (15%)</span>
+                    <span className="text-[var(--text-secondary)]">Model Capability (15%)</span>
                     <span className="font-mono text-[var(--accent-primary)]">{trace.factors.capability}%</span>
                   </div>
                   <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
@@ -195,7 +195,7 @@ export const DecisionInspectorDrawer: React.FC<DecisionInspectorDrawerProps> = (
                 {/* Health Factor */}
                 <div>
                   <div className="flex justify-between text-[11px] mb-1">
-                    <span className="text-slate-300">Provider Health SLA (10%)</span>
+                    <span className="text-[var(--text-secondary)]">Provider Health SLA (10%)</span>
                     <span className="font-mono text-[var(--signal-amber)]">{trace.factors.health}%</span>
                   </div>
                   <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
@@ -207,7 +207,7 @@ export const DecisionInspectorDrawer: React.FC<DecisionInspectorDrawerProps> = (
 
             {/* Token & Savings Ledger */}
             <div className="p-4 rounded-2xl bg-[var(--bg-well)] border border-[var(--border-subtle)] space-y-3">
-              <div className="flex items-center justify-between text-xs font-semibold text-white">
+              <div className="flex items-center justify-between text-xs font-semibold text-[var(--text-bright)]">
                 <span className="flex items-center gap-1.5">
                   <DollarSign className="w-4 h-4 text-[var(--signal-mint)]" />
                   Token & Zero-Cost Ledger
@@ -219,11 +219,11 @@ export const DecisionInspectorDrawer: React.FC<DecisionInspectorDrawerProps> = (
               <div className="grid grid-cols-3 gap-2 text-center" dir="ltr">
                 <div className="bg-[var(--bg-card)] p-2 rounded-xl border border-[var(--border-subtle)]">
                   <div className="text-[10px] text-[var(--text-muted)] uppercase">Prompt</div>
-                  <div className="font-mono font-bold text-xs text-white">{trace.tokens.prompt}</div>
+                  <div className="font-mono font-bold text-xs text-[var(--text-bright)]">{trace.tokens.prompt}</div>
                 </div>
                 <div className="bg-[var(--bg-card)] p-2 rounded-xl border border-[var(--border-subtle)]">
                   <div className="text-[10px] text-[var(--text-muted)] uppercase">Completion</div>
-                  <div className="font-mono font-bold text-xs text-white">{trace.tokens.completion}</div>
+                  <div className="font-mono font-bold text-xs text-[var(--text-bright)]">{trace.tokens.completion}</div>
                 </div>
                 <div className="bg-[var(--bg-card)] p-2 rounded-xl border border-[var(--border-subtle)]">
                   <div className="text-[10px] text-[var(--text-muted)] uppercase">Savings</div>
@@ -236,7 +236,7 @@ export const DecisionInspectorDrawer: React.FC<DecisionInspectorDrawerProps> = (
             <div className="border-t border-[var(--border-subtle)] pt-4">
               <button
                 onClick={() => setShowRawJson(!showRawJson)}
-                className="w-full flex items-center justify-between text-xs font-semibold text-[var(--text-secondary)] hover:text-white py-1 transition-colors"
+                className="w-full flex items-center justify-between text-xs font-semibold text-[var(--text-secondary)] hover:text-[var(--text-bright)] py-1 transition-colors"
               >
                 <span>Raw Decision JSON Payload</span>
                 {showRawJson ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
@@ -246,7 +246,7 @@ export const DecisionInspectorDrawer: React.FC<DecisionInspectorDrawerProps> = (
                 <div className="mt-3 relative">
                   <button
                     onClick={handleCopyJson}
-                    className="absolute top-3 right-3 p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs flex items-center space-x-1 border border-slate-700 transition-colors"
+                    className="absolute top-3 right-3 p-1.5 bg-[var(--bg-well)] hover:bg-[var(--bg-card-active)] text-[var(--text-secondary)] rounded-lg text-xs flex items-center space-x-1 border border-[var(--border-subtle)] transition-colors"
                   >
                     {copied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
                     <span>{copied ? 'Copied' : 'Copy'}</span>

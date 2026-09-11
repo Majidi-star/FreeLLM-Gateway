@@ -1,6 +1,6 @@
 ﻿import React, { createContext, useContext, useState, useEffect } from 'react';
 
-export type ThemePreset = 'Antigravity Dark' | 'Antigravity Light' | 'Custom';
+export type ThemePreset = 'Dark' | 'Light' | 'Custom';
 
 export type ColorTokens = {
   '--bg-obsidian': string;
@@ -22,7 +22,7 @@ export type ColorTokens = {
 };
 
 export const PRESET_THEMES: Record<Exclude<ThemePreset, 'Custom'>, ColorTokens> = {
-  'Antigravity Dark': {
+  'Dark': {
     '--bg-obsidian': '#101010',
     '--bg-rail': '#141414',
     '--bg-card': '#1a1a1a',
@@ -40,7 +40,7 @@ export const PRESET_THEMES: Record<Exclude<ThemePreset, 'Custom'>, ColorTokens> 
     '--text-muted': '#666666',
     '--text-bright': '#FFFFFF',
   },
-  'Antigravity Light': {
+  'Light': {
     '--bg-obsidian': '#F9F9F9',
     '--bg-rail': '#F0F0F0',
     '--bg-card': '#FFFFFF',
@@ -98,12 +98,12 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [preset, setPresetState] = useState<ThemePreset>(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('goalroute_theme_preset') as ThemePreset;
-      if (saved && (saved in PRESET_THEMES || saved === 'Custom')) {
-        return saved;
-      }
+      const saved = localStorage.getItem('goalroute_theme_preset');
+      if (saved === 'Antigravity Dark' || saved === 'Dark') return 'Dark';
+      if (saved === 'Antigravity Light' || saved === 'Light') return 'Light';
+      if (saved === 'Custom') return 'Custom';
     }
-    return 'Antigravity Dark';
+    return 'Dark';
   });
 
   const [tokens, setTokensState] = useState<ColorTokens>(() => {
@@ -117,7 +117,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         }
       }
     }
-    return PRESET_THEMES['Antigravity Dark'];
+    return PRESET_THEMES['Dark'];
   });
 
   const applyTokensToDOM = (toks: ColorTokens) => {
@@ -153,7 +153,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const resetTheme = () => {
-    setPreset('Antigravity Dark');
+    setPreset('Dark');
   };
 
   const exportTheme = () => {

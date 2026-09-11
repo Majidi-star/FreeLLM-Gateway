@@ -200,7 +200,7 @@ export const CredentialVault: React.FC = () => {
   };
 
   const probeKey = async (id: string) => {
-    // Skip unconfigured providers â€” never run handshake probes on keys that aren't set up
+    // Skip unconfigured providers — never run handshake probes on keys that aren't set up
     const targetKey = keys.find((k) => k.id === id);
     if (!targetKey || targetKey.hasKey === false || targetKey.status === 'unconfigured') {
       return;
@@ -248,7 +248,7 @@ export const CredentialVault: React.FC = () => {
   };
 
   const handleTestKey = async (id: string) => {
-    // Skip unconfigured providers â€” never run handshake probes on keys that aren't set up
+    // Skip unconfigured providers — never run handshake probes on keys that aren't set up
     const targetKey = keys.find((k) => k.id === id);
     if (!targetKey || targetKey.hasKey === false || targetKey.status === 'unconfigured') {
       return;
@@ -367,7 +367,7 @@ export const CredentialVault: React.FC = () => {
         {/* Capsule 3 */}
         <div className="p-4 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-subtle)] space-y-1 squircle-capsule">
           <div className="text-[11px] text-[var(--text-muted)] font-medium uppercase">Avg Handshake Ping</div>
-          <div className="text-xl font-bold text-[var(--text-primary)] font-mono" dir="ltr">{avgPingMs > 0 ? `${avgPingMs} ms` : 'â€”'}</div>
+          <div className="text-xl font-bold text-[var(--text-primary)] font-mono" dir="ltr">{avgPingMs > 0 ? `${avgPingMs} ms` : '—'}</div>
           <div className="text-[10px] text-[var(--signal-mint)] font-mono">
             {fastestPing > 0 ? `Fastest: ${fastestPing}ms` : 'Run a handshake probe'}
           </div>

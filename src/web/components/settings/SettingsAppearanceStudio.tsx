@@ -123,7 +123,7 @@ export const SettingsAppearanceStudio: React.FC = () => {
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           
           {/* Preset Cards */}
-          {(['Antigravity Dark', 'Antigravity Light', 'Custom'] as ThemePreset[]).map((p) => {
+          {(['Dark', 'Light', 'Custom'] as ThemePreset[]).map((p) => {
             const isActive = preset === p;
             return (
               <button
@@ -140,8 +140,8 @@ export const SettingsAppearanceStudio: React.FC = () => {
                   {isActive && <Sparkles className="w-4 h-4 text-[var(--accent-primary)]" />}
                 </div>
                 <div className="text-[11px] text-[var(--text-muted)] mt-1">
-                  {p === 'Antigravity Dark' && 'Dark theme (#101010 background, #CCCCCC text, #007acc accent)'}
-                  {p === 'Antigravity Light' && 'Light theme (#F9F9F9 background, #101010 text, #007acc accent)'}
+                  {p === 'Dark' && 'Dark theme (#101010 background, #CCCCCC text, #007acc accent)'}
+                  {p === 'Light' && 'Light theme (#F9F9F9 background, #101010 text, #007acc accent)'}
                   {p === 'Custom' && 'User custom color variables'}
                 </div>
               </button>

@@ -317,14 +317,14 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
 
           <div className="text-right">
             <div className="text-[var(--text-muted)] text-[10px] uppercase">Avg Latency</div>
-            <div className="font-bold text-[var(--signal-mint)] text-sm">{avgLatencyMs > 0 ? `${avgLatencyMs} ms` : 'â€”'}</div>
+            <div className="font-bold text-[var(--signal-mint)] text-sm">{avgLatencyMs > 0 ? `${avgLatencyMs} ms` : '—'}</div>
           </div>
 
           <div className="h-8 w-px bg-[var(--border-subtle)]" />
 
           <div className="text-right">
             <div className="text-[var(--text-muted)] text-[10px] uppercase">Success Rate</div>
-            <div className="font-bold text-[var(--text-primary)] text-sm">{successPct !== null ? `${successPct}%` : 'â€”'}</div>
+            <div className="font-bold text-[var(--text-primary)] text-sm">{successPct !== null ? `${successPct}%` : '—'}</div>
           </div>
 
           <div className="h-8 w-px bg-[var(--border-subtle)]" />
@@ -345,7 +345,7 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
             className="text-xs font-semibold text-[var(--accent-primary)] hover:underline flex items-center gap-1"
           >
             <Sparkles className="w-3.5 h-3.5" />
-            <span>Customize Goal Studio Constraints â†’</span>
+            <span>Customize Goal Studio Constraints →</span>
           </button>
         </div>
 
@@ -419,7 +419,7 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
               title="Discover and sync models from all providers with active keys"
             >
               <RefreshCw className={`w-3 h-3 ${isSyncing ? 'animate-spin' : ''}`} />
-              <span>{isSyncing ? 'Syncingâ€¦' : 'ðŸ”„ Sync Models'}</span>
+              <span>{isSyncing ? 'Syncing…' : 'Sync Models'}</span>
             </button>
             {syncError && (
               <span className="text-[10px] font-mono text-red-400">{syncError}</span>
@@ -482,7 +482,7 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-sm font-bold text-[var(--text-primary)] uppercase tracking-wider">Live Traffic & Routing Decision Stream</h2>
-            <p className="text-xs text-[var(--text-muted)]">Click "Why? â†’" on any request log to inspect full decision evaluation steps.</p>
+            <p className="text-xs text-[var(--text-muted)]">Click "Why? →" on any request log to inspect full decision evaluation steps.</p>
           </div>
           {streamStatus === 'live' && (
             <span className="text-xs font-mono text-[var(--signal-mint)] bg-[var(--signal-mint)]/10 px-2.5 py-1 rounded-full border border-[var(--signal-mint)]/20">
@@ -530,7 +530,7 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
                     <span className="text-xs font-mono text-[var(--text-secondary)] font-bold" dir="ltr">{tr.selectedModel}</span>
                     {tr.isFallback ? (
                       <span className="text-[10px] font-mono font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20">
-                        âš  Fallback
+                        ⚠ Fallback
                       </span>
                     ) : (
                       <span className="text-[10px] font-mono text-[var(--accent-primary)] bg-[var(--accent-primary)]/10 px-2 py-0.5 rounded-md">

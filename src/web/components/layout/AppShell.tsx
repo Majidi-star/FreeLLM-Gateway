@@ -126,7 +126,7 @@ export const AppShell: React.FC = () => {
             <div className="text-[10px] text-[var(--text-secondary)]">
               {activeKeys !== null
                 ? `${activeKeys} / ${activeKeys} Free Enclave Keys`
-                : 'Loading enclave keysâ€¦'}
+                : 'Loading enclave keys…'}
             </div>
           </div>
 

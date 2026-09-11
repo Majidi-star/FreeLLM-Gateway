@@ -19,9 +19,9 @@ describe('Theme Text Token Coverage', () => {
     }
   });
 
-  it('switching Antigravity Dark -> Antigravity Light changes --text-primary (tautology reject)', () => {
-    const dark = PRESET_THEMES['Antigravity Dark'];
-    const light = PRESET_THEMES['Antigravity Light'];
+  it('switching Dark -> Light changes --text-primary (tautology reject)', () => {
+    const dark = PRESET_THEMES['Dark'];
+    const light = PRESET_THEMES['Light'];
     expect(dark['--text-primary']).toBe('#CCCCCC');
     expect(light['--text-primary']).toBe('#101010');
     expect(dark['--text-primary']).not.toBe(light['--text-primary']);
@@ -32,7 +32,7 @@ describe('Theme Text Token Coverage', () => {
   it('custom token updates reflect in exported theme JSON', () => {
     // Simulates updateToken() spreading a custom value into the token map,
     // which exportTheme() then serializes.
-    const customTokens = { ...PRESET_THEMES['Antigravity Dark'], '--text-primary': '#FF8800' };
+    const customTokens = { ...PRESET_THEMES['Dark'], '--text-primary': '#FF8800' };
     const exported = JSON.stringify({ preset: 'Custom', tokens: customTokens });
     const parsed = JSON.parse(exported);
     expect(parsed.tokens['--text-primary']).toBe('#FF8800');

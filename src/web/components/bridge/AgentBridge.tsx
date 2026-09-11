@@ -202,7 +202,7 @@ export const AgentBridge: React.FC = () => {
       {/* 1. Header Ribbon */}
       <section className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-white tracking-tight flex items-center gap-2">
+          <h1 className="text-2xl font-semibold text-[var(--text-bright)] tracking-tight flex items-center gap-2">
             <Zap className="w-6 h-6 text-[var(--accent-primary)]" />
             Agent Bridge
           </h1>
@@ -222,7 +222,7 @@ export const AgentBridge: React.FC = () => {
       {/* 2. Card 1: 1-Click Connect Station */}
       <section className="rounded-2xl bg-[var(--bg-card)] border border-[var(--border-subtle)] p-6 sm:p-7 space-y-6 shadow-sm">
         <div>
-          <h2 className="text-lg font-semibold text-white tracking-tight">
+          <h2 className="text-lg font-semibold text-[var(--text-bright)] tracking-tight">
             1. Choose Your Assistant
           </h2>
           <p className="text-sm text-[var(--text-secondary)] mt-1">
@@ -256,7 +256,7 @@ export const AgentBridge: React.FC = () => {
             </div>
             <span
               className={`text-xs font-semibold ${
-                selectedAssistant === 'qwen' ? 'text-white' : 'text-slate-300'
+                selectedAssistant === 'qwen' ? 'text-[var(--text-bright)]' : 'text-[var(--text-secondary)]'
               }`}
             >
               Qwen / Tongyi
@@ -290,7 +290,7 @@ export const AgentBridge: React.FC = () => {
             </div>
             <span
               className={`text-xs font-semibold ${
-                selectedAssistant === 'cline' ? 'text-white' : 'text-slate-300'
+                selectedAssistant === 'cline' ? 'text-[var(--text-bright)]' : 'text-[var(--text-secondary)]'
               }`}
             >
               Cline
@@ -324,7 +324,7 @@ export const AgentBridge: React.FC = () => {
             </div>
             <span
               className={`text-xs font-semibold ${
-                selectedAssistant === 'claude' ? 'text-white' : 'text-slate-300'
+                selectedAssistant === 'claude' ? 'text-[var(--text-bright)]' : 'text-[var(--text-secondary)]'
               }`}
             >
               Claude Desktop
@@ -358,7 +358,7 @@ export const AgentBridge: React.FC = () => {
             </div>
             <span
               className={`text-xs font-semibold ${
-                selectedAssistant === 'cursor' ? 'text-white' : 'text-slate-300'
+                selectedAssistant === 'cursor' ? 'text-[var(--text-bright)]' : 'text-[var(--text-secondary)]'
               }`}
             >
               Cursor
@@ -389,7 +389,7 @@ export const AgentBridge: React.FC = () => {
                   className={`px-2.5 py-1 rounded-full text-[11px] font-mono transition-colors cursor-pointer ${
                     selectedOs === 'windows'
                       ? 'bg-[var(--accent-primary)] text-slate-950 font-semibold'
-                      : 'text-[var(--text-secondary)] hover:text-white'
+                      : 'text-[var(--text-secondary)] hover:text-[var(--text-bright)]'
                   }`}
                 >
                   Windows
@@ -400,7 +400,7 @@ export const AgentBridge: React.FC = () => {
                   className={`px-2.5 py-1 rounded-full text-[11px] font-mono transition-colors cursor-pointer ${
                     selectedOs === 'macos'
                       ? 'bg-[var(--accent-primary)] text-slate-950 font-semibold'
-                      : 'text-[var(--text-secondary)] hover:text-white'
+                      : 'text-[var(--text-secondary)] hover:text-[var(--text-bright)]'
                   }`}
                 >
                   macOS
@@ -411,7 +411,7 @@ export const AgentBridge: React.FC = () => {
                   className={`px-2.5 py-1 rounded-full text-[11px] font-mono transition-colors cursor-pointer ${
                     selectedOs === 'linux'
                       ? 'bg-[var(--accent-primary)] text-slate-950 font-semibold'
-                      : 'text-[var(--text-secondary)] hover:text-white'
+                      : 'text-[var(--text-secondary)] hover:text-[var(--text-bright)]'
                   }`}
                 >
                   Linux
@@ -422,7 +422,7 @@ export const AgentBridge: React.FC = () => {
               <button
                 type="button"
                 onClick={handleCopyPath}
-                className="px-2.5 py-1 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] text-xs text-slate-200 flex items-center gap-1.5 transition border border-white/[0.04] active:scale-95 cursor-pointer"
+                className="px-2.5 py-1 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] text-xs text-[var(--text-secondary)] flex items-center gap-1.5 transition border border-white/[0.04] active:scale-95 cursor-pointer"
               >
                 {copiedPath ? (
                   <>
@@ -464,28 +464,28 @@ export const AgentBridge: React.FC = () => {
               )}
             </button>
           </div>
-          <pre className="p-4 text-[13px] leading-relaxed font-mono overflow-x-auto text-slate-300">
+          <pre className="p-4 text-[13px] leading-relaxed font-mono overflow-x-auto text-[var(--text-secondary)]">
             <code>{configText}</code>
           </pre>
         </div>
 
         {/* 3-Step Micro-guide */}
         <div className="flex items-center justify-center gap-2 sm:gap-3 pt-1 flex-wrap">
-          <div className="flex items-center gap-1.5 text-xs font-medium text-slate-300 bg-white/[0.04] border border-[var(--border-subtle)] px-3 py-1.5 rounded-full">
+          <div className="flex items-center gap-1.5 text-xs font-medium text-[var(--text-secondary)] bg-white/[0.04] border border-[var(--border-subtle)] px-3 py-1.5 rounded-full">
             <span className="w-4 h-4 rounded-full bg-[var(--accent-primary)]/20 text-[var(--accent-primary)] flex items-center justify-center text-[10px] font-mono font-bold">
               1
             </span>{' '}
             Copy Code
           </div>
           <span className="text-slate-600 text-xs font-mono">──→</span>
-          <div className="flex items-center gap-1.5 text-xs font-medium text-slate-300 bg-white/[0.04] border border-[var(--border-subtle)] px-3 py-1.5 rounded-full">
+          <div className="flex items-center gap-1.5 text-xs font-medium text-[var(--text-secondary)] bg-white/[0.04] border border-[var(--border-subtle)] px-3 py-1.5 rounded-full">
             <span className="w-4 h-4 rounded-full bg-[var(--accent-primary)]/20 text-[var(--accent-primary)] flex items-center justify-center text-[10px] font-mono font-bold">
               2
             </span>{' '}
             Open App Settings
           </div>
           <span className="text-slate-600 text-xs font-mono">──→</span>
-          <div className="flex items-center gap-1.5 text-xs font-medium text-slate-300 bg-white/[0.04] border border-[var(--border-subtle)] px-3 py-1.5 rounded-full">
+          <div className="flex items-center gap-1.5 text-xs font-medium text-[var(--text-secondary)] bg-white/[0.04] border border-[var(--border-subtle)] px-3 py-1.5 rounded-full">
             <span className="w-4 h-4 rounded-full bg-[var(--accent-primary)]/20 text-[var(--accent-primary)] flex items-center justify-center text-[10px] font-mono font-bold">
               3
             </span>{' '}
@@ -497,7 +497,7 @@ export const AgentBridge: React.FC = () => {
       {/* 3. Card 2: Security & Tool Access */}
       <section className="rounded-2xl bg-[var(--bg-card)] border border-[var(--border-subtle)] p-6 sm:p-7 space-y-5 shadow-sm">
         <div>
-          <h2 className="text-lg font-semibold text-white tracking-tight">
+          <h2 className="text-lg font-semibold text-[var(--text-bright)] tracking-tight">
             2. Security &amp; Tool Access
           </h2>
           <p className="text-sm text-[var(--text-secondary)] mt-1">
@@ -529,7 +529,7 @@ export const AgentBridge: React.FC = () => {
                     <span className="w-2 h-2 rounded-full bg-[var(--accent-primary)]" />
                   )}
                 </span>
-                <span className="text-sm font-semibold text-white">Safe Mode</span>
+                <span className="text-sm font-semibold text-[var(--text-bright)]">Safe Mode</span>
                 <span className="text-[10px] text-[var(--text-muted)] font-medium">
                   (Recommended)
                 </span>
@@ -567,7 +567,7 @@ export const AgentBridge: React.FC = () => {
                     <span className="w-2 h-2 rounded-full bg-[var(--signal-amber)]" />
                   )}
                 </span>
-                <span className="text-sm font-semibold text-slate-200">
+                <span className="text-sm font-semibold text-[var(--text-primary)]">
                   Full Superuser
                 </span>
               </div>
@@ -596,7 +596,7 @@ export const AgentBridge: React.FC = () => {
         <button
           type="button"
           onClick={() => setIsDrawerOpen(!isDrawerOpen)}
-          className="w-full flex items-center justify-between px-6 sm:px-7 py-5 text-sm font-medium text-slate-300 hover:text-white transition-colors cursor-pointer"
+          className="w-full flex items-center justify-between px-6 sm:px-7 py-5 text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-bright)] transition-colors cursor-pointer"
         >
           <span>
             Show Advanced Settings{' '}
@@ -615,7 +615,7 @@ export const AgentBridge: React.FC = () => {
           <div className="px-6 sm:px-7 pb-7 space-y-6 border-t border-[var(--border-subtle)] pt-6 animate-in slide-in-from-top-2 duration-200">
             {/* Transport Toggle */}
             <div>
-              <h4 className="text-xs font-semibold text-slate-300 mb-2.5">
+              <h4 className="text-xs font-semibold text-[var(--text-secondary)] mb-2.5">
                 Local App Connection
               </h4>
               <div className="inline-flex bg-[var(--bg-well)] border border-[var(--border-subtle)] rounded-full p-1 w-full max-w-md">
@@ -625,7 +625,7 @@ export const AgentBridge: React.FC = () => {
                   className={`flex-1 py-2 px-3 rounded-full text-xs font-medium transition-all cursor-pointer ${
                     transport === 'stdio'
                       ? 'bg-[var(--accent-primary)] text-slate-950 font-semibold shadow-sm'
-                      : 'text-[var(--text-secondary)] hover:text-white'
+                      : 'text-[var(--text-secondary)] hover:text-[var(--text-bright)]'
                   }`}
                 >
                   STDIO (Local)
@@ -636,7 +636,7 @@ export const AgentBridge: React.FC = () => {
                   className={`flex-1 py-2 px-3 rounded-full text-xs font-medium transition-all cursor-pointer ${
                     transport === 'sse'
                       ? 'bg-[var(--accent-primary)] text-slate-950 font-semibold shadow-sm'
-                      : 'text-[var(--text-secondary)] hover:text-white'
+                      : 'text-[var(--text-secondary)] hover:text-[var(--text-bright)]'
                   }`}
                 >
                   Remote (HTTP/SSE)
@@ -651,7 +651,7 @@ export const AgentBridge: React.FC = () => {
 
             {/* Granular Tool Switches */}
             <div>
-              <h4 className="text-xs font-semibold text-slate-300 mb-3">
+              <h4 className="text-xs font-semibold text-[var(--text-secondary)] mb-3">
                 Tool Permissions
               </h4>
               <div className="space-y-2.5">
@@ -682,7 +682,7 @@ export const AgentBridge: React.FC = () => {
                           />
                         </button>
 
-                        <span className="text-sm font-mono text-slate-200">
+                        <span className="text-sm font-mono text-[var(--text-secondary)]">
                           {tool.name}
                         </span>
 

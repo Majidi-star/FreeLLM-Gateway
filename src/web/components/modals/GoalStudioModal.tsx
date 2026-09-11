@@ -108,7 +108,7 @@ export const GoalStudioModal: React.FC<GoalStudioModalProps> = ({ isOpen, onClos
               <Sparkles className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-white tracking-tight">Goal Studio & Constraint Optimizer</h2>
+              <h2 className="text-xl font-bold text-[var(--text-bright)] tracking-tight">Goal Studio & Constraint Optimizer</h2>
               <p className="text-xs text-[var(--text-secondary)] mt-0.5">
                 Define routing target requirements enforced by the <GlossaryTerm term="Greedy Set-Cover" definition="Optimization solver balancing latency and quality across free providers" /> solver.
               </p>
@@ -116,7 +116,7 @@ export const GoalStudioModal: React.FC<GoalStudioModalProps> = ({ isOpen, onClos
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-[var(--bg-card-active)] transition-colors"
+            className="p-2 rounded-xl text-[var(--text-muted)] hover:text-[var(--text-bright)] hover:bg-[var(--bg-card-active)] transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -135,7 +135,7 @@ export const GoalStudioModal: React.FC<GoalStudioModalProps> = ({ isOpen, onClos
               }`}
             >
               <Code className="w-4 h-4 text-[var(--accent-primary)] mb-2" />
-              <div className="font-semibold text-sm text-white">High-Speed Code</div>
+              <div className="font-semibold text-sm text-[var(--text-bright)]">High-Speed Code</div>
               <div className="text-[11px] text-[var(--text-muted)] mt-1">Qwen 2.5 Coder + DeepSeek</div>
             </button>
 
@@ -148,7 +148,7 @@ export const GoalStudioModal: React.FC<GoalStudioModalProps> = ({ isOpen, onClos
               }`}
             >
               <Zap className="w-4 h-4 text-[var(--signal-mint)] mb-2" />
-              <div className="font-semibold text-sm text-white">Sub-100ms Chat</div>
+              <div className="font-semibold text-sm text-[var(--text-bright)]">Sub-100ms Chat</div>
               <div className="text-[11px] text-[var(--text-muted)] mt-1">Groq & Cerebras Llama 3.3</div>
             </button>
 
@@ -161,7 +161,7 @@ export const GoalStudioModal: React.FC<GoalStudioModalProps> = ({ isOpen, onClos
               }`}
             >
               <MessageSquare className="w-4 h-4 text-[var(--signal-amber)] mb-2" />
-              <div className="font-semibold text-sm text-white">Math & Reasoning</div>
+              <div className="font-semibold text-sm text-[var(--text-bright)]">Math & Reasoning</div>
               <div className="text-[11px] text-[var(--text-muted)] mt-1">DeepSeek-R1 Enclave</div>
             </button>
 
@@ -174,7 +174,7 @@ export const GoalStudioModal: React.FC<GoalStudioModalProps> = ({ isOpen, onClos
               }`}
             >
               <SlidersHorizontal className="w-4 h-4 text-purple-400 mb-2" />
-              <div className="font-semibold text-sm text-white">Custom Sliders</div>
+              <div className="font-semibold text-sm text-[var(--text-bright)]">Custom Sliders</div>
               <div className="text-[11px] text-[var(--text-muted)] mt-1">Manual Weight Tuning</div>
             </button>
           </div>
@@ -252,7 +252,7 @@ export const GoalStudioModal: React.FC<GoalStudioModalProps> = ({ isOpen, onClos
         {/* Greedy Set-Cover Receipt & Pareto Headroom */}
         <div className="mt-4 p-4 rounded-2xl bg-[var(--bg-rail)] border border-[var(--border-subtle)] space-y-3">
           <div className="flex items-center justify-between text-xs">
-            <span className="font-semibold text-slate-200 flex items-center gap-1.5">
+            <span className="font-semibold text-[var(--text-primary)] flex items-center gap-1.5">
               <ShieldCheck className="w-4 h-4 text-[var(--signal-mint)]" />
               Greedy Set-Cover Receipt Optimization
             </span>
@@ -285,7 +285,7 @@ export const GoalStudioModal: React.FC<GoalStudioModalProps> = ({ isOpen, onClos
           )}
           <button
             onClick={onClose}
-            className="px-5 py-2.5 rounded-xl text-xs font-semibold text-[var(--text-secondary)] hover:text-white hover:bg-[var(--bg-card-active)] transition-colors"
+            className="px-5 py-2.5 rounded-xl text-xs font-semibold text-[var(--text-secondary)] hover:text-[var(--text-bright)] hover:bg-[var(--bg-card-active)] transition-colors"
           >
             Cancel
           </button>
