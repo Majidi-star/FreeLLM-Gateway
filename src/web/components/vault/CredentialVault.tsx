@@ -35,6 +35,19 @@ export function formatCleanError(rawErr: string | null | undefined): string {
 
 
 
+export const formatErrorMessage = (err: any): string => {
+  if (!err) return 'An unexpected error occurred';
+  if (typeof err === 'string') return err;
+  if (typeof err.message === 'string') return err.message;
+  if (typeof err.error === 'string') return err.error;
+  if (typeof err.error?.message === 'string') return err.error.message;
+  try {
+    return JSON.stringify(err);
+  } catch {
+    return 'An unexpected error occurred';
+  }
+};
+
 export interface KeyEntry {
   id: string;
   provider: string;
@@ -128,6 +141,7 @@ export const CredentialVault: React.FC = () => {
           'Content-Type': 'application/json',
           ...(adminToken ? { authorization: `Bearer ${adminToken}` } : {}),
         },
+        body: JSON.stringify({}),
       });
       const data = await res.json();
       if (data.success) {
@@ -145,10 +159,10 @@ export const CredentialVault: React.FC = () => {
           });
         }
       } else {
-        setSyncFeedback({ type: 'error', message: data.error || 'Model sync failed' });
+        setSyncFeedback({ type: 'error', message: formatErrorMessage(data.error || data) });
       }
     } catch (e: any) {
-      setSyncFeedback({ type: 'error', message: e.message || 'Model sync failed' });
+      setSyncFeedback({ type: 'error', message: formatErrorMessage(e) });
     } finally {
       setIsSyncing(false);
     }
@@ -695,7 +709,15 @@ export const CredentialVault: React.FC = () => {
                 <label className="font-semibold text-[var(--text-secondary)]">Select Provider</label>
                 <div className="relative">
                   <input
-                    type="text"
+                    type="search"
+                    name="provider-search-no-autofill"
+                    autoComplete="off"
+                    autoCapitalize="off"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    data-lpignore="true"
+                    data-1p-ignore="true"
+                    data-form-type="other"
                     value={isDropdownOpen ? providerSearchQuery : currentProvider.displayName}
                     onChange={(e) => {
                       setProviderSearchQuery(e.target.value);
@@ -705,7 +727,7 @@ export const CredentialVault: React.FC = () => {
                       setIsDropdownOpen(true);
                       setProviderSearchQuery('');
                     }}
-                    placeholder="Search provider (e.g. Groq, Gemini, Claude)..."
+                    placeholder="Type to search provider (e.g. Groq, Gemini, Claude)..."
                     className="w-full p-3 pr-10 bg-[var(--bg-well)] border border-[var(--border-subtle)] focus:border-[var(--signal-mint)] rounded-xl text-[var(--text-primary)] font-medium focus:outline-none transition-colors"
                     dir="ltr"
                   />
@@ -758,6 +780,9 @@ export const CredentialVault: React.FC = () => {
                 <label className="font-semibold text-[var(--text-secondary)]">API Key</label>
                 <input
                   type="password"
+                  name="provider-api-key-secret"
+                  autoComplete="new-password"
+                  data-lpignore="true"
                   value={inputApiKey}
                   onChange={(e) => setInputApiKey(e.target.value)}
                   placeholder="Paste your API key here..."

@@ -22,6 +22,30 @@ const TOKEN_LABELS: Record<keyof ColorTokens, { label: string; description: stri
   '--text-bright': { label: 'Bright Text / Highlights', description: 'High-contrast text for dark containers and badges' },
 };
 
+export const DEFAULT_FALLBACK_COLOR = '#121622';
+
+// Helper to safely parse color string (hex or rgba/rgb) to valid 7-char hex (#RRGGBB) for <input type="color">
+export const getHexForInput = (colorStr: string): string => {
+  if (!colorStr) return DEFAULT_FALLBACK_COLOR;
+  const trimmed = colorStr.trim();
+  if (trimmed.startsWith('#')) {
+    if (trimmed.length === 4) {
+      return `#${trimmed[1]}${trimmed[1]}${trimmed[2]}${trimmed[2]}${trimmed[3]}${trimmed[3]}`;
+    }
+    // HTML <input type="color"> strictly requires 7 characters (#RRGGBB). Truncate 8-digit hex (#RRGGBBAA)
+    return trimmed.slice(0, 7);
+  }
+
+  const match = trimmed.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*([\d.]+)\s*)?\)$/i);
+  if (match) {
+    const r = Math.min(255, Math.max(0, parseInt(match[1], 10))).toString(16).padStart(2, '0');
+    const g = Math.min(255, Math.max(0, parseInt(match[2], 10))).toString(16).padStart(2, '0');
+    const b = Math.min(255, Math.max(0, parseInt(match[3], 10))).toString(16).padStart(2, '0');
+    return `#${r}${g}${b}`;
+  }
+  return DEFAULT_FALLBACK_COLOR;
+};
+
 export const SettingsAppearanceStudio: React.FC = () => {
   const { preset, tokens, setPreset, updateToken, resetTheme, exportTheme, importTheme } = useTheme();
   const [importJsonText, setImportJsonText] = useState('');
@@ -65,32 +89,6 @@ export const SettingsAppearanceStudio: React.FC = () => {
     } else {
       setImportStatus('error');
     }
-  };
-
-  // Helper to safely parse color string (hex or rgba/rgb) to hex for <input type="color">
-  const getHexForInput = (colorStr: string): string => {
-    if (!colorStr) return '#121622';
-    const trimmed = colorStr.trim();
-    if (trimmed.startsWith('#')) {
-      if (trimmed.length === 4) {
-        return `#${trimmed[1]}${trimmed[1]}${trimmed[2]}${trimmed[2]}${trimmed[3]}${trimmed[3]}`;
-      }
-      return trimmed;
-    }
-
-    const match = trimmed.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*([\d.]+)\s*)?\)$/i);
-    if (match) {
-      const r = Math.min(255, Math.max(0, parseInt(match[1], 10))).toString(16).padStart(2, '0');
-      const g = Math.min(255, Math.max(0, parseInt(match[2], 10))).toString(16).padStart(2, '0');
-      const b = Math.min(255, Math.max(0, parseInt(match[3], 10))).toString(16).padStart(2, '0');
-      if (match[4] !== undefined) {
-        const aFloat = parseFloat(match[4]);
-        const a = Math.min(255, Math.max(0, Math.round(aFloat * 255))).toString(16).padStart(2, '0');
-        return `#${r}${g}${b}${a}`;
-      }
-      return `#${r}${g}${b}`;
-    }
-    return '#121622';
   };
 
   return (

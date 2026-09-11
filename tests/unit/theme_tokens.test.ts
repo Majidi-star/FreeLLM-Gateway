@@ -1,4 +1,6 @@
 import { PRESET_THEMES, ALLOWED_TOKENS } from '../../src/web/context/ThemeContext.js';
+import { getHexForInput } from '../../src/web/components/settings/SettingsAppearanceStudio.js';
+import { formatErrorMessage } from '../../src/web/components/vault/CredentialVault.js';
 
 describe('Theme Text Token Coverage', () => {
   const TEXT_TOKENS = ['--text-primary', '--text-secondary', '--text-muted', '--text-bright'] as const;
@@ -37,5 +39,74 @@ describe('Theme Text Token Coverage', () => {
     const parsed = JSON.parse(exported);
     expect(parsed.tokens['--text-primary']).toBe('#FF8800');
     expect(parsed.tokens['--text-bright']).toBe('#FFFFFF');
+  });
+});
+
+describe('Color Picker Hex Normalization (getHexForInput)', () => {
+  it('always returns strictly 7-character #RRGGBB strings', () => {
+    for (const input of [
+      '#ff5733aa',      // 8-digit hex with alpha
+      '#FF5733',        // 6-digit hex
+      '#f53',           // 3-digit shorthand
+      'rgba(10, 20, 30, 0.5)',
+      'rgb(10, 20, 30)',
+      'not-a-color',
+      '',
+    ]) {
+      const result = getHexForInput(input);
+      expect(result).toMatch(/^#[0-9a-fA-F]{6}$/);
+      expect(result.length).toBe(7);
+    }
+  });
+
+  it('strips 8-digit hex alpha suffix (#RRGGBBAA -> #RRGGBB)', () => {
+    expect(getHexForInput('#ff5733aa')).toBe('#ff5733');
+    expect(getHexForInput('#00F5A080')).toBe('#00F5A0');
+  });
+
+  it('preserves standard 6-digit hex and expands 3-digit shorthand', () => {
+    expect(getHexForInput('#FF5733')).toBe('#FF5733');
+    expect(getHexForInput('#f53')).toBe('#ff5533');
+  });
+
+  it('drops alpha channel from rgba() strings instead of emitting 9-char hex', () => {
+    expect(getHexForInput('rgba(10, 20, 30, 0.5)')).toBe('#0a141e');
+    expect(getHexForInput('rgb(10, 20, 30)')).toBe('#0a141e');
+  });
+
+  it('falls back to the app default for empty or invalid colors', () => {
+    expect(getHexForInput('')).toBe('#121622');
+    expect(getHexForInput('not-a-color')).toBe('#121622');
+  });
+});
+
+describe('API Error Primitive Rendering (formatErrorMessage)', () => {
+  it('passes through plain string errors untouched', () => {
+    expect(formatErrorMessage('Model sync failed')).toBe('Model sync failed');
+  });
+
+  it('extracts .message from Error instances', () => {
+    expect(formatErrorMessage(new Error('network down'))).toBe('network down');
+  });
+
+  it('extracts string .error fields from API error payloads', () => {
+    expect(formatErrorMessage({ error: 'Unauthorized' })).toBe('Unauthorized');
+  });
+
+  it('extracts nested .error.message from API error payloads', () => {
+    expect(formatErrorMessage({ error: { message: 'Provider rejected key' } })).toBe('Provider rejected key');
+  });
+
+  it('returns a primitive string fallback for undefined/null/falsy values', () => {
+    expect(formatErrorMessage(undefined)).toBe('An unexpected error occurred');
+    expect(formatErrorMessage(null)).toBe('An unexpected error occurred');
+  });
+
+  it('never returns a non-string (prevents Objects are not valid as a React child crash)', () => {
+    const circular: any = { deep: {} };
+    circular.deep.self = circular;
+    const result = formatErrorMessage(circular);
+    expect(typeof result).toBe('string');
+    expect(result.length).toBeGreaterThan(0);
   });
 });
