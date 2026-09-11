@@ -4,6 +4,7 @@ import { CockpitDashboard } from '../cockpit/CockpitDashboard.js';
 import { AgentBridge } from '../bridge/AgentBridge.js';
 import { CredentialVault } from '../vault/CredentialVault.js';
 import { SettingsAppearanceStudio } from '../settings/SettingsAppearanceStudio.js';
+import { EndpointsManager } from '../settings/EndpointsManager.js';
 import { GoalStudioModal } from '../modals/GoalStudioModal.js';
 import { DecisionInspectorDrawer, DecisionTrace } from '../drawers/DecisionInspectorDrawer.js';
 import { GlossaryTerm } from '../common/GlossaryTerm.js';
@@ -160,7 +161,12 @@ export const AppShell: React.FC = () => {
         )}
         {activeTab === 'bridge' && <AgentBridge />}
         {activeTab === 'vault' && <CredentialVault />}
-        {activeTab === 'settings' && <SettingsAppearanceStudio />}
+        {activeTab === 'settings' && (
+          <div className="space-y-6 max-w-3xl">
+            <EndpointsManager />
+            <SettingsAppearanceStudio />
+          </div>
+        )}
       </main>
 
       {/* 3. FIXED 360px AI CONCIERGE SIDE PANEL (RIGHT RAIL) */}

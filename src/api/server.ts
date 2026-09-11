@@ -1,8 +1,9 @@
-import Fastify from 'fastify';
+import Fastify, { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import cors from '@fastify/cors';
 import { once } from 'events';
 import crypto from 'node:crypto';
-import { getConfig } from '../infra/config.js';
+import { z } from 'zod';
+import { getConfig, Config } from '../infra/config.js';
 import { logger } from '../infra/logger.js';
 import { getDatabase } from '../infra/db/client.js';
 import { runMigrations } from '../infra/db/migrationRunner.js';
@@ -21,6 +22,11 @@ import { GoalService } from '../services/goalService.js';
 import { PoolService } from '../services/poolService.js';
 import { GatewayService } from '../services/gatewayService.js';
 import { McpService } from '../services/mcpService.js';
+import { MultiPortServerService } from '../services/multiPortServerService.js';
+import { ProtocolType, UpdateEndpointsInput } from '../domain/server/types.js';
+import { translateAnthropicToOpenAI, translateOpenAIToAnthropic } from '../domain/translation/anthropicProtocol.js';
+import { AnthropicMessagesRequest } from '../domain/translation/anthropicTypes.js';
+import { OpenAIChatRequest } from '../domain/translation/types.js';
 import { generateId } from '../shared/ids.js';
 import { AppError } from '../shared/errors.js';
 
@@ -30,6 +36,73 @@ function safeCompareTokens(provided: string, expected: string): boolean {
   const hashB = crypto.createHash('sha256').update(expected).digest();
   return crypto.timingSafeEqual(hashA, hashB);
 }
+
+let activeEndpointsService: MultiPortServerService | null = null;
+
+export function getActiveEndpointsService(): MultiPortServerService {
+  if (!activeEndpointsService) {
+    throw new AppError('Multi-port server service has not been initialized. Call buildApp() first.', 'SERVICE_NOT_INITIALIZED', 500);
+  }
+  return activeEndpointsService;
+}
+
+const updateEndpointsSchema = z.object({
+  remoteAccessEnabled: z.boolean().optional(),
+  ports: z
+    .record(
+      z.enum(['native', 'openai', 'anthropic', 'mcp']),
+      z.number().int().min(1).max(65535)
+    )
+    .optional(),
+  enabledProtocols: z
+    .record(
+      z.enum(['native', 'openai', 'anthropic', 'mcp']),
+      z.boolean()
+    )
+    .optional(),
+}) satisfies z.ZodType<UpdateEndpointsInput>;
+
+// Auth hook shared by all dedicated protocol ports (OpenAI / Anthropic / MCP / Native).
+function buildProtocolAuthHook(config: Config) {
+  return async (req: FastifyRequest, reply: FastifyReply) => {
+    const authHeader = req.headers['authorization'];
+    if (authHeader) {
+      const token = authHeader.replace(/^Bearer\s+/i, '').trim();
+      if (!safeCompareTokens(token, config.ADMIN_API_TOKEN)) {
+        return reply.status(401).send({ error: { message: 'Unauthorized', type: 'authentication_error' } });
+      }
+    } else {
+      const isDevAllowed =
+        config.NODE_ENV === 'development' &&
+        (safeCompareTokens(config.ADMIN_API_TOKEN, 'dev-admin-secret-token') || process.env.ALLOW_ANONYMOUS_DEV === 'true');
+      if (!isDevAllowed) {
+        return reply.status(401).send({ error: { message: 'Unauthorized', type: 'authentication_error' } });
+      }
+    }
+  };
+}
+
+// Error handler shared by all dedicated protocol ports.
+async function protocolErrorHandler(error: Error | AppError, req: FastifyRequest, reply: FastifyReply) {
+  if (error instanceof AppError) {
+    logger.warn({ reqId: req.id, code: error.code, message: error.message }, 'Protocol port application error');
+    return reply.status(error.statusCode).send({
+      error: { message: error.message, type: error.name, code: error.code, details: error.details },
+    });
+  }
+  const statusCode = 'statusCode' in error && typeof error.statusCode === 'number' ? error.statusCode : 500;
+  if (statusCode < 500) {
+    logger.warn({ reqId: req.id, message: error.message }, 'Protocol port client error');
+    return reply.status(statusCode).send({
+      error: { message: error.message, type: error.name || 'BadRequestError', code: 'BAD_REQUEST' },
+    });
+  }
+  logger.error({ reqId: req.id, err: error }, 'Unhandled protocol port error');
+  return reply.status(500).send({
+    error: { message: 'Internal server error', type: 'InternalServerError', code: 'INTERNAL_ERROR' },
+  });
+}
+
 
 export async function buildApp() {
   const config = getConfig();
@@ -57,6 +130,16 @@ export async function buildApp() {
 
   // Auto-sync catalog on server boot
   catalogService.syncCatalog();
+
+  // Resolves the target routing pool for gateway dispatch (header override, else first active pool).
+  const resolveTargetPool = (poolIdHeader: string | null): string => {
+    if (poolIdHeader) return poolIdHeader;
+    const pools = poolRepo.listPools().filter((p) => p.is_active);
+    if (pools.length === 0) {
+      throw new AppError('No active pools exist. Create a pool first.', 'NO_ACTIVE_POOLS', 400);
+    }
+    return pools[0].id;
+  };
 
   const fastify = Fastify({
     logger: false, // Use our Pino redacting logger
@@ -203,21 +286,14 @@ export async function buildApp() {
     return { status: 'healthy', timestamp: Date.now(), connections: summary };
   });
 
-  // Gateway Endpoint: /v1/chat/completions
-  fastify.post('/v1/chat/completions', async (req, reply) => {
-    const poolIdHeader = (req.headers['x-goalroute-pool'] as string) || (req.query as any)?.poolId;
-    
-    // Default to first active pool if no pool specified
-    let targetPoolId = poolIdHeader;
-    if (!targetPoolId) {
-      const pools = poolRepo.listPools().filter((p) => p.is_active);
-      if (pools.length === 0) {
-        return reply.status(400).send({ error: { message: 'No active pools exist. Create a pool first.', code: 'NO_ACTIVE_POOLS' } });
-      }
-      targetPoolId = pools[0].id;
-    }
+  // Shared OpenAI-compatible chat completions handler (main app + OpenAI/Native protocol ports).
+  const chatCompletionsHandler = async (req: FastifyRequest, reply: FastifyReply) => {
+    const poolIdHeader =
+      (req.headers['x-goalroute-pool'] as string) || (req.query as { poolId?: string })?.poolId || null;
 
-    const body = req.body as any;
+    const targetPoolId = resolveTargetPool(poolIdHeader);
+    const body = req.body as OpenAIChatRequest & { stream?: boolean };
+
     if (body?.stream) {
       const abortController = new AbortController();
       let streamFinished = false;
@@ -287,7 +363,10 @@ export async function buildApp() {
     } finally {
       req.raw.removeListener('close', onClose);
     }
-  });
+  };
+
+  // Gateway Endpoint: /v1/chat/completions (main port)
+  fastify.post('/v1/chat/completions', chatCompletionsHandler);
 
   // Management Routes
   fastify.get('/api/v1/providers', async () => providerService.getProvidersWithConnections());
@@ -377,6 +456,129 @@ export async function buildApp() {
     return { isSafeMode: mcpService.getSafeMode(), success: true };
   });
 
+  // Anthropic Messages-compatible handler (dedicated Anthropic protocol port).
+  const anthropicMessagesHandler = async (req: FastifyRequest, reply: FastifyReply) => {
+    const body = req.body as AnthropicMessagesRequest;
+    if (!body || !Array.isArray(body.messages)) {
+      throw new AppError('Request body must be an Anthropic Messages payload with a "messages" array.', 'INVALID_REQUEST', 400);
+    }
+    if (!body.model) {
+      throw new AppError('"model" is required.', 'INVALID_REQUEST', 400);
+    }
+
+    const poolIdHeader = (req.headers['x-goalroute-pool'] as string) || null;
+    const targetPoolId = resolveTargetPool(poolIdHeader);
+    const openaiRequest = translateAnthropicToOpenAI(body);
+
+    const abortController = new AbortController();
+    const onClose = () => abortController.abort();
+    req.raw.on('close', onClose);
+
+    try {
+      if (body.stream === true) {
+        // Anthropic SSE: emit a deterministic message envelope with one content delta.
+        const dispatchResult = await gatewayService.dispatch(targetPoolId, openaiRequest, abortController.signal);
+        const anthropicResponse = translateOpenAIToAnthropic(dispatchResult.response, body.model);
+        const text = anthropicResponse.content.map((block) => block.text).join('');
+
+        reply.raw.setHeader('Content-Type', 'text/event-stream');
+        reply.raw.setHeader('Cache-Control', 'no-cache');
+        reply.raw.setHeader('Connection', 'keep-alive');
+
+        const sse = (event: string, data: unknown) => `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+        reply.raw.write(sse('message_start', {
+          type: 'message_start',
+          message: { ...anthropicResponse, content: [], stop_reason: null, usage: { input_tokens: anthropicResponse.usage.input_tokens, output_tokens: 0 } },
+        }));
+        reply.raw.write(sse('content_block_start', { type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' } }));
+        reply.raw.write(sse('content_block_delta', { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text } }));
+        reply.raw.write(sse('content_block_stop', { type: 'content_block_stop', index: 0 }));
+        reply.raw.write(sse('message_delta', { type: 'message_delta', delta: { stop_reason: anthropicResponse.stop_reason, stop_sequence: null }, usage: { output_tokens: anthropicResponse.usage.output_tokens } }));
+        reply.raw.write(sse('message_stop', { type: 'message_stop' }));
+        reply.raw.end();
+        return reply;
+      }
+
+      const dispatchResult = await gatewayService.dispatch(targetPoolId, openaiRequest, abortController.signal);
+      reply.header('x-goalroute-provider', dispatchResult.selectedStep.providerSlug);
+      reply.header('x-goalroute-model', dispatchResult.selectedStep.modelName);
+      reply.header('x-goalroute-latency-ms', dispatchResult.latencyMs);
+      return reply.send(translateOpenAIToAnthropic(dispatchResult.response, body.model));
+    } finally {
+      req.raw.removeListener('close', onClose);
+    }
+  };
+
+  // Dedicated per-protocol Fastify app factory used by the multi-port listener service.
+  const buildProtocolApp = async (protocol: ProtocolType): Promise<FastifyInstance> => {
+    const app = Fastify({
+      logger: false,
+      genReqId: () => generateId('req'),
+      requestTimeout: 30000,
+      connectionTimeout: 30000,
+      keepAliveTimeout: 65000,
+    });
+
+    await app.register(cors, { origin: true });
+    app.addHook('onRequest', buildProtocolAuthHook(config));
+    app.setErrorHandler(protocolErrorHandler);
+
+    switch (protocol) {
+      case 'openai':
+        app.post('/v1/chat/completions', chatCompletionsHandler);
+        app.get('/v1/models', async () => ({
+          object: 'list',
+          data: catalogService
+            .getAllModels()
+            .filter((m) => m.isActive)
+            .map((m) => ({ id: m.modelName, object: 'model', owned_by: m.providerSlug })),
+        }));
+        break;
+      case 'anthropic':
+        app.post('/v1/messages', anthropicMessagesHandler);
+        break;
+      case 'mcp':
+        app.get('/mcp/sse', async (req, reply) => mcpService.handleSseConnection(req, reply));
+        app.post('/mcp/messages', async (req, reply) => mcpService.handleSseMessage(req, reply));
+        break;
+      case 'native':
+        app.get('/api/v1/health', async () => ({ status: 'ok', timestamp: Date.now() }));
+        app.post('/v1/chat/completions', chatCompletionsHandler);
+        break;
+    }
+
+    await app.ready();
+    return app;
+  };
+
+  const endpointsService = new MultiPortServerService({
+    buildProtocolApp,
+    initialPorts: {
+      native: config.PORT,
+      openai: config.PORT_OPENAI,
+      anthropic: config.PORT_ANTHROPIC,
+      mcp: config.PORT_MCP,
+    },
+    initialHost: config.REMOTE_ACCESS_ENABLED ? '0.0.0.0' : config.HOST,
+    remoteAccessEnabled: config.REMOTE_ACCESS_ENABLED,
+  });
+  activeEndpointsService = endpointsService;
+
+  // System endpoints management routes.
+  fastify.get('/api/v1/system/endpoints', async () => endpointsService.getEndpointsStatus());
+
+  fastify.post('/api/v1/system/endpoints', async (req) => {
+    const parsed = updateEndpointsSchema.safeParse(req.body);
+    if (!parsed.success) {
+      throw new AppError(
+        `Invalid endpoints update payload: ${parsed.error.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join('; ')}`,
+        'VALIDATION_ERROR',
+        400
+      );
+    }
+    return endpointsService.updateConfig(parsed.data);
+  });
+
   return fastify;
 }
 
@@ -388,6 +590,12 @@ export async function startServer(port?: number) {
     const app = await buildApp();
     const address = await app.listen({ port: listenPort, host: '0.0.0.0' });
     logger.info({ address, port: listenPort }, 'GoalRoute HTTP server listening');
+
+    await getActiveEndpointsService().startAll();
+    logger.info(
+      { endpoints: getActiveEndpointsService().getEndpointsStatus() },
+      'Multi-protocol endpoints listening'
+    );
     return app;
   } catch (err) {
     logger.fatal({ err }, 'Failed to start GoalRoute HTTP server');

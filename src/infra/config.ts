@@ -7,6 +7,11 @@ dotenv.config();
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().default(8787),
+  PORT_OPENAI: z.coerce.number().default(8788),
+  PORT_ANTHROPIC: z.coerce.number().default(8789),
+  PORT_MCP: z.coerce.number().default(8790),
+  HOST: z.string().default('127.0.0.1'),
+  REMOTE_ACCESS_ENABLED: z.coerce.boolean().default(false),
   DATABASE_PATH: z.string().default('./data/goalroute.db'),
   ENCRYPTION_MASTER_KEY: z.string().refine(
     (val) => /^[0-9a-fA-F]{64}$/.test(val),
