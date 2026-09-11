@@ -2,6 +2,39 @@ import React, { useState } from 'react';
 import { Key, ShieldCheck, RefreshCw, CheckCircle2, AlertTriangle, Cpu, Lock, Terminal, Activity, Zap, Check, ChevronDown, Plus, X } from 'lucide-react';
 import { GlossaryTerm } from '../common/GlossaryTerm.js';
 
+export function formatCleanError(rawErr: string | null | undefined): string {
+  if (!rawErr) return 'Verification failed';
+  let str = String(rawErr).trim();
+  if (str.includes('snippet=')) {
+    const snippetPart = str.split('snippet=')[1];
+    if (snippetPart) {
+      try {
+        const parsed = JSON.parse(snippetPart.trim());
+        if (parsed.message) return parsed.message;
+        if (parsed.error?.message) return parsed.error.message;
+      } catch {
+        str = snippetPart.replace(/[{}"\\]/g, '').trim();
+      }
+    }
+  }
+  if (str.includes('status=401') || str.includes('401')) {
+    return 'Invalid API key (HTTP 401)';
+  }
+  if (str.includes('status=403') || str.includes('403')) {
+    return 'Forbidden access or invalid permissions (HTTP 403)';
+  }
+  if (str.includes('status=429') || str.includes('429')) {
+    return 'Rate limit exceeded (HTTP 429)';
+  }
+  if (str.includes('status=500') || str.includes('500')) {
+    return 'Provider service error (HTTP 500)';
+  }
+  str = str.replace(/^\[PROVIDER_ERROR\]\s*/, '').replace(/status=\d+\s*type=\w+\s*/g, '').trim();
+  return str || 'Verification failed';
+}
+
+
+
 export interface KeyEntry {
   id: string;
   provider: string;
@@ -13,6 +46,7 @@ export interface KeyEntry {
   dailyQuotaUsedPct: number;
   tier: 'Free Tier' | 'Pro Enclave';
   hasKey?: boolean;
+  lastError?: string | null;
 }
 
 const CATALOG_OPTIONS = [
@@ -120,19 +154,35 @@ export const CredentialVault: React.FC = () => {
         const err = await res.json().catch(() => ({ message: 'Failed to save key' }));
         throw new Error(err.message || 'Failed to save key');
       }
+
+      const connData = await res.json();
+
+      // Immediately run handshake verification before committing connection to vault grid
+      const testRes = await fetch(`/api/v1/providers/${connData.id}/test`, {
+        method: 'POST',
+        headers: adminToken ? { authorization: `Bearer ${adminToken}` } : {},
+      });
+      const testData = await testRes.json().catch(() => ({}));
+
+      if (!testRes.ok || (testData as any).success === false) {
+        const rawErr = (testData as any).error || 'Handshake verification failed';
+        const cleanErr = formatCleanError(rawErr);
+
+        // Rollback unverified connection from SQLite to prevent vault grid pollution
+        await fetch(`/api/v1/providers/${connData.id}`, {
+          method: 'DELETE',
+          headers: adminToken ? { authorization: `Bearer ${adminToken}` } : {},
+        }).catch(() => {});
+
+        setConnectError(`Verification failed: ${cleanErr}`);
+        return; // Keep modal open for user retry without persisting invalid key
+      }
+
       setInputApiKey('');
       setIsConnectModalOpen(false);
       await fetchProviders();
 
-      // Immediately run handshake probe on the newly added provider key
-      const savedKey = (await res.json().catch(() => null)) || null;
-      const provKey = savedKey ? keys.find((k) => k.slug === savedKey.providerSlug) : undefined;
-      if (provKey) {
-        probeKey(provKey.id);
-      }
-
       // Fire-and-forget background model sync for the newly verified provider.
-      // Errors are silent: the seeded catalog remains authoritative on failure.
       const adminTokenBg = getAdminToken();
       fetch('/api/v1/catalog/sync', {
         method: 'POST',
@@ -366,14 +416,14 @@ export const CredentialVault: React.FC = () => {
                     </div>
                     <div>
                       <h3 className="font-bold text-sm text-white">{key.provider}</h3>
-                      <span className="text-[10px] text-[var(--signal-mint)] font-mono bg-[var(--signal-mint)]/10 px-2 py-0.5 rounded-full border border-[var(--signal-mint)]/20">
+                      <span className="text-[10px] text-[var(--signal-mint)] font-mono bg-[var(--signal-mint)]/10 px-2 py-0.5 rounded-full border border-[var(--signal-mint)]/20 whitespace-nowrap">
                         {key.tier}
                       </span>
                     </div>
                   </div>
 
                   <span
-                    className={`flex items-center gap-1.5 text-[11px] font-mono px-2.5 py-1 rounded-full border ${
+                    className={`flex items-center gap-1.5 text-[11px] font-mono px-2.5 py-1 rounded-full shrink-0 border ${
                       key.status === 'degraded' || key.status === 'unavailable'
                         ? 'text-amber-400 bg-amber-500/10 border-amber-500/20'
                         : key.status === 'unconfigured'
@@ -385,6 +435,18 @@ export const CredentialVault: React.FC = () => {
                     {key.status === 'degraded' || key.status === 'unavailable' ? 'Degraded' : key.status === 'unconfigured' ? 'Unconfigured' : key.status === 'testing' ? 'Testing' : 'Verified'}
                   </span>
                 </div>
+{/* Error Alert Box (Full width below header) */}
+{(key.status === 'degraded' || key.status === 'unavailable') && key.lastError ? (
+  <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-[11px] space-y-1 w-full overflow-hidden">
+    <div className="flex items-center gap-1.5 font-semibold text-amber-400">
+      <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+      <span>Verification Failed</span>
+    </div>
+    <p className="text-[10px] text-amber-200/80 font-mono break-words leading-tight" title={key.lastError}>
+      {formatCleanError(key.lastError)}
+    </p>
+  </div>
+) : null}
 
                 {/* Masked Key Display */}
                 <div className="bg-[var(--bg-well)] p-3 rounded-xl border border-[var(--border-subtle)] font-mono text-xs text-slate-300" dir="ltr">

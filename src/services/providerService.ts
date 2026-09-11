@@ -132,6 +132,7 @@ export class ProviderService {
         protocol: p.protocol,
         docsUrl: p.docs_url,
         hasKey: hasValidCredential,
+        lastError: isUnconfigured ? null : (conn?.last_error || null),
         maskedKey: hasValidCredential ? `sk-••••••••${encStr.substring(0, 4)}` : 'Not Configured',
         // Treat any non-healthy status (unavailable, degraded, expired, banned, revoked) as 'degraded'
         status: isUnconfigured
