@@ -70,11 +70,11 @@ export const AppShell: React.FC = () => {
               onClick={() => setActiveTab('cockpit')}
               className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
                 activeTab === 'cockpit'
-                  ? 'bg-[var(--bg-card-active)] text-[var(--text-primary)] border border-[var(--accent-primary)]/40 shadow-md'
+                  ? 'bg-[var(--bg-card-active)] text-[var(--text-primary)] border border-[var(--border-hover)] shadow-md'
                   : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)]'
               }`}
             >
-              <LayoutDashboard className={`w-4 h-4 ${activeTab === 'cockpit' ? 'text-[var(--accent-primary)]' : ''}`} />
+              <LayoutDashboard className="w-4 h-4 shrink-0" />
               <span>Cockpit Dashboard</span>
             </button>
 
@@ -82,11 +82,11 @@ export const AppShell: React.FC = () => {
               onClick={() => setActiveTab('vault')}
               className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
                 activeTab === 'vault'
-                  ? 'bg-[var(--bg-card-active)] text-[var(--text-primary)] border border-[var(--accent-primary)]/40 shadow-md'
+                  ? 'bg-[var(--bg-card-active)] text-[var(--text-primary)] border border-[var(--border-hover)] shadow-md'
                   : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)]'
               }`}
             >
-              <Key className={`w-4 h-4 ${activeTab === 'vault' ? 'text-[var(--accent-primary)]' : ''}`} />
+              <Key className="w-4 h-4 shrink-0" />
               <span>Credential Vault</span>
             </button>
 
@@ -94,11 +94,11 @@ export const AppShell: React.FC = () => {
               onClick={() => setActiveTab('bridge')}
               className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
                 activeTab === 'bridge'
-                  ? 'bg-[var(--bg-card-active)] text-[var(--text-primary)] border border-[var(--accent-primary)]/40 shadow-md'
+                  ? 'bg-[var(--bg-card-active)] text-[var(--text-primary)] border border-[var(--border-hover)] shadow-md'
                   : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)]'
               }`}
             >
-              <Zap className={`w-4 h-4 ${activeTab === 'bridge' ? 'text-[var(--accent-primary)]' : ''}`} />
+              <Zap className="w-4 h-4 shrink-0" />
               <span>Agent Bridge</span>
             </button>
 
@@ -106,7 +106,7 @@ export const AppShell: React.FC = () => {
               onClick={() => setIsGoalStudioOpen(true)}
               className="w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)] transition-all cursor-pointer"
             >
-              <Sparkles className="w-4 h-4 text-[var(--signal-amber)]" />
+              <Sparkles className="w-4 h-4 shrink-0" />
               <span>Goal Studio</span>
             </button>
 
@@ -114,11 +114,11 @@ export const AppShell: React.FC = () => {
               onClick={() => setActiveTab('settings')}
               className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
                 activeTab === 'settings'
-                  ? 'bg-[var(--bg-card-active)] text-[var(--text-primary)] border border-[var(--accent-primary)]/40 shadow-md'
+                  ? 'bg-[var(--bg-card-active)] text-[var(--text-primary)] border border-[var(--border-hover)] shadow-md'
                   : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)]'
               }`}
             >
-              <Palette className={`w-4 h-4 ${activeTab === 'settings' ? 'text-[var(--accent-primary)]' : ''}`} />
+              <Palette className="w-4 h-4 shrink-0" />
               <span>Settings Studio</span>
             </button>
           </nav>

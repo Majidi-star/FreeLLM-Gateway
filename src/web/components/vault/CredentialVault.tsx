@@ -49,20 +49,49 @@ export interface KeyEntry {
   lastError?: string | null;
 }
 
-const CATALOG_OPTIONS = [
-  { slug: 'openai', displayName: 'OpenAI', keyUrl: 'https://platform.openai.com/api-keys', baseUrl: 'https://api.openai.com/v1' },
-  { slug: 'anthropic', displayName: 'Anthropic Claude', keyUrl: 'https://console.anthropic.com/', baseUrl: 'https://api.anthropic.com/v1' },
-  { slug: 'gemini', displayName: 'Google Gemini', keyUrl: 'https://aistudio.google.com/app/apikey', baseUrl: 'https://generativelanguage.googleapis.com/v1beta' },
-  { slug: 'groq', displayName: 'Groq Cloud', keyUrl: 'https://console.groq.com/keys', baseUrl: 'https://api.groq.com/openai/v1' },
-  { slug: 'openrouter', displayName: 'OpenRouter', keyUrl: 'https://openrouter.ai/keys', baseUrl: 'https://openrouter.ai/api/v1' },
-  { slug: 'together', displayName: 'Together AI', keyUrl: 'https://api.together.ai/settings/api-keys', baseUrl: 'https://api.together.xyz/v1' },
-  { slug: 'cerebras', displayName: 'Cerebras', keyUrl: 'https://cloud.cerebras.ai/', baseUrl: 'https://api.cerebras.ai/v1' },
-  { slug: 'sambanova', displayName: 'SambaNova Cloud', keyUrl: 'https://cloud.sambanova.ai/', baseUrl: 'https://api.sambanova.ai/v1' },
-  { slug: 'deepseek', displayName: 'DeepSeek', keyUrl: 'https://platform.deepseek.com/api_keys', baseUrl: 'https://api.deepseek.com/v1' },
-  { slug: 'mistral', displayName: 'Mistral AI', keyUrl: 'https://console.mistral.ai/api-keys/', baseUrl: 'https://api.mistral.ai/v1' },
-  { slug: 'fireworks', displayName: 'Fireworks AI', keyUrl: 'https://fireworks.ai/account/api-keys', baseUrl: 'https://api.fireworks.ai/inference/v1' },
-  { slug: 'deepinfra', displayName: 'DeepInfra', keyUrl: 'https://deepinfra.com/dash/api_keys', baseUrl: 'https://api.deepinfra.com/v1' },
+export type TierCategory = 'free' | 'freemium' | 'paid';
+
+export interface CatalogOption {
+  slug: string;
+  displayName: string;
+  keyUrl: string;
+  baseUrl: string;
+  tierCategory: TierCategory;
+  tierLabel: string;
+}
+
+export const CATALOG_OPTIONS: CatalogOption[] = [
+  { slug: 'groq', displayName: 'Groq Cloud', keyUrl: 'https://console.groq.com/keys', baseUrl: 'https://api.groq.com/openai/v1', tierCategory: 'free', tierLabel: '100% Free Tier' },
+  { slug: 'cerebras', displayName: 'Cerebras', keyUrl: 'https://cloud.cerebras.ai/', baseUrl: 'https://api.cerebras.ai/v1', tierCategory: 'free', tierLabel: '100% Free Tier' },
+  { slug: 'sambanova', displayName: 'SambaNova Cloud', keyUrl: 'https://cloud.sambanova.ai/', baseUrl: 'https://api.sambanova.ai/v1', tierCategory: 'free', tierLabel: '100% Free Tier' },
+  { slug: 'gemini', displayName: 'Google Gemini', keyUrl: 'https://aistudio.google.com/app/apikey', baseUrl: 'https://generativelanguage.googleapis.com/v1beta', tierCategory: 'freemium', tierLabel: 'Initially Free' },
+  { slug: 'openrouter', displayName: 'OpenRouter', keyUrl: 'https://openrouter.ai/keys', baseUrl: 'https://openrouter.ai/api/v1', tierCategory: 'freemium', tierLabel: 'Initially Free' },
+  { slug: 'together', displayName: 'Together AI', keyUrl: 'https://api.together.ai/settings/api-keys', baseUrl: 'https://api.together.xyz/v1', tierCategory: 'freemium', tierLabel: 'Initially Free' },
+  { slug: 'mistral', displayName: 'Mistral AI', keyUrl: 'https://console.mistral.ai/api-keys/', baseUrl: 'https://api.mistral.ai/v1', tierCategory: 'freemium', tierLabel: 'Initially Free' },
+  { slug: 'fireworks', displayName: 'Fireworks AI', keyUrl: 'https://fireworks.ai/account/api-keys', baseUrl: 'https://api.fireworks.ai/inference/v1', tierCategory: 'freemium', tierLabel: 'Initially Free' },
+  { slug: 'deepinfra', displayName: 'DeepInfra', keyUrl: 'https://deepinfra.com/dash/api_keys', baseUrl: 'https://api.deepinfra.com/v1', tierCategory: 'freemium', tierLabel: 'Initially Free' },
+  { slug: 'openai', displayName: 'OpenAI', keyUrl: 'https://platform.openai.com/api-keys', baseUrl: 'https://api.openai.com/v1', tierCategory: 'paid', tierLabel: 'Paid / Usage-Based' },
+  { slug: 'anthropic', displayName: 'Anthropic Claude', keyUrl: 'https://console.anthropic.com/', baseUrl: 'https://api.anthropic.com/v1', tierCategory: 'paid', tierLabel: 'Paid / Usage-Based' },
+  { slug: 'deepseek', displayName: 'DeepSeek', keyUrl: 'https://platform.deepseek.com/api_keys', baseUrl: 'https://api.deepseek.com/v1', tierCategory: 'paid', tierLabel: 'Paid / Usage-Based' },
 ];
+
+export type TierFilter = 'all' | TierCategory;
+
+export function filterCatalogOptions(
+  options: CatalogOption[],
+  tierFilter: TierFilter,
+  searchQuery: string
+): CatalogOption[] {
+  const q = searchQuery.trim().toLowerCase();
+  return options.filter((opt) => {
+    const matchesTier = tierFilter === 'all' || opt.tierCategory === tierFilter;
+    const matchesSearch =
+      q === '' ||
+      opt.displayName.toLowerCase().includes(q) ||
+      opt.slug.toLowerCase().includes(q);
+    return matchesTier && matchesSearch;
+  });
+}
 
 const getAdminToken = () =>
   sessionStorage.getItem('goalroute_admin_token') ||
@@ -82,6 +111,8 @@ export const CredentialVault: React.FC = () => {
   const [isSavingKey, setIsSavingKey] = useState(false);
   const [connectError, setConnectError] = useState<string | null>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [tierFilter, setTierFilter] = useState<TierFilter>('all');
+  const [providerSearchQuery, setProviderSearchQuery] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [customBaseUrl, setCustomBaseUrl] = useState('https://api.openai.com/v1');
   const [isSyncing, setIsSyncing] = useState(false);
@@ -124,6 +155,8 @@ export const CredentialVault: React.FC = () => {
   };
 
   const currentProvider = CATALOG_OPTIONS.find((p) => p.slug === selectedProviderSlug) || CATALOG_OPTIONS[0];
+
+  const filteredCatalogOptions = filterCatalogOptions(CATALOG_OPTIONS, tierFilter, providerSearchQuery);
 
   const selectProvider = (slug: string) => {
     setSelectedProviderSlug(slug);
@@ -371,20 +404,15 @@ export const CredentialVault: React.FC = () => {
 
         <div className="flex items-center gap-3">
           <button
-            onClick={() => setIsConnectModalOpen(true)}
+            onClick={() => {
+              setIsConnectModalOpen(true);
+              setTierFilter('all');
+              setProviderSearchQuery('');
+            }}
             className="px-4 py-2.5 rounded-xl bg-[var(--signal-mint)] hover:bg-[var(--signal-mint)]/80 text-slate-950 font-bold text-xs flex items-center justify-center space-x-2 shadow-lg shadow-[var(--signal-mint)]/20 transition-all active:scale-95 shrink-0"
           >
             <Plus className="w-4 h-4" />
-            <span>+ Connect Provider Key</span>
-          </button>
-
-          <button
-            onClick={handleSyncModels}
-            disabled={isSyncing}
-            className="px-3.5 py-2 rounded-xl bg-[var(--bg-well)] hover:bg-[var(--bg-card-active)] text-[var(--text-primary)] border border-[var(--border-subtle)] text-xs font-semibold flex items-center space-x-2 transition-all active:scale-95 disabled:opacity-50"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-[var(--accent-primary)]' : ''}`} />
-            <span>{isSyncing ? 'Syncing...' : 'Sync Models'}</span>
+            <span>Connect Provider Key</span>
           </button>
 
           <button
@@ -459,14 +487,30 @@ export const CredentialVault: React.FC = () => {
         </div>
       </div>
 
-      {/* 2x2 Squircle Key Cards Gallery Grid */}
+            {/* 2x2 Squircle Key Cards Gallery Grid */}
       <div className="space-y-4">
-        <div className="text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">Provider Key Gallery Cards</div>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
+          <div>
+            <h2 className="text-base font-bold text-[var(--text-primary)]">Configured Key Enclaves</h2>
+            <p className="text-xs text-[var(--text-muted)]">Active provider credentials available for low-latency solver routing</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleSyncModels}
+              disabled={isSyncing}
+              className="px-3 py-1.5 rounded-xl bg-[var(--bg-well)] hover:bg-[var(--bg-card-active)] text-[var(--text-primary)] border border-[var(--border-subtle)] text-xs font-semibold flex items-center space-x-1.5 transition-all active:scale-95 disabled:opacity-50"
+              title="Discover and sync latest models from active providers"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-[var(--accent-primary)]' : ''}`} />
+              <span>{isSyncing ? 'Syncing Catalog...' : 'Sync Models'}</span>
+            </button>
+          </div>
+        </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {keys.length === 0 && (
             <div className="col-span-full p-8 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-subtle)] text-center text-xs text-[var(--text-secondary)]">
-              No provider keys connected yet. Click "+ Connect Provider Key" to add your first credential.
+              No provider keys connected yet. Click "Connect Provider Key" to add your first credential.
             </div>
           )}
           {keys.map((key) => {
@@ -623,33 +667,88 @@ export const CredentialVault: React.FC = () => {
             )}
 
             <div className="space-y-4 text-xs">
+              {/* Tier Filter Tabs */}
+              <div className="space-y-1.5">
+                <label className="font-semibold text-[var(--text-secondary)] text-[11px] uppercase tracking-wider">
+                  Filter by Tier
+                </label>
+                <div className="grid grid-cols-4 gap-1.5 p-1 bg-[var(--bg-well)] border border-[var(--border-subtle)] rounded-xl text-xs">
+                  {(['all', 'free', 'freemium', 'paid'] as const).map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => setTierFilter(t)}
+                      className={`py-1.5 px-2 rounded-lg font-medium capitalize text-[11px] transition-all ${
+                        tierFilter === t
+                          ? 'bg-[var(--accent-primary)] text-white shadow-sm font-bold'
+                          : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-active)]'
+                      }`}
+                    >
+                      {t === 'all' ? 'All' : t === 'free' ? 'Free Tier' : t === 'freemium' ? 'Initially Free' : 'Paid'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Searchable Provider Selector Combobox */}
               <div className="space-y-1.5 relative">
                 <label className="font-semibold text-[var(--text-secondary)]">Select Provider</label>
-                <button
-                  type="button"
-                  onClick={() => setIsDropdownOpen((o) => !o)}
-                  className="w-full p-3 bg-[var(--bg-well)] border border-[var(--border-subtle)] focus:border-[var(--signal-mint)] rounded-xl text-[var(--text-primary)] font-medium focus:outline-none cursor-pointer flex items-center justify-between transition-colors"
-                >
-                  <span>{currentProvider.displayName}</span>
-                  <ChevronDown className={`w-4 h-4 text-[var(--text-muted)] transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
-                </button>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={isDropdownOpen ? providerSearchQuery : currentProvider.displayName}
+                    onChange={(e) => {
+                      setProviderSearchQuery(e.target.value);
+                      if (!isDropdownOpen) setIsDropdownOpen(true);
+                    }}
+                    onFocus={() => {
+                      setIsDropdownOpen(true);
+                      setProviderSearchQuery('');
+                    }}
+                    placeholder="Search provider (e.g. Groq, Gemini, Claude)..."
+                    className="w-full p-3 pr-10 bg-[var(--bg-well)] border border-[var(--border-subtle)] focus:border-[var(--signal-mint)] rounded-xl text-[var(--text-primary)] font-medium focus:outline-none transition-colors"
+                    dir="ltr"
+                  />
+                  <ChevronDown className={`w-4 h-4 text-[var(--text-muted)] absolute right-3 top-3.5 transition-transform pointer-events-none ${isDropdownOpen ? 'rotate-180' : ''}`} />
+                </div>
+
                 {isDropdownOpen && (
                   <>
                     <div className="fixed inset-0 z-40" onClick={() => setIsDropdownOpen(false)} />
-                    <div className="absolute z-50 w-full mt-1 bg-[var(--bg-well)] border border-[var(--border-subtle)] rounded-xl shadow-2xl overflow-hidden max-h-64 overflow-y-auto">
-                      {CATALOG_OPTIONS.map((opt) => (
-                        <button
-                          key={opt.slug}
-                          type="button"
-                          onClick={() => selectProvider(opt.slug)}
-                          className={`w-full px-3 py-2.5 text-left text-[var(--text-primary)] font-medium flex items-center justify-between transition-colors ${
-                            opt.slug === selectedProviderSlug ? 'bg-[var(--bg-card-active)]' : 'hover:bg-[var(--bg-card-active)]'
-                          }`}
-                        >
-                          <span>{opt.displayName}</span>
-                          {opt.slug === selectedProviderSlug && <Check className="w-3.5 h-3.5 text-[var(--signal-mint)]" />}
-                        </button>
-                      ))}
+                    <div className="absolute z-50 w-full mt-1 bg-[var(--bg-well)] border border-[var(--border-subtle)] rounded-xl shadow-2xl overflow-hidden max-h-60 overflow-y-auto custom-scrollbar">
+                      {filteredCatalogOptions.length === 0 ? (
+                        <div className="px-3 py-3 text-xs text-[var(--text-muted)] text-center">
+                          No providers found matching query.
+                        </div>
+                      ) : (
+                        filteredCatalogOptions.map((opt) => (
+                          <button
+                            key={opt.slug}
+                            type="button"
+                            onClick={() => {
+                              selectProvider(opt.slug);
+                              setIsDropdownOpen(false);
+                            }}
+                            className={`w-full px-3 py-2.5 text-left font-medium flex items-center justify-between transition-colors border-b border-[var(--border-subtle)]/30 last:border-0 ${
+                              opt.slug === selectedProviderSlug ? 'bg-[var(--bg-card-active)] text-[var(--accent-primary)]' : 'text-[var(--text-primary)] hover:bg-[var(--bg-card-active)]'
+                            }`}
+                          >
+                            <span className="flex items-center gap-2">
+                              <span>{opt.displayName}</span>
+                              <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded-full font-bold uppercase ${
+                                opt.tierCategory === 'free'
+                                  ? 'bg-[var(--signal-mint)]/15 text-[var(--signal-mint)] border border-[var(--signal-mint)]/30'
+                                  : opt.tierCategory === 'freemium'
+                                  ? 'bg-[var(--signal-amber)]/15 text-[var(--signal-amber)] border border-[var(--signal-amber)]/30'
+                                  : 'bg-purple-500/15 text-purple-400 border border-purple-500/30'
+                              }`}>
+                                {opt.tierLabel}
+                              </span>
+                            </span>
+                            {opt.slug === selectedProviderSlug && <Check className="w-3.5 h-3.5 text-[var(--signal-mint)]" />}
+                          </button>
+                        ))
+                      )}
                     </div>
                   </>
                 )}
