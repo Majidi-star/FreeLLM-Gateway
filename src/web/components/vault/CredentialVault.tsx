@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { Key, ShieldCheck, RefreshCw, CheckCircle2, AlertTriangle, Cpu, Lock, Terminal, Activity, Zap, Check, ChevronDown, Plus, X } from 'lucide-react';
 import { GlossaryTerm } from '../common/GlossaryTerm.js';
 
@@ -200,7 +200,7 @@ export const CredentialVault: React.FC = () => {
   };
 
   const probeKey = async (id: string) => {
-    // Skip unconfigured providers — never run handshake probes on keys that aren't set up
+    // Skip unconfigured providers â€” never run handshake probes on keys that aren't set up
     const targetKey = keys.find((k) => k.id === id);
     if (!targetKey || targetKey.hasKey === false || targetKey.status === 'unconfigured') {
       return;
@@ -248,7 +248,7 @@ export const CredentialVault: React.FC = () => {
   };
 
   const handleTestKey = async (id: string) => {
-    // Skip unconfigured providers — never run handshake probes on keys that aren't set up
+    // Skip unconfigured providers â€” never run handshake probes on keys that aren't set up
     const targetKey = keys.find((k) => k.id === id);
     if (!targetKey || targetKey.hasKey === false || targetKey.status === 'unconfigured') {
       return;
@@ -316,7 +316,7 @@ export const CredentialVault: React.FC = () => {
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[var(--border-subtle)]">
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-[var(--text-primary)] tracking-tight flex items-center gap-2">
             <Key className="w-6 h-6 text-[var(--accent-primary)]" />
             Credential Vault & Provider Key Gallery
           </h1>
@@ -351,7 +351,7 @@ export const CredentialVault: React.FC = () => {
         {/* Capsule 1 */}
         <div className="p-4 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-subtle)] space-y-1 squircle-capsule">
           <div className="text-[11px] text-[var(--text-muted)] font-medium uppercase">Active Enclave Keys</div>
-          <div className="text-xl font-bold text-white font-mono" dir="ltr">{activeKeys.length} / {keys.length}</div>
+          <div className="text-xl font-bold text-[var(--text-primary)] font-mono" dir="ltr">{activeKeys.length} / {keys.length}</div>
           <div className="text-[10px] text-[var(--signal-mint)] font-mono flex items-center gap-1">
             <CheckCircle2 className="w-3 h-3" /> {configuredKeys.length > 0 ? 'All providers ready' : 'No keys configured'}
           </div>
@@ -367,7 +367,7 @@ export const CredentialVault: React.FC = () => {
         {/* Capsule 3 */}
         <div className="p-4 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-subtle)] space-y-1 squircle-capsule">
           <div className="text-[11px] text-[var(--text-muted)] font-medium uppercase">Avg Handshake Ping</div>
-          <div className="text-xl font-bold text-white font-mono" dir="ltr">{avgPingMs > 0 ? `${avgPingMs} ms` : '—'}</div>
+          <div className="text-xl font-bold text-[var(--text-primary)] font-mono" dir="ltr">{avgPingMs > 0 ? `${avgPingMs} ms` : 'â€”'}</div>
           <div className="text-[10px] text-[var(--signal-mint)] font-mono">
             {fastestPing > 0 ? `Fastest: ${fastestPing}ms` : 'Run a handshake probe'}
           </div>
@@ -385,7 +385,7 @@ export const CredentialVault: React.FC = () => {
       <div className="p-4 rounded-2xl bg-[var(--bg-well)] border border-[var(--border-hover)] flex items-start space-x-3 text-xs">
         <ShieldCheck className="w-5 h-5 text-[var(--signal-mint)] shrink-0 mt-0.5" />
         <div className="space-y-0.5">
-          <div className="font-semibold text-white">Vault Watchdog Guard Active</div>
+          <div className="font-semibold text-[var(--text-primary)]">Vault Watchdog Guard Active</div>
           <div className="text-[var(--text-secondary)] leading-relaxed">
             All provider keys are isolated inside local web application memory using standard zero-trust encryption primitives. Credentials are never written to disk or transmitted to third-party tracking servers.
           </div>
@@ -415,7 +415,7 @@ export const CredentialVault: React.FC = () => {
                       <Key className="w-4 h-4" />
                     </div>
                     <div>
-                      <h3 className="font-bold text-sm text-white">{key.provider}</h3>
+                      <h3 className="font-bold text-sm text-[var(--text-primary)]">{key.provider}</h3>
                       <span className="text-[10px] text-[var(--signal-mint)] font-mono bg-[var(--signal-mint)]/10 px-2 py-0.5 rounded-full border border-[var(--signal-mint)]/20 whitespace-nowrap">
                         {key.tier}
                       </span>
@@ -449,7 +449,7 @@ export const CredentialVault: React.FC = () => {
 ) : null}
 
                 {/* Masked Key Display */}
-                <div className="bg-[var(--bg-well)] p-3 rounded-xl border border-[var(--border-subtle)] font-mono text-xs text-slate-300" dir="ltr">
+                <div className="bg-[var(--bg-well)] p-3 rounded-xl border border-[var(--border-subtle)] font-mono text-xs text-[var(--text-secondary)]" dir="ltr">
                   <span className="truncate block">{key.maskedKey}</span>
                 </div>
 
@@ -457,7 +457,7 @@ export const CredentialVault: React.FC = () => {
                 <div className="space-y-2 text-xs">
                   <div className="flex justify-between text-[11px]">
                     <span className="text-[var(--text-muted)]">Last Handshake:</span>
-                    <span className="font-mono text-slate-200" dir="ltr">{key.lastVerified} ({key.lastPingMs}ms)</span>
+                    <span className="font-mono text-[var(--text-primary)]" dir="ltr">{key.lastVerified} ({key.lastPingMs}ms)</span>
                   </div>
 
                   <div className="space-y-1">
@@ -479,7 +479,7 @@ export const CredentialVault: React.FC = () => {
                   <button
                     onClick={() => handleTestKey(key.id)}
                     disabled={testingKeyIds[key.id]}
-                    className="flex-1 px-3 py-1.5 rounded-xl bg-[var(--bg-well)] hover:bg-[var(--bg-card-active)] text-slate-200 border border-[var(--border-subtle)] text-xs font-semibold flex items-center justify-center space-x-1.5 transition-all active:scale-95 disabled:opacity-50"
+                    className="flex-1 px-3 py-1.5 rounded-xl bg-[var(--bg-well)] hover:bg-[var(--bg-card-active)] text-[var(--text-primary)] border border-[var(--border-subtle)] text-xs font-semibold flex items-center justify-center space-x-1.5 transition-all active:scale-95 disabled:opacity-50"
                   >
                     <RefreshCw className={`w-3.5 h-3.5 ${testingKeyIds[key.id] ? 'animate-spin text-[var(--accent-primary)]' : ''}`} />
                     <span>{testingKeyIds[key.id] ? 'Testing...' : 'Test Handshake'}</span>
@@ -502,26 +502,26 @@ export const CredentialVault: React.FC = () => {
 
       {/* Enclave Security Diagnostics Card */}
       <div className="p-6 rounded-[24px] bg-[var(--bg-card)] border border-[var(--border-subtle)] space-y-4">
-        <h3 className="text-sm font-bold text-white flex items-center gap-2">
+        <h3 className="text-sm font-bold text-[var(--text-primary)] flex items-center gap-2">
           <Lock className="w-4 h-4 text-[var(--accent-primary)]" />
           Enclave Security Diagnostics & Isolation Integrity
         </h3>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
           <div className="p-3.5 rounded-xl bg-[var(--bg-well)] border border-[var(--border-subtle)] space-y-1">
-            <div className="font-semibold text-white">Memory Isolation</div>
+            <div className="font-semibold text-[var(--text-primary)]">Memory Isolation</div>
             <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
               Process memory boundaries verified via isolated browser context sandboxing.
             </p>
           </div>
           <div className="p-3.5 rounded-xl bg-[var(--bg-well)] border border-[var(--border-subtle)] space-y-1">
-            <div className="font-semibold text-white">Key Leak Prevention</div>
+            <div className="font-semibold text-[var(--text-primary)]">Key Leak Prevention</div>
             <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
               Outbound request payload scrubbers ensure headers are stripped of raw tokens in logs.
             </p>
           </div>
           <div className="p-3.5 rounded-xl bg-[var(--bg-well)] border border-[var(--border-subtle)] space-y-1">
-            <div className="font-semibold text-white"><GlossaryTerm term="Jitter Shield" /> Proxy</div>
+            <div className="font-semibold text-[var(--text-primary)]"><GlossaryTerm term="Jitter Shield" /> Proxy</div>
             <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
               Sub-millisecond sliding-window jitter shielding dampens latency spikes during probes.
             </p>
@@ -534,13 +534,13 @@ export const CredentialVault: React.FC = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="w-full max-w-md bg-[var(--bg-card)] border border-[var(--border-subtle)] rounded-3xl p-6 space-y-5 shadow-2xl relative">
             <div className="flex items-center justify-between border-b border-[var(--border-subtle)] pb-3">
-              <h3 className="text-base font-bold text-white flex items-center gap-2">
+              <h3 className="text-base font-bold text-[var(--text-primary)] flex items-center gap-2">
                 <Key className="w-5 h-5 text-[var(--signal-mint)]" />
                 Connect Provider Key
               </h3>
               <button
                 onClick={() => setIsConnectModalOpen(false)}
-                className="p-1 rounded-lg text-[var(--text-muted)] hover:text-white hover:bg-[var(--bg-well)] transition-colors"
+                className="p-1 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-well)] transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -555,11 +555,11 @@ export const CredentialVault: React.FC = () => {
 
             <div className="space-y-4 text-xs">
               <div className="space-y-1.5 relative">
-                <label className="font-semibold text-slate-300">Select Provider</label>
+                <label className="font-semibold text-[var(--text-secondary)]">Select Provider</label>
                 <button
                   type="button"
                   onClick={() => setIsDropdownOpen((o) => !o)}
-                  className="w-full p-3 bg-[var(--bg-well)] border border-[var(--border-subtle)] focus:border-[var(--signal-mint)] rounded-xl text-white font-medium focus:outline-none cursor-pointer flex items-center justify-between transition-colors"
+                  className="w-full p-3 bg-[var(--bg-well)] border border-[var(--border-subtle)] focus:border-[var(--signal-mint)] rounded-xl text-[var(--text-primary)] font-medium focus:outline-none cursor-pointer flex items-center justify-between transition-colors"
                 >
                   <span>{currentProvider.displayName}</span>
                   <ChevronDown className={`w-4 h-4 text-[var(--text-muted)] transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
@@ -573,7 +573,7 @@ export const CredentialVault: React.FC = () => {
                           key={opt.slug}
                           type="button"
                           onClick={() => selectProvider(opt.slug)}
-                          className={`w-full px-3 py-2.5 text-left text-white font-medium flex items-center justify-between transition-colors ${
+                          className={`w-full px-3 py-2.5 text-left text-[var(--text-primary)] font-medium flex items-center justify-between transition-colors ${
                             opt.slug === selectedProviderSlug ? 'bg-[var(--bg-card-active)]' : 'hover:bg-[var(--bg-card-active)]'
                           }`}
                         >
@@ -587,13 +587,13 @@ export const CredentialVault: React.FC = () => {
               </div>
 
               <div className="space-y-1.5">
-                <label className="font-semibold text-slate-300">API Key</label>
+                <label className="font-semibold text-[var(--text-secondary)]">API Key</label>
                 <input
                   type="password"
                   value={inputApiKey}
                   onChange={(e) => setInputApiKey(e.target.value)}
                   placeholder="Paste your API key here..."
-                  className="w-full p-3 bg-[var(--bg-well)] border border-[var(--border-subtle)] focus:border-[var(--signal-mint)] rounded-xl text-white font-mono focus:outline-none"
+                  className="w-full p-3 bg-[var(--bg-well)] border border-[var(--border-subtle)] focus:border-[var(--signal-mint)] rounded-xl text-[var(--text-primary)] font-mono focus:outline-none"
                   dir="ltr"
                 />
                 <a
@@ -602,7 +602,7 @@ export const CredentialVault: React.FC = () => {
                   rel="noopener noreferrer"
                   className="text-xs text-[var(--accent-primary)] hover:underline flex items-center gap-1 font-medium"
                 >
-                  Get {currentProvider.displayName} API Key ↗
+                  Get {currentProvider.displayName} API Key â†—
                 </a>
               </div>
 
@@ -610,20 +610,20 @@ export const CredentialVault: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowAdvanced((s) => !s)}
-                  className="flex items-center gap-1.5 text-[var(--text-muted)] hover:text-white font-medium transition-colors"
+                  className="flex items-center gap-1.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] font-medium transition-colors"
                 >
                   <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} />
                   Advanced Settings (Base URL Override)
                 </button>
                 {showAdvanced && (
                   <div className="mt-3 space-y-1.5">
-                    <label className="font-semibold text-slate-300">Endpoint Base URL</label>
+                    <label className="font-semibold text-[var(--text-secondary)]">Endpoint Base URL</label>
                     <input
                       type="text"
                       value={customBaseUrl}
                       onChange={(e) => setCustomBaseUrl(e.target.value)}
                       placeholder={currentProvider.baseUrl}
-                      className="w-full p-3 bg-[var(--bg-well)] border border-[var(--border-subtle)] focus:border-[var(--signal-mint)] rounded-xl text-white font-mono focus:outline-none"
+                      className="w-full p-3 bg-[var(--bg-well)] border border-[var(--border-subtle)] focus:border-[var(--signal-mint)] rounded-xl text-[var(--text-primary)] font-mono focus:outline-none"
                       dir="ltr"
                     />
                     <p className="text-[var(--text-muted)] leading-relaxed">
@@ -637,7 +637,7 @@ export const CredentialVault: React.FC = () => {
             <div className="flex items-center gap-3 pt-2">
               <button
                 onClick={() => setIsConnectModalOpen(false)}
-                className="flex-1 py-2.5 rounded-xl bg-[var(--bg-well)] hover:bg-[var(--bg-card-active)] text-slate-300 font-semibold text-xs transition-colors"
+                className="flex-1 py-2.5 rounded-xl bg-[var(--bg-well)] hover:bg-[var(--bg-card-active)] text-[var(--text-secondary)] font-semibold text-xs transition-colors"
               >
                 Cancel
               </button>
@@ -657,3 +657,4 @@ export const CredentialVault: React.FC = () => {
     </div>
   );
 };
+

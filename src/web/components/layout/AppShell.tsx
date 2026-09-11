@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { LayoutDashboard, Key, Palette, Sparkles, Activity, ShieldCheck, Cpu, Terminal, ArrowUpRight, CheckCircle2, ChevronRight, Zap, RefreshCw, MessageSquare } from 'lucide-react';
 import { CockpitDashboard } from '../cockpit/CockpitDashboard.js';
 import { AgentBridge } from '../bridge/AgentBridge.js';
@@ -34,7 +34,7 @@ export const AppShell: React.FC = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[var(--bg-obsidian)] text-slate-100 font-sans flex flex-col md:flex-row overflow-hidden">
+    <div className="min-h-screen bg-[var(--bg-obsidian)] text-[var(--text-primary)] font-sans flex flex-col md:flex-row overflow-hidden">
       
       {/* 1. FIXED 240px LEFT NAVIGATION RAIL */}
       <aside className="w-full md:w-60 bg-[var(--bg-rail)] border-r border-[var(--border-subtle)] flex flex-col justify-between p-4 shrink-0 z-20">
@@ -49,7 +49,7 @@ export const AppShell: React.FC = () => {
                 </div>
               </div>
               <div>
-                <h1 className="font-extrabold text-base tracking-tight text-white flex items-center gap-1.5">
+                <h1 className="font-extrabold text-base tracking-tight text-[var(--text-primary)] flex items-center gap-1.5">
                   GoalRoute
                   <span className="w-2 h-2 rounded-full bg-[var(--signal-mint)] animate-pulse" />
                 </h1>
@@ -60,7 +60,7 @@ export const AppShell: React.FC = () => {
             {/* Active Workspace Switcher */}
             <div className="bg-[var(--bg-well)] p-2.5 rounded-xl border border-[var(--border-subtle)] text-xs space-y-1">
               <div className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider font-semibold">Active Workspace</div>
-              <div className="font-bold text-white truncate font-mono" dir="ltr">FreeLLM-Gateway</div>
+              <div className="font-bold text-[var(--text-primary)] truncate font-mono" dir="ltr">FreeLLM-Gateway</div>
             </div>
           </div>
 
@@ -70,8 +70,8 @@ export const AppShell: React.FC = () => {
               onClick={() => setActiveTab('cockpit')}
               className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
                 activeTab === 'cockpit'
-                  ? 'bg-[var(--bg-card-active)] text-white border border-[var(--accent-primary)]/40 shadow-md'
-                  : 'text-[var(--text-secondary)] hover:text-white hover:bg-[var(--bg-card)]'
+                  ? 'bg-[var(--bg-card-active)] text-[var(--text-primary)] border border-[var(--accent-primary)]/40 shadow-md'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)]'
               }`}
             >
               <LayoutDashboard className={`w-4 h-4 ${activeTab === 'cockpit' ? 'text-[var(--accent-primary)]' : ''}`} />
@@ -82,8 +82,8 @@ export const AppShell: React.FC = () => {
               onClick={() => setActiveTab('bridge')}
               className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
                 activeTab === 'bridge'
-                  ? 'bg-[var(--bg-card-active)] text-white border border-[var(--accent-primary)]/40 shadow-md'
-                  : 'text-[var(--text-secondary)] hover:text-white hover:bg-[var(--bg-card)]'
+                  ? 'bg-[var(--bg-card-active)] text-[var(--text-primary)] border border-[var(--accent-primary)]/40 shadow-md'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)]'
               }`}
             >
               <Zap className={`w-4 h-4 ${activeTab === 'bridge' ? 'text-[var(--accent-primary)]' : ''}`} />
@@ -94,8 +94,8 @@ export const AppShell: React.FC = () => {
               onClick={() => setActiveTab('vault')}
               className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
                 activeTab === 'vault'
-                  ? 'bg-[var(--bg-card-active)] text-white border border-[var(--accent-primary)]/40 shadow-md'
-                  : 'text-[var(--text-secondary)] hover:text-white hover:bg-[var(--bg-card)]'
+                  ? 'bg-[var(--bg-card-active)] text-[var(--text-primary)] border border-[var(--accent-primary)]/40 shadow-md'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)]'
               }`}
             >
               <Key className={`w-4 h-4 ${activeTab === 'vault' ? 'text-[var(--accent-primary)]' : ''}`} />
@@ -106,8 +106,8 @@ export const AppShell: React.FC = () => {
               onClick={() => setActiveTab('settings')}
               className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
                 activeTab === 'settings'
-                  ? 'bg-[var(--bg-card-active)] text-white border border-[var(--accent-primary)]/40 shadow-md'
-                  : 'text-[var(--text-secondary)] hover:text-white hover:bg-[var(--bg-card)]'
+                  ? 'bg-[var(--bg-card-active)] text-[var(--text-primary)] border border-[var(--accent-primary)]/40 shadow-md'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)]'
               }`}
             >
               <Palette className={`w-4 h-4 ${activeTab === 'settings' ? 'text-[var(--accent-primary)]' : ''}`} />
@@ -126,7 +126,7 @@ export const AppShell: React.FC = () => {
             <div className="text-[10px] text-[var(--text-secondary)]">
               {activeKeys !== null
                 ? `${activeKeys} / ${activeKeys} Free Enclave Keys`
-                : 'Loading enclave keys…'}
+                : 'Loading enclave keysâ€¦'}
             </div>
           </div>
 
@@ -135,7 +135,7 @@ export const AppShell: React.FC = () => {
               DEV
             </div>
             <div className="truncate">
-              <div className="text-xs font-bold text-white truncate">Developer Station</div>
+              <div className="text-xs font-bold text-[var(--text-primary)] truncate">Developer Station</div>
               <div className="text-[10px] text-[var(--text-muted)] truncate">Local Workstation</div>
             </div>
           </div>
@@ -165,7 +165,7 @@ export const AppShell: React.FC = () => {
               <Sparkles className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="font-bold text-sm text-white">GoalRoute Copilot</h2>
+              <h2 className="font-bold text-sm text-[var(--text-primary)]">GoalRoute Copilot</h2>
               <p className="text-[10px] text-[var(--text-muted)]">Real-time Route Advisor Concierge</p>
             </div>
           </div>
@@ -179,7 +179,7 @@ export const AppShell: React.FC = () => {
               </span>
               <span className="text-[10px] font-mono text-[var(--signal-mint)]">OPTIMAL</span>
             </div>
-            <p className="text-xs text-slate-200 leading-relaxed font-sans">
+            <p className="text-xs text-[var(--text-primary)] leading-relaxed font-sans">
               "{conciergeMsg}"
             </p>
           </div>
@@ -190,7 +190,7 @@ export const AppShell: React.FC = () => {
             
             <button
               onClick={() => setIsGoalStudioOpen(true)}
-              className="w-full p-3 rounded-xl bg-[var(--bg-card)] hover:bg-[var(--bg-card-active)] border border-[var(--border-subtle)] text-xs font-semibold text-white flex items-center justify-between transition-colors shadow-sm"
+              className="w-full p-3 rounded-xl bg-[var(--bg-card)] hover:bg-[var(--bg-card-active)] border border-[var(--border-subtle)] text-xs font-semibold text-[var(--text-primary)] flex items-center justify-between transition-colors shadow-sm"
             >
               <span className="flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-[var(--accent-primary)]" />
@@ -201,7 +201,7 @@ export const AppShell: React.FC = () => {
 
             <button
               onClick={() => setActiveTab('vault')}
-              className="w-full p-3 rounded-xl bg-[var(--bg-card)] hover:bg-[var(--bg-card-active)] border border-[var(--border-subtle)] text-xs font-semibold text-white flex items-center justify-between transition-colors shadow-sm"
+              className="w-full p-3 rounded-xl bg-[var(--bg-card)] hover:bg-[var(--bg-card-active)] border border-[var(--border-subtle)] text-xs font-semibold text-[var(--text-primary)] flex items-center justify-between transition-colors shadow-sm"
             >
               <span className="flex items-center gap-2">
                 <Key className="w-4 h-4 text-[var(--signal-mint)]" />
@@ -212,7 +212,7 @@ export const AppShell: React.FC = () => {
 
             <button
               onClick={() => setActiveTab('settings')}
-              className="w-full p-3 rounded-xl bg-[var(--bg-card)] hover:bg-[var(--bg-card-active)] border border-[var(--border-subtle)] text-xs font-semibold text-white flex items-center justify-between transition-colors shadow-sm"
+              className="w-full p-3 rounded-xl bg-[var(--bg-card)] hover:bg-[var(--bg-card-active)] border border-[var(--border-subtle)] text-xs font-semibold text-[var(--text-primary)] flex items-center justify-between transition-colors shadow-sm"
             >
               <span className="flex items-center gap-2">
                 <Palette className="w-4 h-4 text-purple-400" />
@@ -232,7 +232,7 @@ export const AppShell: React.FC = () => {
                   <span>TR-94A20F18</span>
                   <span className="text-[var(--signal-mint)]">42ms</span>
                 </div>
-                <div className="font-semibold text-white truncate" dir="ltr">DeepSeek-R1</div>
+                <div className="font-semibold text-[var(--text-primary)] truncate" dir="ltr">DeepSeek-R1</div>
                 <div className="text-[11px] text-[var(--text-secondary)]">Greedy Set-Cover chosen for code optimization.</div>
               </div>
 
@@ -241,7 +241,7 @@ export const AppShell: React.FC = () => {
                   <span>TR-88C11B02</span>
                   <span className="text-[var(--signal-mint)]">85ms</span>
                 </div>
-                <div className="font-semibold text-white truncate" dir="ltr">Gemini 2.5 Flash</div>
+                <div className="font-semibold text-[var(--text-primary)] truncate" dir="ltr">Gemini 2.5 Flash</div>
                 <div className="text-[11px] text-[var(--text-secondary)]">Zero-cost route selected under high throughput.</div>
               </div>
             </div>
@@ -275,3 +275,4 @@ export const AppShell: React.FC = () => {
     </div>
   );
 };
+

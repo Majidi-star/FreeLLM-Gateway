@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { Activity, Zap, Cpu, ArrowUpRight, CheckCircle2, AlertTriangle, Sparkles, Sliders, RefreshCw, ChevronRight } from 'lucide-react';
 import { DecisionTrace } from '../drawers/DecisionInspectorDrawer.js';
 import { GlossaryTerm } from '../common/GlossaryTerm.js';
@@ -294,7 +294,7 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
             <span className="w-3 h-3 rounded-full bg-[var(--signal-mint)] relative" />
           </div>
           <div>
-            <div className="font-bold text-sm text-white flex items-center gap-2">
+            <div className="font-bold text-sm text-[var(--text-primary)] flex items-center gap-2">
               GoalRoute Self-Healing Routing Engine
               <span className="text-[10px] font-mono bg-[var(--signal-mint)]/10 text-[var(--signal-mint)] border border-[var(--signal-mint)]/20 px-2 py-0.5 rounded-full">
                 ONLINE
@@ -310,21 +310,21 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
         <div className="flex items-center space-x-6 text-xs font-mono" dir="ltr">
           <div className="text-right">
             <div className="text-[var(--text-muted)] text-[10px] uppercase">Requests Logged</div>
-            <div className="font-bold text-white text-sm">{traces.length} <span className="text-[10px] text-slate-400">in stream</span></div>
+            <div className="font-bold text-[var(--text-primary)] text-sm">{traces.length} <span className="text-[10px] text-[var(--text-muted)]">in stream</span></div>
           </div>
 
           <div className="h-8 w-px bg-[var(--border-subtle)]" />
 
           <div className="text-right">
             <div className="text-[var(--text-muted)] text-[10px] uppercase">Avg Latency</div>
-            <div className="font-bold text-[var(--signal-mint)] text-sm">{avgLatencyMs > 0 ? `${avgLatencyMs} ms` : '—'}</div>
+            <div className="font-bold text-[var(--signal-mint)] text-sm">{avgLatencyMs > 0 ? `${avgLatencyMs} ms` : 'â€”'}</div>
           </div>
 
           <div className="h-8 w-px bg-[var(--border-subtle)]" />
 
           <div className="text-right">
             <div className="text-[var(--text-muted)] text-[10px] uppercase">Success Rate</div>
-            <div className="font-bold text-white text-sm">{successPct !== null ? `${successPct}%` : '—'}</div>
+            <div className="font-bold text-[var(--text-primary)] text-sm">{successPct !== null ? `${successPct}%` : 'â€”'}</div>
           </div>
 
           <div className="h-8 w-px bg-[var(--border-subtle)]" />
@@ -345,7 +345,7 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
             className="text-xs font-semibold text-[var(--accent-primary)] hover:underline flex items-center gap-1"
           >
             <Sparkles className="w-3.5 h-3.5" />
-            <span>Customize Goal Studio Constraints →</span>
+            <span>Customize Goal Studio Constraints â†’</span>
           </button>
         </div>
 
@@ -362,7 +362,7 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
                 : 'bg-[var(--bg-card)] border-[var(--border-subtle)] hover:border-[var(--border-hover)]'
             }`}
           >
-            <div className="font-bold text-xs text-white">Standard Balanced</div>
+            <div className="font-bold text-xs text-[var(--text-primary)]">Standard Balanced</div>
             <div className="text-[11px] text-[var(--text-muted)] mt-0.5">Equal speed & accuracy</div>
           </button>
 
@@ -375,7 +375,7 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
                 : 'bg-[var(--bg-card)] border-[var(--border-subtle)] hover:border-[var(--border-hover)]'
             }`}
           >
-            <div className="font-bold text-xs text-white">Ultra Low Latency</div>
+            <div className="font-bold text-xs text-[var(--text-primary)]">Ultra Low Latency</div>
             <div className="text-[11px] text-[var(--text-muted)] mt-0.5">Sub-80ms Groq & Cerebras</div>
           </button>
 
@@ -388,7 +388,7 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
                 : 'bg-[var(--bg-card)] border-[var(--border-subtle)] hover:border-[var(--border-hover)]'
             }`}
           >
-            <div className="font-bold text-xs text-white">Maximum Free Quota</div>
+            <div className="font-bold text-xs text-[var(--text-primary)]">Maximum Free Quota</div>
             <div className="text-[11px] text-[var(--text-muted)] mt-0.5">Distributes across all keys</div>
           </button>
 
@@ -401,7 +401,7 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
                 : 'bg-[var(--bg-card)] border-[var(--border-subtle)] hover:border-[var(--border-hover)]'
             }`}
           >
-            <div className="font-bold text-xs text-white">Deep Reasoning</div>
+            <div className="font-bold text-xs text-[var(--text-primary)]">Deep Reasoning</div>
             <div className="text-[11px] text-[var(--text-muted)] mt-0.5">DeepSeek-R1 priority</div>
           </button>
         </div>
@@ -415,11 +415,11 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
             <button
               onClick={handleSyncModels}
               disabled={isSyncing}
-              className="px-3 py-1.5 rounded-lg bg-[var(--bg-well)] hover:bg-[var(--bg-card-active)] border border-[var(--border-subtle)] hover:border-[var(--border-hover)] text-[var(--text-secondary)] hover:text-white text-[11px] font-semibold flex items-center gap-1.5 transition-all active:scale-95 disabled:opacity-50"
+              className="px-3 py-1.5 rounded-lg bg-[var(--bg-well)] hover:bg-[var(--bg-card-active)] border border-[var(--border-subtle)] hover:border-[var(--border-hover)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-[11px] font-semibold flex items-center gap-1.5 transition-all active:scale-95 disabled:opacity-50"
               title="Discover and sync models from all providers with active keys"
             >
               <RefreshCw className={`w-3 h-3 ${isSyncing ? 'animate-spin' : ''}`} />
-              <span>{isSyncing ? 'Syncing…' : '🔄 Sync Models'}</span>
+              <span>{isSyncing ? 'Syncingâ€¦' : 'ðŸ”„ Sync Models'}</span>
             </button>
             {syncError && (
               <span className="text-[10px] font-mono text-red-400">{syncError}</span>
@@ -448,7 +448,7 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
                 </span>
               </div>
               <div>
-                <h3 className="font-bold text-sm text-white truncate">{model.displayName}</h3>
+                <h3 className="font-bold text-sm text-[var(--text-primary)] truncate">{model.displayName}</h3>
                 <p className="text-[11px] text-[var(--text-muted)] font-mono truncate" dir="ltr">
                   {model.modelName}
                 </p>
@@ -460,7 +460,7 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
                 </div>
                 <div className="flex justify-between text-[11px]">
                   <span className="text-[var(--text-muted)]">Capabilities:</span>
-                  <span className="text-white">
+                  <span className="text-[var(--text-primary)]">
                     {model.supportsVision ? 'Vision + Tools' : model.supportsTools ? 'Tools' : 'Text'}
                   </span>
                 </div>
@@ -481,8 +481,8 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-sm font-bold text-white uppercase tracking-wider">Live Traffic & Routing Decision Stream</h2>
-            <p className="text-xs text-[var(--text-muted)]">Click "Why? →" on any request log to inspect full decision evaluation steps.</p>
+            <h2 className="text-sm font-bold text-[var(--text-primary)] uppercase tracking-wider">Live Traffic & Routing Decision Stream</h2>
+            <p className="text-xs text-[var(--text-muted)]">Click "Why? â†’" on any request log to inspect full decision evaluation steps.</p>
           </div>
           {streamStatus === 'live' && (
             <span className="text-xs font-mono text-[var(--signal-mint)] bg-[var(--signal-mint)]/10 px-2.5 py-1 rounded-full border border-[var(--signal-mint)]/20">
@@ -527,10 +527,10 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
                       <span className="w-2 h-2 rounded-full bg-[var(--signal-mint)] shrink-0" />
                     )}
                     <span className="text-[11px] font-mono text-[var(--text-muted)]" dir="ltr">{tr.timestamp}</span>
-                    <span className="text-xs font-mono text-slate-300 font-bold" dir="ltr">{tr.selectedModel}</span>
+                    <span className="text-xs font-mono text-[var(--text-secondary)] font-bold" dir="ltr">{tr.selectedModel}</span>
                     {tr.isFallback ? (
                       <span className="text-[10px] font-mono font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20">
-                        ⚠ Fallback
+                        âš  Fallback
                       </span>
                     ) : (
                       <span className="text-[10px] font-mono text-[var(--accent-primary)] bg-[var(--accent-primary)]/10 px-2 py-0.5 rounded-md">
@@ -539,14 +539,14 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
                     )}
                   </div>
 
-                  <p className="text-xs font-mono text-slate-300 truncate max-w-xl bg-[var(--bg-well)] p-2 rounded-lg border border-[var(--border-subtle)] mt-1" dir="ltr">
+                  <p className="text-xs font-mono text-[var(--text-secondary)] truncate max-w-xl bg-[var(--bg-well)] p-2 rounded-lg border border-[var(--border-subtle)] mt-1" dir="ltr">
                     {tr.promptSnippet}
                   </p>
                 </div>
 
                 <div className="flex items-center space-x-4 shrink-0 font-mono text-xs" dir="ltr">
                   <div className="text-right">
-                    <div className="text-slate-200 font-bold">{tr.latencyMs}ms</div>
+                    <div className="text-[var(--text-primary)] font-bold">{tr.latencyMs}ms</div>
                     <div className="text-[10px] text-[var(--text-muted)]">{tr.tokens.total} tokens</div>
                   </div>
 
@@ -569,3 +569,4 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
     </div>
   );
 };
+

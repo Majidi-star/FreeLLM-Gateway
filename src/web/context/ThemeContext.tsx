@@ -1,6 +1,6 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+﻿import React, { createContext, useContext, useState, useEffect } from 'react';
 
-export type ThemePreset = 'Obsidian Stealth' | 'Midnight OLED' | 'Cyber Mint' | 'Custom';
+export type ThemePreset = 'Antigravity Dark' | 'Antigravity Light' | 'Custom';
 
 export type ColorTokens = {
   '--bg-obsidian': string;
@@ -18,65 +18,51 @@ export type ColorTokens = {
   '--text-primary': string;
   '--text-secondary': string;
   '--text-muted': string;
+  '--text-bright': string;
 };
 
 export const PRESET_THEMES: Record<Exclude<ThemePreset, 'Custom'>, ColorTokens> = {
-  'Obsidian Stealth': {
-    '--bg-obsidian': '#090a0f',
-    '--bg-rail': '#0d1017',
-    '--bg-card': '#121622',
-    '--bg-card-active': '#161b28',
-    '--bg-well': '#090d14',
-    '--border-subtle': 'rgba(255, 255, 255, 0.06)',
-    '--border-hover': 'rgba(255, 255, 255, 0.18)',
-    '--accent-primary': '#7c9cff',
-    '--accent-primary-hover': '#9bb3ff',
+  'Antigravity Dark': {
+    '--bg-obsidian': '#101010',
+    '--bg-rail': '#141414',
+    '--bg-card': '#1a1a1a',
+    '--bg-card-active': '#222222',
+    '--bg-well': '#0d0d0d',
+    '--border-subtle': 'rgba(255, 255, 255, 0.08)',
+    '--border-hover': 'rgba(255, 255, 255, 0.2)',
+    '--accent-primary': '#007acc',
+    '--accent-primary-hover': '#1f8ad2',
     '--signal-mint': '#00f5a0',
     '--signal-amber': '#ffb800',
     '--signal-coral': '#f55036',
-    '--text-primary': '#ffffff',
-    '--text-secondary': '#94a3b8',
-    '--text-muted': '#64748b',
+    '--text-primary': '#CCCCCC',
+    '--text-secondary': '#999999',
+    '--text-muted': '#666666',
+    '--text-bright': '#FFFFFF',
   },
-  'Midnight OLED': {
-    '--bg-obsidian': '#000000',
-    '--bg-rail': '#050508',
-    '--bg-card': '#0a0c12',
-    '--bg-card-active': '#121520',
-    '--bg-well': '#020204',
-    '--border-subtle': 'rgba(255, 255, 255, 0.08)',
-    '--border-hover': 'rgba(255, 255, 255, 0.25)',
-    '--accent-primary': '#6366f1',
-    '--accent-primary-hover': '#818cf8',
+  'Antigravity Light': {
+    '--bg-obsidian': '#F9F9F9',
+    '--bg-rail': '#F0F0F0',
+    '--bg-card': '#FFFFFF',
+    '--bg-card-active': '#EAEAEA',
+    '--bg-well': '#F3F3F3',
+    '--border-subtle': 'rgba(0, 0, 0, 0.1)',
+    '--border-hover': 'rgba(0, 0, 0, 0.25)',
+    '--accent-primary': '#007acc',
+    '--accent-primary-hover': '#005fa3',
     '--signal-mint': '#10b981',
-    '--signal-amber': '#f59e0b',
-    '--signal-coral': '#ef4444',
-    '--text-primary': '#ffffff',
-    '--text-secondary': '#a1a1aa',
-    '--text-muted': '#71717a',
-  },
-  'Cyber Mint': {
-    '--bg-obsidian': '#040d0b',
-    '--bg-rail': '#081714',
-    '--bg-card': '#0d211d',
-    '--bg-card-active': '#142e29',
-    '--bg-well': '#030a08',
-    '--border-subtle': 'rgba(0, 245, 160, 0.12)',
-    '--border-hover': 'rgba(0, 245, 160, 0.3)',
-    '--accent-primary': '#00f5a0',
-    '--accent-primary-hover': '#38ffb4',
-    '--signal-mint': '#00f5a0',
-    '--signal-amber': '#ffca28',
-    '--signal-coral': '#ff5252',
-    '--text-primary': '#f0fdf4',
-    '--text-secondary': '#99f6e4',
-    '--text-muted': '#5eead4',
+    '--signal-amber': '#d97706',
+    '--signal-coral': '#dc2626',
+    '--text-primary': '#101010',
+    '--text-secondary': '#444444',
+    '--text-muted': '#777777',
+    '--text-bright': '#000000',
   },
 };
 
 const COLOR_REGEX = /^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+(?:\s*,\s*(?:0|1|0?\.\d+))?\s*\))$/;
 
-const ALLOWED_TOKENS = [
+export const ALLOWED_TOKENS = [
   '--bg-obsidian',
   '--bg-rail',
   '--bg-card',
@@ -92,6 +78,7 @@ const ALLOWED_TOKENS = [
   '--text-primary',
   '--text-secondary',
   '--text-muted',
+  '--text-bright',
 ];
 
 const FORBIDDEN_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
@@ -116,7 +103,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return saved;
       }
     }
-    return 'Obsidian Stealth';
+    return 'Antigravity Dark';
   });
 
   const [tokens, setTokensState] = useState<ColorTokens>(() => {
@@ -130,7 +117,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         }
       }
     }
-    return PRESET_THEMES['Obsidian Stealth'];
+    return PRESET_THEMES['Antigravity Dark'];
   });
 
   const applyTokensToDOM = (toks: ColorTokens) => {
@@ -166,7 +153,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const resetTheme = () => {
-    setPreset('Obsidian Stealth');
+    setPreset('Antigravity Dark');
   };
 
   const exportTheme = () => {
