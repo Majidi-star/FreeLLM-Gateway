@@ -168,7 +168,11 @@ export async function buildApp() {
 
     const url = req.url;
     if (url.startsWith('/api/v1/')) {
-      if (url.startsWith('/api/v1/health') || url.startsWith('/api/v1/mcp/settings')) {
+      if (
+        url.startsWith('/api/v1/health') ||
+        url.startsWith('/api/v1/mcp/settings') ||
+        (req.method === 'GET' && url.startsWith('/api/v1/system/endpoints'))
+      ) {
         return;
       }
 

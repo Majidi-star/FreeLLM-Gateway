@@ -275,6 +275,26 @@ describe('Multi-Port Gateway Server (live bindings)', () => {
     expect(localCheck.status).toBe(200);
   });
 
+  it('allows unauthenticated GET /api/v1/system/endpoints status read', async () => {
+    const res = await getApp().inject({
+      method: 'GET',
+      url: '/api/v1/system/endpoints',
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.host).toBeDefined();
+    expect(body.endpoints).toBeDefined();
+  });
+
+  it('rejects unauthenticated POST /api/v1/system/endpoints modification with 401', async () => {
+    const res = await getApp().inject({
+      method: 'POST',
+      url: '/api/v1/system/endpoints',
+      payload: { remoteAccessEnabled: true },
+    });
+    expect(res.statusCode).toBe(401);
+  });
+
   it('rejects duplicate port assignment across enabled protocols', async () => {
     const res = await getApp().inject({
       method: 'POST',

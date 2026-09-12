@@ -88,9 +88,12 @@ export const EndpointsManager: React.FC = () => {
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch('/api/v1/system/endpoints', {
-        headers: { authorization: `Bearer ${getAdminToken()}` },
-      });
+      const token = getAdminToken();
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['authorization'] = `Bearer ${token}`;
+      }
+      const res = await fetch('/api/v1/system/endpoints', { headers });
       if (!res.ok) throw new Error(`Failed to load endpoints (HTTP ${res.status})`);
       const data = (await res.json()) as SystemEndpointsStatus;
       setStatus(data);
