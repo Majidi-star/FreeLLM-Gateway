@@ -275,10 +275,11 @@ describe('Multi-Port Gateway Server (live bindings)', () => {
     expect(localCheck.status).toBe(200);
   });
 
-  it('allows unauthenticated GET /api/v1/system/endpoints status read', async () => {
+  it('allows unauthenticated GET /api/v1/system/endpoints status read even with invalid auth header', async () => {
     const res = await getApp().inject({
       method: 'GET',
       url: '/api/v1/system/endpoints',
+      headers: { authorization: 'Bearer invalid_stale_token_123' },
     });
     expect(res.statusCode).toBe(200);
     const body = res.json();

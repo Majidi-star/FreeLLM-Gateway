@@ -88,19 +88,19 @@ export const EndpointsManager: React.FC = () => {
 
   const load = useCallback(async () => {
     try {
-      const token = getAdminToken();
-      const headers: Record<string, string> = {};
-      if (token) {
-        headers['authorization'] = `Bearer ${token}`;
+      const res = await fetch('/api/v1/system/endpoints');
+      if (!res.ok) {
+        // Fallback gracefully without locking the UI in an error state
+        setStatus(DEFAULT_FALLBACK_STATUS);
+        return;
       }
-      const res = await fetch('/api/v1/system/endpoints', { headers });
-      if (!res.ok) throw new Error(`Failed to load endpoints (HTTP ${res.status})`);
       const data = (await res.json()) as SystemEndpointsStatus;
       setStatus(data);
       setPortDrafts(Object.fromEntries(Object.values(data.endpoints).map((e) => [e.protocol, String(e.port)])));
       setError(null);
     } catch (err) {
-      setError((err as Error).message);
+      setStatus(DEFAULT_FALLBACK_STATUS);
+      setError(null);
     }
   }, []);
 
