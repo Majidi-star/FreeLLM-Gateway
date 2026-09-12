@@ -253,7 +253,9 @@ describe('Multi-Port Gateway Server (live bindings)', () => {
     expect(status.remoteAccessEnabled).toBe(true);
 
     // Loopback still reaches the re-bound listener.
-    const remoteCheck = await fetch(`http://127.0.0.1:${openaiPort}/v1/models`);
+    const remoteCheck = await fetch(`http://127.0.0.1:${openaiPort}/v1/models`, {
+      headers: { connection: 'close' },
+    });
     expect(remoteCheck.status).toBe(200);
 
     const localRes = await getApp().inject({
@@ -267,7 +269,9 @@ describe('Multi-Port Gateway Server (live bindings)', () => {
     expect(status.host).toBe('127.0.0.1');
     expect(status.remoteAccessEnabled).toBe(false);
 
-    const localCheck = await fetch(`http://127.0.0.1:${openaiPort}/v1/models`);
+    const localCheck = await fetch(`http://127.0.0.1:${openaiPort}/v1/models`, {
+      headers: { connection: 'close' },
+    });
     expect(localCheck.status).toBe(200);
   });
 

@@ -2,6 +2,7 @@
 import { Activity, Zap, Cpu, ArrowUpRight, CheckCircle2, AlertTriangle, Sparkles, Sliders, ChevronRight } from 'lucide-react';
 import { DecisionTrace } from '../drawers/DecisionInspectorDrawer.js';
 import { GlossaryTerm } from '../common/GlossaryTerm.js';
+import { EndpointsManager } from '../settings/EndpointsManager.js';
 
 interface CockpitDashboardProps {
   onOpenGoalStudio: () => void;
@@ -243,7 +244,10 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
-      
+
+      {/* Server Endpoints & Multi-Protocol Gateway Status */}
+      <EndpointsManager />
+
       {/* Ambient System Health Ribbon */}
       <div className="p-4 rounded-[24px] bg-[var(--bg-card)] border border-[var(--border-subtle)] shadow-xl flex flex-wrap items-center justify-between gap-4">
         

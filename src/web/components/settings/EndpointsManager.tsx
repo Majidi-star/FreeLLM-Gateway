@@ -59,13 +59,25 @@ const COPY_TARGETS = (status: SystemEndpointsStatus): Snippet[] => {
   ];
 };
 
-function getAdminToken(): string {
+export function getAdminToken(): string {
   return (
     sessionStorage.getItem('goalroute_admin_token') ||
     localStorage.getItem('goalroute_admin_token') ||
+    (import.meta as any).env?.VITE_ADMIN_API_TOKEN ||
     'dev-admin-secret-token'
   );
 }
+
+export const DEFAULT_FALLBACK_STATUS: SystemEndpointsStatus = {
+  host: typeof window !== 'undefined' ? window.location.hostname || '127.0.0.1' : '127.0.0.1',
+  remoteAccessEnabled: false,
+  endpoints: {
+    native: { protocol: 'native', enabled: true, port: 8787, pathPrefix: '/api/v1', description: 'Native Gateway API', sampleCurl: '' },
+    openai: { protocol: 'openai', enabled: true, port: 8788, pathPrefix: '/v1', description: 'OpenAI Compatibility', sampleCurl: '' },
+    anthropic: { protocol: 'anthropic', enabled: true, port: 8789, pathPrefix: '/v1', description: 'Anthropic Compatibility', sampleCurl: '' },
+    mcp: { protocol: 'mcp', enabled: true, port: 8790, pathPrefix: '/mcp', description: 'MCP Bridge Server', sampleCurl: '' },
+  },
+};
 
 export const EndpointsManager: React.FC = () => {
   const [status, setStatus] = useState<SystemEndpointsStatus | null>(null);
@@ -131,19 +143,39 @@ export const EndpointsManager: React.FC = () => {
     }
   }, []);
 
-  if (!status) {
+  if (!status && !error) {
     return (
-      <div className="p-5 rounded-[24px] bg-[var(--bg-card)] border border-[var(--border-subtle)] flex items-center gap-2 text-xs text-[var(--text-muted)]">
-        <RefreshCw className="w-4 h-4 animate-spin" />
-        Loading endpoint status…
+      <div className="p-5 rounded-[24px] bg-[var(--bg-card)] border border-[var(--border-subtle)] flex items-center justify-between text-xs text-[var(--text-muted)]">
+        <div className="flex items-center gap-2">
+          <RefreshCw className="w-4 h-4 animate-spin text-[var(--accent-primary)]" />
+          <span>Connecting to Gateway Server status…</span>
+        </div>
       </div>
     );
   }
 
-  const snippets = COPY_TARGETS(status);
+  const activeStatus = status || DEFAULT_FALLBACK_STATUS;
+
+  const snippets = COPY_TARGETS(activeStatus);
 
   return (
     <div className="p-5 rounded-[24px] bg-[var(--bg-card)] border border-[var(--border-subtle)] space-y-5">
+      {/* Error Alert Banner if fetch/update failed */}
+      {error && (
+        <div className="p-3.5 rounded-xl bg-[var(--signal-coral)]/10 border border-[var(--signal-coral)]/30 text-xs text-[var(--signal-coral)] flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{error}</span>
+          </div>
+          <button
+            onClick={() => void load()}
+            className="px-2.5 py-1 rounded-lg bg-[var(--signal-coral)]/20 hover:bg-[var(--signal-coral)]/30 font-semibold text-[11px] transition-colors"
+          >
+            Retry Connection
+          </button>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2">
@@ -170,24 +202,24 @@ export const EndpointsManager: React.FC = () => {
       <div className="p-4 rounded-2xl bg-[var(--bg-well)] border border-[var(--border-subtle)] space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-xs font-semibold text-[var(--text-primary)]">
-            {status.remoteAccessEnabled ? (
+            {activeStatus.remoteAccessEnabled ? (
               <Globe className="w-4 h-4 text-[var(--signal-amber)]" />
             ) : (
               <Lock className="w-4 h-4 text-[var(--signal-mint)]" />
             )}
-            {status.remoteAccessEnabled ? 'Remote Access (0.0.0.0)' : 'Local Only (127.0.0.1)'}
+            {activeStatus.remoteAccessEnabled ? 'Remote Access (0.0.0.0)' : 'Local Only (127.0.0.1)'}
           </div>
           <button
             disabled={busy}
-            onClick={() => void applyUpdate({ remoteAccessEnabled: !status.remoteAccessEnabled })}
+            onClick={() => void applyUpdate({ remoteAccessEnabled: !activeStatus.remoteAccessEnabled })}
             className="flex items-center gap-1.5 text-xs font-semibold text-[var(--text-primary)] disabled:opacity-50"
           >
-            {status.remoteAccessEnabled ? (
+            {activeStatus.remoteAccessEnabled ? (
               <ToggleRight className="w-5 h-5 text-[var(--signal-amber)]" />
             ) : (
               <ToggleLeft className="w-5 h-5 text-[var(--text-muted)]" />
             )}
-            {status.remoteAccessEnabled ? 'Remote' : 'Local'}
+            {activeStatus.remoteAccessEnabled ? 'Remote' : 'Local'}
           </button>
         </div>
         <p className="text-[10px] text-[var(--text-muted)] leading-relaxed">
@@ -202,7 +234,7 @@ export const EndpointsManager: React.FC = () => {
         <div className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
           Exposed Endpoints
         </div>
-        {Object.values(status.endpoints).map((endpoint) => (
+        {Object.values(activeStatus.endpoints).map((endpoint) => (
           <div
             key={endpoint.protocol}
             className="p-3 rounded-xl bg-[var(--bg-well)] border border-[var(--border-subtle)] space-y-2"
@@ -246,7 +278,7 @@ export const EndpointsManager: React.FC = () => {
               </div>
             </div>
             <div className="text-[10px] text-[var(--text-muted)] font-mono" dir="ltr">
-              http://{status.host === '0.0.0.0' ? '127.0.0.1' : status.host}:{endpoint.port}
+              http://{activeStatus.host === '0.0.0.0' ? '127.0.0.1' : activeStatus.host}:{endpoint.port}
               {endpoint.pathPrefix}
             </div>
             <div className="text-[10px] text-[var(--text-secondary)]">{endpoint.description}</div>

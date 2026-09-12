@@ -1,10 +1,9 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { LayoutDashboard, Key, Palette, Sparkles, Activity, ShieldCheck, Cpu, Terminal, ArrowUpRight, CheckCircle2, ChevronRight, Zap, RefreshCw, MessageSquare } from 'lucide-react';
 import { CockpitDashboard } from '../cockpit/CockpitDashboard.js';
 import { AgentBridge } from '../bridge/AgentBridge.js';
 import { CredentialVault } from '../vault/CredentialVault.js';
 import { SettingsAppearanceStudio } from '../settings/SettingsAppearanceStudio.js';
-import { EndpointsManager } from '../settings/EndpointsManager.js';
 import { GoalStudioModal } from '../modals/GoalStudioModal.js';
 import { DecisionInspectorDrawer, DecisionTrace } from '../drawers/DecisionInspectorDrawer.js';
 import { GlossaryTerm } from '../common/GlossaryTerm.js';
@@ -162,8 +161,7 @@ export const AppShell: React.FC = () => {
         {activeTab === 'bridge' && <AgentBridge />}
         {activeTab === 'vault' && <CredentialVault />}
         {activeTab === 'settings' && (
-          <div className="space-y-6 max-w-3xl">
-            <EndpointsManager />
+          <div className="max-w-4xl">
             <SettingsAppearanceStudio />
           </div>
         )}
