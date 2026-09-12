@@ -215,6 +215,15 @@ export class MultiPortServerService {
   }
 
   private async bindProtocol(protocol: ProtocolType): Promise<void> {
+    if (protocol === 'native') {
+      // The "native" protocol is the main application instance itself,
+      // which is already listening on this.ports.native (config.PORT).
+      // Spinning up a second Fastify listener here would bind to the same
+      // port and silently shadow the main app's routes for local traffic
+      // (this was the root cause of every /api/v1/* 401/404 on the
+      // dashboard). There is nothing to bind — just track the metadata.
+      return;
+    }
     if (this.instances.has(protocol)) {
       throw new AppError(`Protocol "${protocol}" is already bound`, 'PORT_ALREADY_BOUND', 409);
     }
@@ -244,6 +253,10 @@ export class MultiPortServerService {
   }
 
   private async unbindProtocol(protocol: ProtocolType): Promise<void> {
+    if (protocol === 'native') {
+      // No dedicated listener exists for "native" — see bindProtocol().
+      return;
+    }
     const app = this.instances.get(protocol);
     this.instances.delete(protocol);
     this.addresses.delete(protocol);
