@@ -161,7 +161,7 @@ export const AppShell: React.FC = () => {
         {activeTab === 'bridge' && <AgentBridge />}
         {activeTab === 'vault' && <CredentialVault />}
         {activeTab === 'settings' && (
-          <div className="max-w-4xl">
+          <div className="max-w-4xl mx-auto">
             <SettingsAppearanceStudio />
           </div>
         )}
