@@ -16,7 +16,7 @@ export const AppShell: React.FC = () => {
   const [conciergeMsg, setConciergeMsg] = useState('GoalRoute Copilot active. Monitoring your configured enclave keys with 0ms overhead.');
   const [activeKeys, setActiveKeys] = useState<number | null>(null);
 
-  // Left Rail Resize State
+  // Left Panel Resize State
   const [leftPanelWidth, setLeftPanelWidth] = useState<number>(() => {
     try {
       const saved = localStorage.getItem('goalroute_left_panel_width');
@@ -29,13 +29,27 @@ export const AppShell: React.FC = () => {
   });
   const [isResizingLeft, setIsResizingLeft] = useState(false);
 
+  // Right Panel Resize State
+  const [rightPanelWidth, setRightPanelWidth] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('goalroute_right_panel_width');
+      if (saved) {
+        const parsed = Number(saved);
+        if (parsed >= 300 && parsed <= 800) return parsed;
+      }
+    } catch {}
+    return 400;
+  });
+  const [isResizingRight, setIsResizingRight] = useState(false);
+
+  // Left Panel Mouse Move Listener
   useEffect(() => {
     if (!isResizingLeft) return;
 
     const handleMouseMove = (e: MouseEvent) => {
       const newWidth = e.clientX;
-      const minWidth = 220;
-      const maxWidth = Math.min(480, window.innerWidth * 0.4);
+      const minWidth = 200;
+      const maxWidth = Math.min(500, window.innerWidth * 0.4);
       const clampedWidth = Math.min(Math.max(newWidth, minWidth), maxWidth);
 
       setLeftPanelWidth(clampedWidth);
@@ -61,19 +75,7 @@ export const AppShell: React.FC = () => {
     };
   }, [isResizingLeft]);
 
-  // Right Panel Resize State
-  const [rightPanelWidth, setRightPanelWidth] = useState<number>(() => {
-    try {
-      const saved = localStorage.getItem('goalroute_right_panel_width');
-      if (saved) {
-        const parsed = Number(saved);
-        if (parsed >= 300 && parsed <= 800) return parsed;
-      }
-    } catch {}
-    return 400;
-  });
-  const [isResizingRight, setIsResizingRight] = useState(false);
-
+  // Right Panel Mouse Move Listener
   useEffect(() => {
     if (!isResizingRight) return;
 
@@ -132,11 +134,11 @@ export const AppShell: React.FC = () => {
         className="relative w-full h-full bg-[var(--bg-rail)] border-r border-[var(--border-subtle)] flex flex-col justify-between p-4 shrink-0 z-20 overflow-y-auto custom-scrollbar"
         style={{ width: `${leftPanelWidth}px` }}
       >
-        {/* Right Edge Drag Handle for Left Rail */}
+        {/* Right Edge Drag Handle */}
         <div
           onMouseDown={() => setIsResizingLeft(true)}
           className="absolute top-0 right-0 bottom-0 w-2.5 cursor-col-resize hover:bg-[var(--accent-primary)]/40 active:bg-[var(--accent-primary)] z-30 transition-colors group flex items-center justify-center -mr-1"
-          title="Drag to adjust left rail width"
+          title="Drag to adjust navigation panel width"
         >
           <div className="w-1 h-8 rounded-full bg-[var(--border-hover)] group-hover:bg-[var(--accent-primary)] transition-colors" />
         </div>

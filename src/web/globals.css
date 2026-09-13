@@ -8,16 +8,16 @@
   --bg-card: #1a1a1a;
   --bg-card-active: #222222;
   --bg-well: #0d0d0d;
-  --border-subtle: rgba(255, 255, 255, 0.12);
-  --border-hover: rgba(255, 255, 255, 0.25);
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-hover: rgba(255, 255, 255, 0.2);
   --accent-primary: #007acc;
   --accent-primary-hover: #1f8ad2;
   --signal-mint: #00f5a0;
   --signal-amber: #ffb800;
   --signal-coral: #f55036;
-  --text-primary: #e0e0e0;
-  --text-secondary: #b3b3b3;
-  --text-muted: #8c8c8c;
+  --text-primary: #cccccc;
+  --text-secondary: #999999;
+  --text-muted: #666666;
   --text-bright: #ffffff;
 }
 
