@@ -439,124 +439,128 @@ export const GoalStudioModal: React.FC<GoalStudioModalProps> = ({ isOpen, onClos
             </div>
           </div>
 
-          {/* Section 2: Target Volume & Safety Headroom */}
+          {/* Section 2: Target Volume & Safety Headroom Sliders */}
           <div className="space-y-3">
             <label className="text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
               2. Target Daily Volume & Over-Provisioning Headroom
             </label>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-[var(--bg-well)] p-4 rounded-2xl border border-[var(--border-subtle)]">
+            <div className="bg-[var(--bg-well)] p-4 rounded-2xl border border-[var(--border-subtle)] space-y-3">
               {/* Daily Token Target */}
-              <div className="space-y-2">
-                <div className="flex justify-between text-xs">
-                  <span className="text-[var(--text-secondary)] font-medium">Daily Target Tokens</span>
+              <div className="space-y-1.5 p-3 rounded-xl bg-[var(--bg-card-active)] border border-[var(--border-subtle)]">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-[var(--text-bright)] font-semibold">Daily Target Tokens</span>
                   <span className="text-[var(--accent-primary)] font-mono font-bold">
                     {(targetTokensPerDay / 1000000).toFixed(2)}M / day
                   </span>
                 </div>
-                <input
-                  type="range"
-                  min="500000"
-                  max="20000000"
-                  step="500000"
-                  value={targetTokensPerDay}
-                  onChange={(e) => {
-                    setTargetTokensPerDay(Number(e.target.value));
-                    setSelectedIntent('custom');
-                  }}
-                  className="w-full h-1.5 bg-[var(--bg-card-active)] rounded-lg appearance-none cursor-pointer accent-[var(--accent-primary)]"
-                />
-                <div className="flex justify-between text-[10px] text-[var(--text-muted)] font-mono">
-                  <span>500k</span>
-                  <span>10M</span>
-                  <span>20M</span>
+                <div className="flex items-center gap-3">
+                  <span className="text-[10px] font-mono text-[var(--text-muted)] w-9">500k</span>
+                  <input
+                    type="range"
+                    min="500000"
+                    max="20000000"
+                    step="500000"
+                    value={targetTokensPerDay}
+                    onChange={(e) => {
+                      setTargetTokensPerDay(Number(e.target.value));
+                      setSelectedIntent('custom');
+                    }}
+                    className="flex-1 h-1.5 bg-[var(--bg-well)] rounded-lg appearance-none cursor-pointer accent-[var(--accent-primary)]"
+                  />
+                  <span className="text-[10px] font-mono text-[var(--text-muted)] w-9 text-right">20M</span>
                 </div>
               </div>
 
               {/* Daily Requests Target */}
-              <div className="space-y-2">
-                <div className="flex justify-between text-xs">
-                  <span className="text-[var(--text-secondary)] font-medium">Daily Target Requests</span>
+              <div className="space-y-1.5 p-3 rounded-xl bg-[var(--bg-card-active)] border border-[var(--border-subtle)]">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-[var(--text-bright)] font-semibold">Daily Target Requests</span>
                   <span className="text-[var(--signal-mint)] font-mono font-bold">
                     {targetRequestsPerDay.toLocaleString()} reqs / day
                   </span>
                 </div>
-                <input
-                  type="range"
-                  min="500"
-                  max="10000"
-                  step="250"
-                  value={targetRequestsPerDay}
-                  onChange={(e) => {
-                    setTargetRequestsPerDay(Number(e.target.value));
-                    setSelectedIntent('custom');
-                  }}
-                  className="w-full h-1.5 bg-[var(--bg-card-active)] rounded-lg appearance-none cursor-pointer accent-[var(--signal-mint)]"
-                />
-                <div className="flex justify-between text-[10px] text-[var(--text-muted)] font-mono">
-                  <span>500</span>
-                  <span>5k</span>
-                  <span>10k</span>
+                <div className="flex items-center gap-3">
+                  <span className="text-[10px] font-mono text-[var(--text-muted)] w-9">500</span>
+                  <input
+                    type="range"
+                    min="500"
+                    max="10000"
+                    step="250"
+                    value={targetRequestsPerDay}
+                    onChange={(e) => {
+                      setTargetRequestsPerDay(Number(e.target.value));
+                      setSelectedIntent('custom');
+                    }}
+                    className="flex-1 h-1.5 bg-[var(--bg-well)] rounded-lg appearance-none cursor-pointer accent-[var(--signal-mint)]"
+                  />
+                  <span className="text-[10px] font-mono text-[var(--text-muted)] w-9 text-right">10k</span>
                 </div>
               </div>
 
               {/* Safety Margin Headroom */}
-              <div className="space-y-2">
-                <div className="flex justify-between text-xs">
-                  <span className="text-[var(--text-secondary)] font-medium">Safety Headroom Margin</span>
+              <div className="space-y-1.5 p-3 rounded-xl bg-[var(--bg-card-active)] border border-[var(--border-subtle)]">
+                <div className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[var(--text-bright)] font-semibold">Safety Headroom Margin</span>
+                    <span className="text-[10px] font-mono text-[var(--text-muted)]">
+                      (Headroom: {(effectiveTargetTokens / 1000000).toFixed(2)}M tokens)
+                    </span>
+                  </div>
                   <span className="text-[var(--signal-amber)] font-mono font-bold">
                     +{safetyMarginPct}%
                   </span>
                 </div>
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  step="5"
-                  value={safetyMarginPct}
-                  onChange={(e) => {
-                    setSafetyMarginPct(Number(e.target.value));
-                    setSelectedIntent('custom');
-                  }}
-                  className="w-full h-1.5 bg-[var(--bg-card-active)] rounded-lg appearance-none cursor-pointer accent-[var(--signal-amber)]"
-                />
-                <div className="text-[10px] text-[var(--text-muted)] font-mono text-right">
-                  Target + Headroom: {(effectiveTargetTokens / 1000000).toFixed(2)}M tokens
+                <div className="flex items-center gap-3">
+                  <span className="text-[10px] font-mono text-[var(--text-muted)] w-9">0%</span>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    step="5"
+                    value={safetyMarginPct}
+                    onChange={(e) => {
+                      setSafetyMarginPct(Number(e.target.value));
+                      setSelectedIntent('custom');
+                    }}
+                    className="flex-1 h-1.5 bg-[var(--bg-well)] rounded-lg appearance-none cursor-pointer accent-[var(--signal-amber)]"
+                  />
+                  <span className="text-[10px] font-mono text-[var(--text-muted)] w-9 text-right">100%</span>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Section 3: Exhaustion & Routing Policy Controls */}
+          {/* Section 3: Exhaustion, Reliability & Budget Controls Grid */}
           <div className="space-y-3">
             <label className="text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
               3. Exhaustion Strategy & Reliability Controls
             </label>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Exhaustion Strategy Selector */}
-              <div className="bg-[var(--bg-well)] p-4 rounded-2xl border border-[var(--border-subtle)] space-y-2.5">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {/* Exhaustion Strategy */}
+              <div className="bg-[var(--bg-well)] p-3.5 rounded-2xl border border-[var(--border-subtle)] flex flex-col justify-between space-y-2.5">
                 <div className="flex items-center justify-between text-xs">
                   <span className="font-semibold text-[var(--text-bright)] flex items-center gap-1.5">
                     <Activity className="w-3.5 h-3.5 text-sky-400" />
-                    Exhaustion Quota Strategy
+                    Exhaustion Quota
                   </span>
                   <span className="text-[10px] font-mono text-[var(--text-muted)]">{exhaustionPref}</span>
                 </div>
-                <div className="grid grid-cols-2 gap-2 p-1 bg-[var(--bg-card-active)] rounded-xl border border-[var(--border-subtle)]">
+                <div className="grid grid-cols-2 gap-1.5 p-1 bg-[var(--bg-card-active)] rounded-xl border border-[var(--border-subtle)]">
                   <button
                     type="button"
                     onClick={() => {
                       setExhaustionPref('fill_first');
                       setSelectedIntent('custom');
                     }}
-                    className={`px-3 py-2 rounded-lg text-xs font-medium transition-all text-center ${
+                    className={`px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-all text-center ${
                       exhaustionPref === 'fill_first'
                         ? 'bg-[var(--accent-primary)] text-white font-bold shadow-md'
                         : 'text-[var(--text-secondary)] hover:text-[var(--text-bright)]'
                     }`}
                   >
-                    Drain Free First
+                    Drain Free
                   </button>
                   <button
                     type="button"
@@ -564,45 +568,45 @@ export const GoalStudioModal: React.FC<GoalStudioModalProps> = ({ isOpen, onClos
                       setExhaustionPref('preserve_backup');
                       setSelectedIntent('custom');
                     }}
-                    className={`px-3 py-2 rounded-lg text-xs font-medium transition-all text-center ${
+                    className={`px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-all text-center ${
                       exhaustionPref === 'preserve_backup'
                         ? 'bg-[var(--accent-primary)] text-white font-bold shadow-md'
                         : 'text-[var(--text-secondary)] hover:text-[var(--text-bright)]'
                     }`}
                   >
-                    Balance & Preserve
+                    Preserve
                   </button>
                 </div>
-                <p className="text-[11px] text-[var(--text-muted)] leading-normal">
+                <p className="text-[10px] text-[var(--text-muted)] leading-normal">
                   {exhaustionPref === 'fill_first'
-                    ? 'Fill First completely exhausts one provider quota before routing to the next.'
-                    : 'Balance & Preserve spreads request load across all active healthy providers.'}
+                    ? 'Fill First exhausts one provider quota before routing next.'
+                    : 'Preserve spreads request load across active healthy providers.'}
                 </p>
               </div>
 
-              {/* Reliability Redundancy Mode Toggle */}
-              <div className="bg-[var(--bg-well)] p-4 rounded-2xl border border-[var(--border-subtle)] space-y-2.5">
+              {/* Multi-Provider Reliability Mode */}
+              <div className="bg-[var(--bg-well)] p-3.5 rounded-2xl border border-[var(--border-subtle)] flex flex-col justify-between space-y-2.5">
                 <div className="flex items-center justify-between text-xs">
                   <span className="font-semibold text-[var(--text-bright)] flex items-center gap-1.5">
                     <Layers className="w-3.5 h-3.5 text-[var(--signal-amber)]" />
-                    Multi-Provider Reliability Mode
+                    Reliability Mode
                   </span>
                   <span className="text-[10px] font-mono text-[var(--text-muted)]">{reliabilityPref}</span>
                 </div>
-                <div className="grid grid-cols-2 gap-2 p-1 bg-[var(--bg-card-active)] rounded-xl border border-[var(--border-subtle)]">
+                <div className="grid grid-cols-2 gap-1.5 p-1 bg-[var(--bg-card-active)] rounded-xl border border-[var(--border-subtle)]">
                   <button
                     type="button"
                     onClick={() => {
                       setReliabilityPref('standard');
                       setSelectedIntent('custom');
                     }}
-                    className={`px-3 py-2 rounded-lg text-xs font-medium transition-all text-center ${
+                    className={`px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-all text-center ${
                       reliabilityPref === 'standard'
                         ? 'bg-[var(--signal-mint)] text-[var(--bg-obsidian)] font-bold shadow-md'
                         : 'text-[var(--text-secondary)] hover:text-[var(--text-bright)]'
                     }`}
                   >
-                    Standard Single
+                    Standard
                   </button>
                   <button
                     type="button"
@@ -610,99 +614,96 @@ export const GoalStudioModal: React.FC<GoalStudioModalProps> = ({ isOpen, onClos
                       setReliabilityPref('maximum');
                       setSelectedIntent('custom');
                     }}
-                    className={`px-3 py-2 rounded-lg text-xs font-medium transition-all text-center ${
+                    className={`px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-all text-center ${
                       reliabilityPref === 'maximum'
                         ? 'bg-[var(--signal-amber)] text-[var(--bg-obsidian)] font-bold shadow-md'
                         : 'text-[var(--text-secondary)] hover:text-[var(--text-bright)]'
                     }`}
                   >
-                    Maximum Redundant
+                    Maximum
                   </button>
                 </div>
-                <p className="text-[11px] text-[var(--text-muted)] leading-normal">
+                <p className="text-[10px] text-[var(--text-muted)] leading-normal">
                   {reliabilityPref === 'maximum'
-                    ? 'Maximum forces cross-provider backup steps and triggers 6-factor auto_score policy.'
-                    : 'Standard routes based on primary greedy candidate selection.'}
+                    ? 'Forces cross-provider backup steps & auto_score policy.'
+                    : 'Standard routes based on primary candidate selection.'}
                 </p>
               </div>
-            </div>
 
-            {/* Section 4: Budget Preference Toggle */}
-            <div className="bg-[var(--bg-well)] p-4 rounded-2xl border border-[var(--border-subtle)] space-y-3">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-semibold text-[var(--text-bright)] flex items-center gap-1.5">
-                  <DollarSign className="w-4 h-4 text-[var(--signal-mint)]" />
-                  Cost Allowance & Budget Preference
-                </span>
-                <span className="text-[11px] font-mono text-[var(--signal-mint)] font-bold">
-                  {budgetPref === 'free' ? '$0.00 FREE ONLY' : budgetPref === 'capped' ? `CAPPED ($${budgetCapUsdMonthly}/MO)` : 'UNLIMITED'}
-                </span>
-              </div>
-
-              <div className="grid grid-cols-3 gap-2 p-1 bg-[var(--bg-card-active)] rounded-xl border border-[var(--border-subtle)]">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setBudgetPref('free');
-                    setSelectedIntent('custom');
-                  }}
-                  className={`px-3 py-2 rounded-lg text-xs font-medium transition-all text-center ${
-                    budgetPref === 'free'
-                      ? 'bg-[var(--signal-mint)] text-[var(--bg-obsidian)] font-bold shadow-md'
-                      : 'text-[var(--text-secondary)] hover:text-[var(--text-bright)]'
-                  }`}
-                >
-                  Free Only ($0.00)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setBudgetPref('capped');
-                    setSelectedIntent('custom');
-                  }}
-                  className={`px-3 py-2 rounded-lg text-xs font-medium transition-all text-center ${
-                    budgetPref === 'capped'
-                      ? 'bg-[var(--signal-amber)] text-[var(--bg-obsidian)] font-bold shadow-md'
-                      : 'text-[var(--text-secondary)] hover:text-[var(--text-bright)]'
-                  }`}
-                >
-                  Capped Paid Fallback
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setBudgetPref('unlimited');
-                    setSelectedIntent('custom');
-                  }}
-                  className={`px-3 py-2 rounded-lg text-xs font-medium transition-all text-center ${
-                    budgetPref === 'unlimited'
-                      ? 'bg-purple-500 text-white font-bold shadow-md'
-                      : 'text-[var(--text-secondary)] hover:text-[var(--text-bright)]'
-                  }`}
-                >
-                  Unlimited Paid
-                </button>
-              </div>
-
-              {budgetPref === 'capped' && (
-                <div className="flex items-center space-x-3 pt-2">
-                  <label className="text-xs text-[var(--text-secondary)]">Max Monthly Cap (USD):</label>
-                  <div className="relative flex-1 max-w-[140px]">
-                    <span className="absolute left-3 top-2 text-xs font-mono text-[var(--text-muted)]">$</span>
+              {/* Cost Allowance & Budget Preference */}
+              <div className="bg-[var(--bg-well)] p-3.5 rounded-2xl border border-[var(--border-subtle)] flex flex-col justify-between space-y-2.5">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-semibold text-[var(--text-bright)] flex items-center gap-1.5">
+                    <DollarSign className="w-3.5 h-3.5 text-[var(--signal-mint)]" />
+                    Budget Preference
+                  </span>
+                  <span className="text-[10px] font-mono text-[var(--signal-mint)] font-bold">
+                    {budgetPref === 'free' ? '$0 FREE' : budgetPref === 'capped' ? `$${budgetCapUsdMonthly}/MO` : 'UNLIMITED'}
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-1 p-1 bg-[var(--bg-card-active)] rounded-xl border border-[var(--border-subtle)]">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setBudgetPref('free');
+                      setSelectedIntent('custom');
+                    }}
+                    className={`px-1.5 py-1.5 rounded-lg text-[11px] font-medium transition-all text-center ${
+                      budgetPref === 'free'
+                        ? 'bg-[var(--signal-mint)] text-[var(--bg-obsidian)] font-bold shadow-md'
+                        : 'text-[var(--text-secondary)] hover:text-[var(--text-bright)]'
+                    }`}
+                  >
+                    Free Only
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setBudgetPref('capped');
+                      setSelectedIntent('custom');
+                    }}
+                    className={`px-1.5 py-1.5 rounded-lg text-[11px] font-medium transition-all text-center ${
+                      budgetPref === 'capped'
+                        ? 'bg-[var(--signal-amber)] text-[var(--bg-obsidian)] font-bold shadow-md'
+                        : 'text-[var(--text-secondary)] hover:text-[var(--text-bright)]'
+                    }`}
+                  >
+                    Capped
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setBudgetPref('unlimited');
+                      setSelectedIntent('custom');
+                    }}
+                    className={`px-1.5 py-1.5 rounded-lg text-[11px] font-medium transition-all text-center ${
+                      budgetPref === 'unlimited'
+                        ? 'bg-purple-500 text-white font-bold shadow-md'
+                        : 'text-[var(--text-secondary)] hover:text-[var(--text-bright)]'
+                    }`}
+                  >
+                    Unlimited
+                  </button>
+                </div>
+                {budgetPref === 'capped' ? (
+                  <div className="flex items-center space-x-2 pt-0.5">
+                    <label className="text-[10px] text-[var(--text-secondary)]">Cap ($):</label>
                     <input
                       type="number"
                       min="1"
                       max="1000"
                       value={budgetCapUsdMonthly}
                       onChange={(e) => setBudgetCapUsdMonthly(Number(e.target.value))}
-                      className="w-full pl-7 pr-3 py-1.5 bg-[var(--bg-card-active)] border border-[var(--border-subtle)] rounded-lg text-xs font-mono text-[var(--text-bright)] focus:border-[var(--accent-primary)] outline-none"
+                      className="w-full px-2 py-0.5 bg-[var(--bg-card-active)] border border-[var(--border-subtle)] rounded-lg text-[11px] font-mono text-[var(--text-bright)] focus:border-[var(--accent-primary)] outline-none"
                     />
                   </div>
-                  <span className="text-[11px] text-[var(--text-muted)]">Monthly budget limit</span>
-                </div>
-              )}
+                ) : (
+                  <p className="text-[10px] text-[var(--text-muted)] leading-normal">
+                    {budgetPref === 'free' ? 'Uses strictly zero-cost API endpoints.' : 'Allows unconstrained paid failovers.'}
+                  </p>
+                )}
+              </div>
             </div>
-
           </div>
 
           {/* Section 5: Dynamic Solver Receipt & Paid Gap Suggestion */}
