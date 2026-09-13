@@ -7,6 +7,7 @@ import { SettingsAppearanceStudio } from '../settings/SettingsAppearanceStudio.j
 import { GoalStudioModal } from '../modals/GoalStudioModal.js';
 import { DecisionInspectorDrawer, DecisionTrace } from '../drawers/DecisionInspectorDrawer.js';
 import { GlossaryTerm } from '../common/GlossaryTerm.js';
+import { AgenticChat } from '../chat/AgenticChat.js';
 
 export const AppShell: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'cockpit' | 'bridge' | 'vault' | 'settings'>('cockpit');
@@ -36,9 +37,9 @@ export const AppShell: React.FC = () => {
   return (
     <div className="min-h-screen bg-[var(--bg-obsidian)] text-[var(--text-primary)] font-sans flex flex-col md:flex-row overflow-hidden">
       
-      {/* 1. FIXED 240px LEFT NAVIGATION RAIL */}
-      <aside className="w-full md:w-60 bg-[var(--bg-rail)] border-r border-[var(--border-subtle)] flex flex-col justify-between p-4 shrink-0 z-20">
-        <div className="space-y-6">
+      {/* 1. FIXED 260px LEFT NAVIGATION RAIL */}
+      <aside className="w-full md:w-64 bg-[var(--bg-rail)] border-r border-[var(--border-subtle)] flex flex-col justify-between p-4 shrink-0 z-20 overflow-y-auto custom-scrollbar">
+        <div className="space-y-5">
           
           {/* Logo & Workspace */}
           <div className="space-y-3">
@@ -122,10 +123,54 @@ export const AppShell: React.FC = () => {
               <span>Settings Studio</span>
             </button>
           </nav>
+
+          {/* System & Telemetry Monitor Section (Relocated from right panel, formatted as distinct cards) */}
+          <div className="pt-3 border-t border-[var(--border-subtle)] space-y-3">
+            <div className="text-[10px] font-mono uppercase tracking-wider text-[var(--text-muted)] px-1 font-semibold flex items-center justify-between">
+              <span>Telemetry Monitor</span>
+              <span className="w-2 h-2 rounded-full bg-[var(--signal-mint)] animate-pulse" />
+            </div>
+
+            {/* Route Advisor Card */}
+            <div className="p-3 rounded-xl bg-[var(--bg-well)] border border-[var(--border-subtle)] space-y-1.5 shadow-inner">
+              <div className="flex items-center justify-between text-[11px] text-[var(--accent-primary)] font-semibold">
+                <span className="flex items-center gap-1">
+                  <Activity className="w-3 h-3 text-[var(--signal-mint)]" />
+                  Advisor
+                </span>
+                <span className="text-[9px] font-mono bg-[var(--signal-mint)]/10 text-[var(--signal-mint)] px-1.5 py-0.5 rounded">LIVE</span>
+              </div>
+              <p className="text-[11px] text-[var(--text-secondary)] leading-snug">
+                "{conciergeMsg}"
+              </p>
+            </div>
+
+            {/* Stream Feed Snapshot */}
+            <div className="space-y-1.5">
+              <div className="p-2.5 rounded-xl bg-[var(--bg-well)] border border-[var(--border-subtle)] text-[11px] space-y-1">
+                <div className="flex justify-between text-[9px] text-[var(--text-muted)] font-mono" dir="ltr">
+                  <span>TR-94A20F18</span>
+                  <span className="text-[var(--signal-mint)]">42ms</span>
+                </div>
+                <div className="font-semibold text-[var(--text-primary)] truncate" dir="ltr">DeepSeek-R1</div>
+                <div className="text-[10px] text-[var(--text-muted)]">Greedy Set-Cover code route.</div>
+              </div>
+
+              <div className="p-2.5 rounded-xl bg-[var(--bg-well)] border border-[var(--border-subtle)] text-[11px] space-y-1">
+                <div className="flex justify-between text-[9px] text-[var(--text-muted)] font-mono" dir="ltr">
+                  <span>TR-88C11B02</span>
+                  <span className="text-[var(--signal-mint)]">85ms</span>
+                </div>
+                <div className="font-semibold text-[var(--text-primary)] truncate" dir="ltr">Gemini 2.5 Flash</div>
+                <div className="text-[10px] text-[var(--text-muted)]">Zero-cost throughput route.</div>
+              </div>
+            </div>
+          </div>
+
         </div>
 
         {/* Left Rail Footer: System Health & Profile */}
-        <div className="space-y-3 pt-4 border-t border-[var(--border-subtle)]">
+        <div className="space-y-3 pt-3 border-t border-[var(--border-subtle)] mt-4">
           <div className="bg-[var(--bg-well)] p-2.5 rounded-xl border border-[var(--border-subtle)] space-y-1">
             <div className="flex items-center justify-between text-[11px]">
               <span className="text-[var(--text-muted)] font-medium">Engine SLA</span>
@@ -167,105 +212,9 @@ export const AppShell: React.FC = () => {
         )}
       </main>
 
-      {/* 3. FIXED 360px AI CONCIERGE SIDE PANEL (RIGHT RAIL) */}
-      <aside className="w-full md:w-[360px] bg-[var(--bg-rail)] border-l border-[var(--border-subtle)] flex flex-col justify-between p-5 shrink-0 space-y-6 overflow-y-auto custom-scrollbar z-10">
-        <div className="space-y-6">
-          
-          {/* Header */}
-          <div className="flex items-center space-x-2.5 pb-4 border-b border-[var(--border-subtle)]">
-            <div className="p-2 rounded-xl bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] border border-[var(--accent-primary)]/30">
-              <Sparkles className="w-4 h-4" />
-            </div>
-            <div>
-              <h2 className="font-bold text-sm text-[var(--text-primary)]">GoalRoute Copilot</h2>
-              <p className="text-[10px] text-[var(--text-muted)]">Real-time Route Advisor Concierge</p>
-            </div>
-          </div>
-
-          {/* Real-time Advisor Quote Box */}
-          <div className="p-4 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-hover)] space-y-2 relative shadow-lg">
-            <div className="flex items-center justify-between text-xs text-[var(--accent-primary)] font-semibold">
-              <span className="flex items-center gap-1.5">
-                <Activity className="w-3.5 h-3.5 text-[var(--signal-mint)]" />
-                Live Recommendation
-              </span>
-              <span className="text-[10px] font-mono text-[var(--signal-mint)]">OPTIMAL</span>
-            </div>
-            <p className="text-xs text-[var(--text-primary)] leading-relaxed font-sans">
-              "{conciergeMsg}"
-            </p>
-          </div>
-
-          {/* Quick Actions Panel */}
-          <div className="space-y-2">
-            <div className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-secondary)]">Quick Actions</div>
-            
-            <button
-              onClick={() => setIsGoalStudioOpen(true)}
-              className="w-full p-3 rounded-xl bg-[var(--bg-card)] hover:bg-[var(--bg-card-active)] border border-[var(--border-subtle)] text-xs font-semibold text-[var(--text-primary)] flex items-center justify-between transition-colors shadow-sm"
-            >
-              <span className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-[var(--accent-primary)]" />
-                Configure Goal Studio
-              </span>
-              <ChevronRight className="w-4 h-4 text-[var(--text-muted)]" />
-            </button>
-
-            <button
-              onClick={() => setActiveTab('vault')}
-              className="w-full p-3 rounded-xl bg-[var(--bg-card)] hover:bg-[var(--bg-card-active)] border border-[var(--border-subtle)] text-xs font-semibold text-[var(--text-primary)] flex items-center justify-between transition-colors shadow-sm"
-            >
-              <span className="flex items-center gap-2">
-                <Key className="w-4 h-4 text-[var(--signal-mint)]" />
-                Probe Credential Keys
-              </span>
-              <ChevronRight className="w-4 h-4 text-[var(--text-muted)]" />
-            </button>
-
-            <button
-              onClick={() => setActiveTab('settings')}
-              className="w-full p-3 rounded-xl bg-[var(--bg-card)] hover:bg-[var(--bg-card-active)] border border-[var(--border-subtle)] text-xs font-semibold text-[var(--text-primary)] flex items-center justify-between transition-colors shadow-sm"
-            >
-              <span className="flex items-center gap-2">
-                <Palette className="w-4 h-4 text-purple-400" />
-                Appearance & Theme Studio
-              </span>
-              <ChevronRight className="w-4 h-4 text-[var(--text-muted)]" />
-            </button>
-          </div>
-
-          {/* Live Decision Feed Snapshot */}
-          <div className="space-y-3">
-            <div className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-secondary)]">Telemetry Stream Feed</div>
-            
-            <div className="space-y-2">
-              <div className="p-3 rounded-xl bg-[var(--bg-well)] border border-[var(--border-subtle)] text-xs space-y-1">
-                <div className="flex justify-between text-[10px] text-[var(--text-muted)] font-mono" dir="ltr">
-                  <span>TR-94A20F18</span>
-                  <span className="text-[var(--signal-mint)]">42ms</span>
-                </div>
-                <div className="font-semibold text-[var(--text-primary)] truncate" dir="ltr">DeepSeek-R1</div>
-                <div className="text-[11px] text-[var(--text-secondary)]">Greedy Set-Cover chosen for code optimization.</div>
-              </div>
-
-              <div className="p-3 rounded-xl bg-[var(--bg-well)] border border-[var(--border-subtle)] text-xs space-y-1">
-                <div className="flex justify-between text-[10px] text-[var(--text-muted)] font-mono" dir="ltr">
-                  <span>TR-88C11B02</span>
-                  <span className="text-[var(--signal-mint)]">85ms</span>
-                </div>
-                <div className="font-semibold text-[var(--text-primary)] truncate" dir="ltr">Gemini 2.5 Flash</div>
-                <div className="text-[11px] text-[var(--text-secondary)]">Zero-cost route selected under high throughput.</div>
-              </div>
-            </div>
-          </div>
-
-        </div>
-
-        {/* Footer Info */}
-        <div className="pt-4 border-t border-[var(--border-subtle)] text-center text-[10px] font-mono text-[var(--text-muted)] space-y-1">
-          <div>GoalRoute Gateway Engine</div>
-          <div className="text-[var(--signal-mint)]">Zero Billable Cost Policy Active</div>
-        </div>
+      {/* 3. AGENTIC CHAT INTERFACE (RIGHT RAIL) */}
+      <aside className="w-full md:w-[380px] lg:w-[420px] bg-[var(--bg-rail)] border-l border-[var(--border-subtle)] flex flex-col shrink-0 overflow-hidden z-10 h-screen">
+        <AgenticChat />
       </aside>
 
       {/* Goal Studio Modal Container */}

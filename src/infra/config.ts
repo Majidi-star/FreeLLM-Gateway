@@ -46,11 +46,36 @@ function loadConfig(): Config {
   }
 
   const config = result.data;
+  assertConfigPolicy(config);
+
+  return config;
+}
+
+// Cross-field policy guards that must hold in every environment, including
+// when tests bypass loadConfig() via resetConfigForTest().
+function assertConfigPolicy(config: Config): void {
   if (config.NODE_ENV === 'production' && config.ADMIN_API_TOKEN === 'dev-admin-secret-token') {
     throw new ConfigError('ADMIN_API_TOKEN must be explicitly configured in production environment');
   }
 
-  return config;
+  // Remote access must never be combined with a default/weak admin token or with
+  // development-mode's anonymous-request allowance, regardless of NODE_ENV. This
+  // prevents an unauthenticated gateway from ever being exposed to the network.
+  if (config.REMOTE_ACCESS_ENABLED && config.ADMIN_API_TOKEN === 'dev-admin-secret-token') {
+    throw new ConfigError(
+      'REMOTE_ACCESS_ENABLED=true requires a non-default ADMIN_API_TOKEN to be set. ' +
+        'Generate one and set it in your environment before enabling remote access.'
+    );
+  }
+
+  const KNOWN_EXAMPLE_MASTER_KEY =
+    '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+  if (config.NODE_ENV === 'production' && config.ENCRYPTION_MASTER_KEY === KNOWN_EXAMPLE_MASTER_KEY) {
+    throw new ConfigError(
+      'ENCRYPTION_MASTER_KEY is still set to the publicly-known example value from .env.example. ' +
+        'Generate a real key with: openssl rand -hex 32'
+    );
+  }
 }
 
 let cachedConfig: Config | null = null;
@@ -65,6 +90,7 @@ export function getConfig(): Config {
 export function resetConfigForTest(override?: Partial<Config>): Config {
   if (override) {
     cachedConfig = envSchema.parse({ ...process.env, ...override });
+    assertConfigPolicy(cachedConfig);
   } else {
     cachedConfig = null;
   }

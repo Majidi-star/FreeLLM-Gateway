@@ -47,14 +47,14 @@ describe('GoalRoute End-to-End Integration Flow', () => {
     expect(syncRes.providersCount).toBeGreaterThan(0);
 
     // 2. Add Connections
-    const conn1 = providerService.addConnection({
+    const conn1 = await providerService.addConnection({
       providerSlug: 'groq',
       label: 'Groq Primary Free',
       apiKey: 'gsk_test_key_groq_123',
       tier: 'free',
     });
 
-    const conn2 = providerService.addConnection({
+    const conn2 = await providerService.addConnection({
       providerSlug: 'cerebras',
       label: 'Cerebras Backup Free',
       apiKey: 'csk_test_key_cerebras_456',

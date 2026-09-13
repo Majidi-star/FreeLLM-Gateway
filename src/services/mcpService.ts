@@ -55,83 +55,84 @@ export class McpService {
     return this.isSafeMode;
   }
 
+  public getToolDefinitions() {
+    return [
+      {
+        name: 'check_quota',
+        description: 'Inspect remaining daily quotas and provider health.',
+        inputSchema: {
+          type: 'object',
+          properties: {},
+        },
+      },
+      {
+        name: 'solve_routing_goal',
+        description: 'Determine the optimal free LLM route based on task requirements.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            task: { type: 'string', description: 'Task description or type (code, reasoning, chat, general)' },
+            maxLatencyMs: { type: 'number', description: 'Maximum acceptable latency in milliseconds' },
+            preferReasoning: { type: 'boolean', description: 'Whether reasoning capabilities are preferred' },
+          },
+          required: ['task'],
+        },
+      },
+      {
+        name: 'probe_provider_keys',
+        description: 'Test latency and availability of configured provider keys.',
+        inputSchema: {
+          type: 'object',
+          properties: {},
+        },
+      },
+      {
+        name: 'mutate_pools',
+        description: 'Add, update, or remove routing pool configurations.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            action: { type: 'string', enum: ['create', 'delete'], description: 'Pool action to perform' },
+            goalId: { type: 'string', description: 'Goal ID for pool creation' },
+            name: { type: 'string', description: 'Name of the pool' },
+            poolId: { type: 'string', description: 'Pool ID for deletion' },
+          },
+          required: ['action'],
+        },
+      },
+    ];
+  }
+
+  public async callTool(name: string, args: Record<string, any> = {}) {
+    if (name === 'check_quota') {
+      return this.handleCheckQuota();
+    }
+    if (name === 'solve_routing_goal') {
+      return this.handleSolveRoutingGoal(args as any);
+    }
+    if (name === 'probe_provider_keys') {
+      return this.handleProbeProviderKeys();
+    }
+    if (name === 'mutate_pools') {
+      if (this.isSafeMode) {
+        throw new McpError(
+          ErrorCode.InvalidRequest,
+          'Operation denied: GoalRoute is operating in Safe Mode.'
+        );
+      }
+      return this.handleMutatePools(args as any);
+    }
+    throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${name}`);
+  }
+
   private registerHandlers(): void {
     this.server.setRequestHandler(ListToolsRequestSchema, async () => {
-      return {
-        tools: [
-          {
-            name: 'check_quota',
-            description: 'Inspect remaining daily quotas and provider health.',
-            inputSchema: {
-              type: 'object',
-              properties: {},
-            },
-          },
-          {
-            name: 'solve_routing_goal',
-            description: 'Determine the optimal free LLM route based on task requirements.',
-            inputSchema: {
-              type: 'object',
-              properties: {
-                task: { type: 'string', description: 'Task description or type (code, reasoning, chat, general)' },
-                maxLatencyMs: { type: 'number', description: 'Maximum acceptable latency in milliseconds' },
-                preferReasoning: { type: 'boolean', description: 'Whether reasoning capabilities are preferred' },
-              },
-              required: ['task'],
-            },
-          },
-          {
-            name: 'probe_provider_keys',
-            description: 'Test latency and availability of configured provider keys.',
-            inputSchema: {
-              type: 'object',
-              properties: {},
-            },
-          },
-          {
-            name: 'mutate_pools',
-            description: 'Add, update, or remove routing pool configurations.',
-            inputSchema: {
-              type: 'object',
-              properties: {
-                action: { type: 'string', enum: ['create', 'delete'], description: 'Pool action to perform' },
-                goalId: { type: 'string', description: 'Goal ID for pool creation' },
-                name: { type: 'string', description: 'Name of the pool' },
-                poolId: { type: 'string', description: 'Pool ID for deletion' },
-              },
-              required: ['action'],
-            },
-          },
-        ],
-      };
+      return { tools: this.getToolDefinitions() };
     });
 
     this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const { name, arguments: args } = request.params;
-
-      if (name === 'check_quota') {
-        return this.handleCheckQuota();
-      }
-
-      if (name === 'solve_routing_goal') {
-        return this.handleSolveRoutingGoal(args as any);
-      }
-
-      if (name === 'probe_provider_keys') {
-        return this.handleProbeProviderKeys();
-      }
-
-      if (name === 'mutate_pools') {
-        if (this.isSafeMode) {
-          throw new McpError(
-            ErrorCode.InvalidRequest,
-            'Operation denied: GoalRoute is operating in Safe Mode.'
-          );
-        }
-        return this.handleMutatePools(args as any);
-      }
-
-      throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${name}`);
+      return this.callTool(name, (args as any) || {});
     });
   }
 

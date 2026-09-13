@@ -252,9 +252,12 @@ export class ProviderService {
       logger.warn({ connectionId: conn.id, error: errorMsg }, 'Provider connection test failed');
 
       const isNetworkError = /ENOTFOUND|ECONNREFUSED|EAI_AGAIN|ETIMEDOUT|ECONNRESET/.test(errorMsg);
+      const isAuthError = /status=401|status=403|Invalid API key|Unauthorized|Forbidden/i.test(errorMsg);
       const safeMessage = isNetworkError
         ? 'Unable to reach the configured endpoint. Check the base URL and network connectivity.'
-        : 'Connection test failed. Check the credentials and try again.';
+        : isAuthError
+          ? 'Invalid API key or unauthorized. Double-check the credential you entered.'
+          : 'Connection test failed. Check the credentials and try again.';
 
       return { success: false, error: safeMessage };
     }

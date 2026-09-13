@@ -28,6 +28,7 @@ export interface MultiPortServerDeps {
   initialPorts: Record<ProtocolType, number>;
   initialHost: string;
   remoteAccessEnabled: boolean;
+  isDefaultAdminToken: boolean;
   initialEnabled?: Partial<Record<ProtocolType, boolean>>;
 }
 
@@ -124,6 +125,12 @@ export class MultiPortServerService {
     let nextRemote = this.remoteAccessEnabled;
     if (input.remoteAccessEnabled !== undefined) {
       nextRemote = Boolean(input.remoteAccessEnabled);
+      if (nextRemote && this.deps.isDefaultAdminToken) {
+        throw new ValidationError(
+          'Cannot enable remote access while ADMIN_API_TOKEN is still the default value. ' +
+            'Set a non-default ADMIN_API_TOKEN first.'
+        );
+      }
       nextHost = nextRemote ? '0.0.0.0' : '127.0.0.1';
     }
 

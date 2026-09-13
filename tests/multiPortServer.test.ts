@@ -142,12 +142,16 @@ describe('Multi-Port Gateway Server (live bindings)', () => {
 
   beforeAll(async () => {
     app = (await buildApp()) as unknown as TestApp;
+    // The "native" protocol has no dedicated listener (MultiPortServerService
+    // skips it), so bind the main app instance on the native port here.
+    await (app as any).listen({ port: nativePort, host: '127.0.0.1' });
     await getActiveEndpointsService().startAll();
     appHolder.__multiportApp = app;
   });
 
   afterAll(async () => {
     await getActiveEndpointsService().stopAll();
+    // app.close() also closes the main app's native-port listener bound above.
     await app.close();
   });
 

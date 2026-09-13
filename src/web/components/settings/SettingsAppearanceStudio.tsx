@@ -52,7 +52,7 @@ export const SettingsAppearanceStudio: React.FC = () => {
   const [importStatus, setImportStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [copiedJson, setCopiedJson] = useState(false);
   const [adminToken, setAdminToken] = useState(() =>
-    localStorage.getItem('goalroute_admin_token') || sessionStorage.getItem('goalroute_admin_token') || 'dev-admin-secret-token'
+    localStorage.getItem('goalroute_admin_token') || sessionStorage.getItem('goalroute_admin_token') || ''
   );
   const [tokenSaved, setTokenSaved] = useState(false);
   const activeTimersRef = React.useRef<Set<ReturnType<typeof setTimeout>>>(new Set());

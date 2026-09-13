@@ -172,6 +172,11 @@ export async function buildApp() {
   await fastify.register(rateLimit, {
     max: 100,
     timeWindow: '1 minute',
+    keyGenerator: (req) => {
+      const authHeader = req.headers['authorization'];
+      if (authHeader) return `auth:${authHeader}`;
+      return `ip:${req.ip}`;
+    },
   });
 
   // Global Request Logging & Authentication Middleware
@@ -180,7 +185,9 @@ export async function buildApp() {
 
     const url = req.url;
     const isGetEndpoints = req.method === 'GET' && (url.startsWith('/api/v1/system/endpoints') || url.includes('/system/endpoints'));
-    if (isGetEndpoints || url.startsWith('/api/v1/health') || url.startsWith('/api/v1/mcp/settings')) {
+    // Only exempt this from auth when the gateway is not reachable from the network.
+    // Once remote access is on, endpoint topology should not be handed out for free.
+    if ((isGetEndpoints && !config.REMOTE_ACCESS_ENABLED) || url.startsWith('/api/v1/health') || url.startsWith('/api/v1/mcp/settings')) {
       return;
     }
 
@@ -453,13 +460,29 @@ reply.raw.on('error', () => {});
   fastify.get('/api/v1/mcp/settings', async () => {
     return {
       isSafeMode: mcpService.getSafeMode(),
-      tools: [
-        { name: 'check_quota', safe: true, description: 'Reads provider quota levels' },
-        { name: 'solve_routing_goal', safe: true, description: 'Picks the fastest free route' },
-        { name: 'probe_provider_keys', safe: true, description: 'Tests key latency, read-only' },
-        { name: 'mutate_pools', safe: false, description: 'Adds or removes routing pools' },
-      ],
+      tools: mcpService.getToolDefinitions().map((t) => ({
+        name: t.name,
+        safe: t.name !== 'mutate_pools',
+        description: t.description,
+        inputSchema: t.inputSchema,
+      })),
     };
+  });
+
+  fastify.get('/api/v1/mcp/tools', async () => {
+    return {
+      tools: mcpService.getToolDefinitions(),
+      isSafeMode: mcpService.getSafeMode(),
+    };
+  });
+
+  fastify.post('/api/v1/mcp/call', async (req) => {
+    const body = req.body as { name: string; arguments?: Record<string, any> };
+    if (!body || !body.name) {
+      throw new AppError('Tool "name" is required in body.', 'INVALID_PARAMS', 400);
+    }
+    const result = await mcpService.callTool(body.name, body.arguments || {});
+    return result;
   });
 
   fastify.post('/api/v1/mcp/settings', async (req) => {
@@ -574,6 +597,7 @@ reply.raw.on('error', () => {});
     },
     initialHost: config.REMOTE_ACCESS_ENABLED ? '0.0.0.0' : config.HOST,
     remoteAccessEnabled: config.REMOTE_ACCESS_ENABLED,
+    isDefaultAdminToken: config.ADMIN_API_TOKEN === 'dev-admin-secret-token',
   });
   activeEndpointsService = endpointsService;
 
