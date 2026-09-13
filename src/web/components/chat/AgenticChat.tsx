@@ -101,7 +101,15 @@ export const AgenticChat: React.FC = () => {
 
   // Load available MCP tools on mount
   useEffect(() => {
-    fetch('/api/v1/mcp/tools')
+    const adminToken =
+      sessionStorage.getItem('goalroute_admin_token') ||
+      localStorage.getItem('goalroute_admin_token') ||
+      (import.meta as any).env?.VITE_ADMIN_API_TOKEN ||
+      'dev-admin-secret-token';
+
+    fetch('/api/v1/mcp/tools', {
+      headers: adminToken ? { authorization: `Bearer ${adminToken}` } : {},
+    })
       .then((res) => (res.ok ? res.json() : { tools: [] }))
       .then((data) => {
         if (Array.isArray(data.tools)) {
