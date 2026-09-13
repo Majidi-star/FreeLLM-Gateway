@@ -92,6 +92,7 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
     }
   });
   const [endpointSummary, setEndpointSummary] = useState('3/3 Active');
+  const [endpointUrls, setEndpointUrls] = useState<string[]>([]);
 
   React.useEffect(() => {
     const adminToken = getAdminToken();
@@ -280,10 +281,12 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
                 <span className="text-[10px] font-mono bg-[var(--signal-mint)]/10 text-[var(--signal-mint)] border border-[var(--signal-mint)]/20 px-2 py-0.5 rounded-full font-medium">
                   {endpointSummary}
                 </span>
-                {endpointsCollapsed && (
-                  <span className="text-[11px] font-mono text-[var(--text-secondary)] hidden sm:inline" dir="ltr">
-                    Native: 8787 · OpenAI: 8788 · Anthropic: 8789
-                  </span>
+                {endpointsCollapsed && endpointUrls.length > 0 && (
+                  <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1">
+                    {endpointUrls.map((url) => (
+                      <span key={url} className="text-[10px] font-mono text-[var(--text-muted)]" dir="ltr">{url}</span>
+                    ))}
+                  </div>
                 )}
               </div>
             </div>
@@ -300,8 +303,7 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
         </button>
 
         {/* Expandable Body */}
-        {!endpointsCollapsed && (
-          <div className="border-t border-[var(--border-subtle)]">
+        <div className={`border-t border-[var(--border-subtle)] ${endpointsCollapsed ? 'hidden' : ''}`}>
             <EndpointsManager hideMcp onStatusChange={(s) => {
               const protocols = Object.values(s.endpoints);
               const activeCount = protocols.filter((p) => p.protocol !== 'mcp' && p.enabled).length;
@@ -311,9 +313,13 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
                 .map((p) => `${p.protocol[0].toUpperCase()}${p.protocol.slice(1)}: ${p.port}`)
                 .join(' · ');
               setEndpointSummary(`${activeCount}/${totalCount} Active · ${hosts}`);
+              setEndpointUrls(
+                protocols
+                  .filter((p) => p.protocol !== 'mcp')
+                  .map((p) => `http://${s.host === '0.0.0.0' ? '127.0.0.1' : s.host}:${p.port}${p.pathPrefix}`)
+              );
             }} />
           </div>
-        )}
       </div>
 
       {/* Ambient System Health Ribbon */}
