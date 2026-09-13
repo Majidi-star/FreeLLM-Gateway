@@ -11,7 +11,7 @@ interface ProtocolEndpointConfig {
   sampleCurl: string;
 }
 
-interface SystemEndpointsStatus {
+export interface SystemEndpointsStatus {
   host: string;
   remoteAccessEnabled: boolean;
   endpoints: Record<string, ProtocolEndpointConfig>;
@@ -30,7 +30,7 @@ const PROTOCOL_LABELS: Record<string, string> = {
   mcp: 'MCP Server',
 };
 
-const COPY_TARGETS = (status: SystemEndpointsStatus): Snippet[] => {
+export const COPY_TARGETS = (status: SystemEndpointsStatus, hideMcp = false): Snippet[] => {
   const displayHost = status.host === '0.0.0.0' ? '127.0.0.1' : status.host;
   const openai = status.endpoints.openai;
   const anthropic = status.endpoints.anthropic;
@@ -51,11 +51,15 @@ const COPY_TARGETS = (status: SystemEndpointsStatus): Snippet[] => {
       label: 'Anthropic SDK baseURL',
       text: `baseURL: "http://${displayHost}:${anthropic.port}"`,
     },
-    {
-      id: 'mcp-config',
-      label: 'MCP Server Config',
-      text: `{\n  "mcpServers": {\n    "goalroute": {\n      "url": "http://${displayHost}:${mcp.port}/mcp/sse"\n    }\n  }\n}`,
-    },
+    ...(!hideMcp
+      ? [
+          {
+            id: 'mcp-config',
+            label: 'MCP Server Config',
+            text: `{\n  "mcpServers": {\n    "goalroute": {\n      "url": "http://${displayHost}:${mcp.port}/mcp/sse"\n    }\n  }\n}`,
+          },
+        ]
+      : []),
   ];
 };
 
@@ -79,7 +83,8 @@ export const DEFAULT_FALLBACK_STATUS: SystemEndpointsStatus = {
   },
 };
 
-export const EndpointsManager: React.FC = () => {
+export interface EndpointsManagerProps { hideMcp?: boolean; onStatusChange?: (status: SystemEndpointsStatus) => void }
+export const EndpointsManager: React.FC<EndpointsManagerProps> = ({ hideMcp = false, onStatusChange }) => {
   const [status, setStatus] = useState<SystemEndpointsStatus | null>(null);
   const [portDrafts, setPortDrafts] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
@@ -96,6 +101,7 @@ export const EndpointsManager: React.FC = () => {
       }
       const data = (await res.json()) as SystemEndpointsStatus;
       setStatus(data);
+      onStatusChange?.(data);
       setPortDrafts(Object.fromEntries(Object.values(data.endpoints).map((e) => [e.protocol, String(e.port)])));
       setError(null);
     } catch (err) {
@@ -127,6 +133,7 @@ export const EndpointsManager: React.FC = () => {
       }
       const next = data as SystemEndpointsStatus;
       setStatus(next);
+      onStatusChange?.(next);
       setPortDrafts(Object.fromEntries(Object.values(next.endpoints).map((e) => [e.protocol, String(e.port)])));
       setError(null);
     } catch (err) {
@@ -159,7 +166,7 @@ export const EndpointsManager: React.FC = () => {
 
   const activeStatus = status || DEFAULT_FALLBACK_STATUS;
 
-  const snippets = COPY_TARGETS(activeStatus);
+  const snippets = COPY_TARGETS(activeStatus, hideMcp);
 
   return (
     <div className="p-5 rounded-[24px] bg-[var(--bg-card)] border border-[var(--border-subtle)] space-y-5">
@@ -237,7 +244,7 @@ export const EndpointsManager: React.FC = () => {
         <div className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
           Exposed Endpoints
         </div>
-        {Object.values(activeStatus.endpoints).map((endpoint) => (
+        {Object.values(activeStatus.endpoints).filter((endpoint) => !hideMcp || endpoint.protocol !== 'mcp').map((endpoint) => (
           <div
             key={endpoint.protocol}
             className="p-3 rounded-xl bg-[var(--bg-well)] border border-[var(--border-subtle)] space-y-2"

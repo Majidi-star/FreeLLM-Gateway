@@ -1,5 +1,5 @@
 ﻿import React, { useState } from 'react';
-import { Activity, Zap, Cpu, ArrowUpRight, CheckCircle2, AlertTriangle, Sparkles, Sliders, ChevronRight } from 'lucide-react';
+import { Activity, Zap, Cpu, ArrowUpRight, CheckCircle2, AlertTriangle, Sparkles, Sliders, ChevronRight, ChevronDown, Network } from 'lucide-react';
 import { DecisionTrace } from '../drawers/DecisionInspectorDrawer.js';
 import { GlossaryTerm } from '../common/GlossaryTerm.js';
 import { EndpointsManager } from '../settings/EndpointsManager.js';
@@ -83,6 +83,15 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
   const [savingPreset, setSavingPreset] = useState(false);
   const [streamStatus, setStreamStatus] = useState<StreamStatus>('connecting');
   const [catalogModels, setCatalogModels] = useState<CatalogModelItem[]>([]);
+  const [endpointsCollapsed, setEndpointsCollapsed] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('cockpit_endpoints_collapsed');
+      return saved === null ? true : saved === 'true';
+    } catch {
+      return true;
+    }
+  });
+  const [endpointSummary, setEndpointSummary] = useState('3/3 Active');
 
   React.useEffect(() => {
     const adminToken = getAdminToken();
@@ -245,8 +254,67 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
 
-      {/* Server Endpoints & Multi-Protocol Gateway Status */}
-      <EndpointsManager />
+      {/* Connection & Endpoints — collapsible multi-protocol gateway status */}
+      <div className="rounded-[24px] bg-[var(--bg-card)] border border-[var(--border-subtle)] overflow-hidden shadow-xl">
+        {/* Collapsible Header */}
+        <button
+          type="button"
+          onClick={() => {
+            const next = !endpointsCollapsed;
+            setEndpointsCollapsed(next);
+            try { localStorage.setItem('cockpit_endpoints_collapsed', String(next)); } catch { /* noop */ }
+          }}
+          className="w-full px-5 py-4 flex items-center justify-between gap-4 hover:bg-[var(--bg-card-active)] transition-colors text-left cursor-pointer"
+          aria-expanded={!endpointsCollapsed}
+        >
+          <div className="flex items-center gap-3">
+            <span className="w-9 h-9 rounded-xl bg-[var(--accent-primary)]/10 border border-[var(--accent-primary)]/20 flex items-center justify-center shrink-0">
+              <Network className="w-4 h-4 text-[var(--accent-primary)]" />
+            </span>
+            <div>
+              <div className="font-semibold text-sm text-[var(--text-primary)] flex items-center gap-2">
+                Connection &amp; Endpoints
+              </div>
+              {/* Concise summary pill shown when collapsed */}
+              <div className="mt-1 flex flex-wrap items-center gap-2">
+                <span className="text-[10px] font-mono bg-[var(--signal-mint)]/10 text-[var(--signal-mint)] border border-[var(--signal-mint)]/20 px-2 py-0.5 rounded-full font-medium">
+                  {endpointSummary}
+                </span>
+                {endpointsCollapsed && (
+                  <span className="text-[11px] font-mono text-[var(--text-secondary)] hidden sm:inline" dir="ltr">
+                    Native: 8787 · OpenAI: 8788 · Anthropic: 8789
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-[10px] font-mono px-2.5 py-1 rounded-full bg-[var(--signal-mint)]/10 text-[var(--signal-mint)] border border-[var(--signal-mint)]/25 flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-[var(--signal-mint)]" />
+              ONLINE
+            </span>
+            <ChevronDown
+              className={`w-4 h-4 text-[var(--text-secondary)] transition-transform duration-200 ${endpointsCollapsed ? '' : 'rotate-180'}`}
+            />
+          </div>
+        </button>
+
+        {/* Expandable Body */}
+        {!endpointsCollapsed && (
+          <div className="border-t border-[var(--border-subtle)]">
+            <EndpointsManager hideMcp onStatusChange={(s) => {
+              const protocols = Object.values(s.endpoints);
+              const activeCount = protocols.filter((p) => p.protocol !== 'mcp' && p.enabled).length;
+              const totalCount = protocols.filter((p) => p.protocol !== 'mcp').length;
+              const hosts = protocols
+                .filter((p) => p.protocol !== 'mcp')
+                .map((p) => `${p.protocol[0].toUpperCase()}${p.protocol.slice(1)}: ${p.port}`)
+                .join(' · ');
+              setEndpointSummary(`${activeCount}/${totalCount} Active · ${hosts}`);
+            }} />
+          </div>
+        )}
+      </div>
 
       {/* Ambient System Health Ribbon */}
       <div className="p-4 rounded-[24px] bg-[var(--bg-card)] border border-[var(--border-subtle)] shadow-xl flex flex-wrap items-center justify-between gap-4">

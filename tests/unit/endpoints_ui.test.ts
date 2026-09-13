@@ -13,7 +13,7 @@ globalThis.localStorage = {
 };
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { getAdminToken, DEFAULT_FALLBACK_STATUS } from '../../src/web/components/settings/EndpointsManager.js';
+import { getAdminToken, DEFAULT_FALLBACK_STATUS, COPY_TARGETS } from '../../src/web/components/settings/EndpointsManager.js';
 
 describe('EndpointsManager Token Resolution', () => {
   const originalSessionStorage = globalThis.sessionStorage;
@@ -132,5 +132,23 @@ describe('DEFAULT_FALLBACK_STATUS', () => {
     expect(DEFAULT_FALLBACK_STATUS.endpoints.openai.pathPrefix).toBe('/v1');
     expect(DEFAULT_FALLBACK_STATUS.endpoints.anthropic.pathPrefix).toBe('/v1');
     expect(DEFAULT_FALLBACK_STATUS.endpoints.mcp.pathPrefix).toBe('/mcp');
+  });
+});
+
+describe('COPY_TARGETS hideMcp filtering', () => {
+  it('includes the MCP config snippet by default', () => {
+    const snippets = COPY_TARGETS(DEFAULT_FALLBACK_STATUS);
+    const mcpSnippet = snippets.find((s) => s.id === 'mcp-config');
+    expect(mcpSnippet).toBeDefined();
+    expect(mcpSnippet?.label).toBe('MCP Server Config');
+  });
+
+  it('omits the MCP config snippet when hideMcp is true', () => {
+    const snippets = COPY_TARGETS(DEFAULT_FALLBACK_STATUS, true);
+    expect(snippets.some((s) => s.id === 'mcp-config')).toBe(false);
+    // Non-MCP snippets are preserved
+    expect(snippets.some((s) => s.id === 'curl')).toBe(true);
+    expect(snippets.some((s) => s.id === 'openai-sdk')).toBe(true);
+    expect(snippets.some((s) => s.id === 'anthropic-sdk')).toBe(true);
   });
 });

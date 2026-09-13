@@ -14,8 +14,23 @@ import {
   MousePointer,
   Cpu,
   Globe,
+  RefreshCw,
+  Power,
 } from 'lucide-react';
 import { sanitizeForClipboard } from '../../utils/clipboardSanitizer.js';
+import { getAdminToken } from '../settings/EndpointsManager.js';
+
+/** Local fallback used only during the brief window before the
+ *  /api/v1/system/endpoints fetch resolves or if it fails.
+ *  Defaults mirror the backend config defaults (MCP protocol port = 8790). */
+const DEFAULT_MCP_URL = 'http://127.0.0.1:8790/mcp/sse';
+
+interface McpEndpointStatus {
+  host: string;
+  endpoints: {
+    mcp: { port: number; enabled: boolean };
+  };
+}
 
 type Assistant = 'qwen' | 'cline' | 'claude' | 'cursor';
 type OS = 'windows' | 'macos' | 'linux';
@@ -87,6 +102,12 @@ export const AgentBridge: React.FC = () => {
   const [securityMode, setSecurityMode] = useState<SecurityMode>('safe');
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [transport, setTransport] = useState<Transport>('sse');
+  const [endpointsStatus, setEndpointsStatus] = useState<McpEndpointStatus | null>(null);
+  const [mcpPortDraft, setMcpPortDraft] = useState<string>('');
+  const [mcpBusy, setMcpBusy] = useState(false);
+  const [mcpSnippetsOpen, setMcpSnippetsOpen] = useState(false);
+  const [mcpCopiedId, setMcpCopiedId] = useState<string | null>(null);
+  const [mcpError, setMcpError] = useState<string | null>(null);
   const [toolsState, setToolsState] = useState<Record<string, boolean>>({
     check_quota: true,
     solve_routing_goal: true,
@@ -117,6 +138,29 @@ export const AgentBridge: React.FC = () => {
       .catch(() => {});
   }, []);
 
+  // Fetch live gateway endpoint state from the backend so we derive
+  // the MCP SSE URL from the user-configured port/host rather than
+  // hardcoding it. See EndpointsManager.tsx for the canonical pattern.
+  useEffect(() => {
+    fetch('/api/v1/system/endpoints')
+      .then((res) => res.json())
+      .then((data) => {
+        setEndpointsStatus(data);
+        if (data?.endpoints?.mcp?.port !== undefined) {
+          setMcpPortDraft(String(data.endpoints.mcp.port));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  // Derive MCP port and SSE URL from live backend state, falling back to
+  // DEFAULT_MCP_URL only during the brief window before the fetch resolves
+  // or if it fails.
+  const mcpPort = endpointsStatus ? endpointsStatus.endpoints.mcp.port : 8790;
+  const mcpUrl = endpointsStatus
+    ? `http://${endpointsStatus.host === '0.0.0.0' ? '127.0.0.1' : endpointsStatus.host}:${endpointsStatus.endpoints.mcp.port}/mcp/sse`
+    : DEFAULT_MCP_URL;
+
   const configPath = PATH_MAP[selectedAssistant][selectedOs];
 
   // Dynamic JSON Configuration object based on Assistant, Transport, and OS
@@ -125,7 +169,7 @@ export const AgentBridge: React.FC = () => {
       return {
         mcpServers: {
           goalroute: {
-            url: 'http://127.0.0.1:8787/mcp/sse',
+            url: mcpUrl,
           },
         },
       };
@@ -197,6 +241,58 @@ export const AgentBridge: React.FC = () => {
     }));
   };
 
+  // Apply an MCP port change via the same /api/v1/system/endpoints mutation
+  // endpoint EndpointsManager uses, so both views stay in sync with the backend.
+  const applyMcpEndpoint = async (body: Record<string, unknown>) => {
+    setMcpBusy(true);
+    setMcpError(null);
+    try {
+      const res = await fetch('/api/v1/system/endpoints', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bearer ${getAdminToken()}`,
+        },
+        body: JSON.stringify(body),
+      });
+      const data = (await res.json()) as McpEndpointStatus | { error?: { message?: string } };
+      if (!res.ok) {
+        const message =
+          'error' in data && data.error?.message ? data.error.message : `Update failed (HTTP ${res.status})`;
+        throw new Error(message);
+      }
+      const next = data as McpEndpointStatus;
+      setEndpointsStatus(next);
+      setMcpPortDraft(String(next.endpoints.mcp.port));
+    } catch (err) {
+      setMcpError((err as Error).message);
+    } finally {
+      setMcpBusy(false);
+    }
+  };
+
+  const applyMcpPort = () => {
+    const parsed = Number.parseInt(mcpPortDraft, 10);
+    if (!Number.isFinite(parsed) || parsed <= 0 || parsed > 65535) {
+      setMcpError('Enter a valid port (1–65535)');
+      return;
+    }
+    void applyMcpEndpoint({ ports: { mcp: parsed } });
+  };
+
+  const toggleMcpEnabled = () => {
+    const next = !(endpointsStatus?.endpoints.mcp.enabled ?? true);
+    void applyMcpEndpoint({ enabledProtocols: { mcp: next } });
+  };
+
+  const copyMcpSnippet = async (id: string, text: string) => {
+    try {
+      await navigator.clipboard.writeText(sanitizeForClipboard(text));
+      setMcpCopiedId(id);
+      window.setTimeout(() => setMcpCopiedId((prev) => (prev === id ? null : prev)), 1500);
+    } catch { /* clipboard unavailable */ }
+  };
+
   return (
     <div className="max-w-4xl mx-auto space-y-7 animate-in fade-in duration-300">
       {/* 1. Header Ribbon */}
@@ -215,11 +311,159 @@ export const AgentBridge: React.FC = () => {
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--signal-mint)] opacity-75"></span>
             <span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--signal-mint)]"></span>
           </span>
-          <span>Gateway Ready (Port 8787)</span>
+          <span>Gateway Ready (Port {mcpPort})</span>
         </div>
       </section>
 
-      {/* 2. Card 1: 1-Click Connect Station */}
+      {/* MCP Server — endpoint config relocated from Cockpit EndpointsManager */}
+      <section className="rounded-2xl bg-[var(--bg-card)] border border-[var(--border-subtle)] p-6 sm:p-7 space-y-5 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <span className="w-10 h-10 rounded-xl bg-[var(--accent-primary)]/10 border border-[var(--accent-primary)]/20 flex items-center justify-center shrink-0">
+              <Globe className="w-5 h-5 text-[var(--accent-primary)]" />
+            </span>
+            <div>
+              <h2 className="text-lg font-semibold text-[var(--text-bright)] tracking-tight flex items-center gap-2">
+                MCP Server
+              </h2>
+              <p className="text-sm text-[var(--text-secondary)] mt-0.5">
+                Model Context Protocol bridge for your AI agent.
+              </p>
+            </div>
+          </div>
+          {/* Active indicator */}
+          <div className="flex items-center gap-2 shrink-0">
+            {(endpointsStatus?.endpoints.mcp.enabled ?? true) ? (
+              <>
+                <span className="w-2 h-2 rounded-full bg-[var(--signal-mint)] animate-pulse" />
+                <span className="text-[10px] font-mono bg-[var(--signal-mint)]/10 text-[var(--signal-mint)] border border-[var(--signal-mint)]/25 px-2 py-1 rounded-full font-semibold">
+                  ONLINE
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="w-2 h-2 rounded-full bg-[var(--text-muted)]" />
+                <span className="text-[10px] font-mono bg-[var(--bg-card-active)] text-[var(--text-muted)] border border-[var(--border-subtle)] px-2 py-1 rounded-full font-semibold">
+                  DISABLED
+                </span>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Error banner */}
+        {mcpError && (
+          <div className="p-3 rounded-xl bg-[var(--signal-coral)]/10 border border-[var(--signal-coral)]/30 text-xs text-[var(--signal-coral)] flex items-center gap-2">
+            <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+            {mcpError}
+          </div>
+        )}
+
+        {/* Endpoint URL */}
+        <div className="flex items-center gap-2 bg-[var(--bg-well)] border border-[var(--border-subtle)] rounded-xl px-4 py-3 font-mono text-xs text-[var(--text-secondary)]" dir="ltr">
+          <Globe className="w-3.5 h-3.5 text-[var(--text-muted)] shrink-0" />
+          <span className="truncate">
+            http://{endpointsStatus?.host === '0.0.0.0' ? '127.0.0.1' : endpointsStatus?.host || '127.0.0.1'}:{mcpPort}/mcp
+          </span>
+          <button
+            onClick={() => void copyMcpSnippet('mcp-base', `http://${endpointsStatus?.host === '0.0.0.0' ? '127.0.0.1' : endpointsStatus?.host || '127.0.0.1'}:${mcpPort}/mcp`)}
+            className="ml-auto p-1.5 rounded-lg hover:bg-[var(--bg-card-active)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] shrink-0 transition-colors"
+            title="Copy endpoint URL"
+          >
+            {mcpCopiedId === 'mcp-base' ? <Check className="w-3.5 h-3.5 text-[var(--signal-mint)]" /> : <Copy className="w-3.5 h-3.5" />}
+          </button>
+        </div>
+
+        {/* Port + toggles */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+          <div>
+            <label className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-secondary)] block mb-1.5">
+              Port
+            </label>
+            <input
+              type="number"
+              inputMode="numeric"
+              value={mcpPortDraft}
+              onChange={(e) => setMcpPortDraft(e.target.value)}
+              disabled={mcpBusy}
+              className="w-full px-3 py-2 bg-[var(--bg-well)] text-[var(--text-primary)] border border-[var(--border-subtle)] focus:border-[var(--accent-primary)] rounded-lg font-mono text-sm focus:outline-none"
+              dir="ltr"
+            />
+          </div>
+
+          <div className="flex items-center gap-2 sm:justify-end">
+            <button
+              type="button"
+              onClick={applyMcpPort}
+              disabled={mcpBusy || mcpPortDraft === String(mcpPort)}
+              className="px-3.5 py-2 rounded-lg bg-[var(--accent-primary)] hover:bg-[var(--accent-primary-hover)] disabled:opacity-40 text-slate-950 font-bold text-xs transition-all flex items-center gap-1.5"
+            >
+              {mcpBusy ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : null}
+              Apply Port
+            </button>
+            <button
+              type="button"
+              onClick={toggleMcpEnabled}
+              disabled={mcpBusy}
+              className="px-3.5 py-2 rounded-lg bg-[var(--bg-card-active)] hover:bg-[var(--bg-well)] disabled:opacity-40 text-[var(--text-secondary)] hover:text-[var(--text-primary)] font-semibold text-xs transition-all flex items-center gap-1.5 border border-[var(--border-subtle)]"
+            >
+              <Power className={`w-3.5 h-3.5 ${(endpointsStatus?.endpoints.mcp.enabled ?? true) ? 'text-[var(--signal-mint)]' : 'text-[var(--text-muted)]'}`} />
+              {(endpointsStatus?.endpoints.mcp.enabled ?? true) ? 'Disable' : 'Enable'}
+            </button>
+          </div>
+        </div>
+
+        {/* Connection Snippets drawer */}
+        <div className="rounded-xl border border-[var(--border-subtle)] overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setMcpSnippetsOpen((prev) => !prev)}
+            className="w-full px-4 py-3 bg-[var(--bg-well)]/50 hover:bg-[var(--bg-card-active)] transition-colors flex items-center justify-between text-left"
+            aria-expanded={mcpSnippetsOpen}
+          >
+            <span className="text-xs font-semibold text-[var(--text-secondary)] flex items-center gap-2">
+              <Code2 className="w-3.5 h-3.5 text-[var(--accent-primary)]" />
+              Connection Snippets
+            </span>
+            <ChevronDown className={`w-4 h-4 text-[var(--text-secondary)] transition-transform duration-200 ${mcpSnippetsOpen ? 'rotate-180' : ''}`} />
+          </button>
+
+          {mcpSnippetsOpen && (
+            <div className="divide-y divide-[var(--border-subtle)]">
+              {/* SSE transport */}
+              <div className="p-4 flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="text-[11px] font-semibold text-[var(--text-primary)] mb-1">SSE Transport</div>
+                  <pre className="text-[11px] font-mono text-[var(--text-secondary)] bg-[var(--bg-well)] p-2 rounded-lg overflow-x-auto border border-[var(--border-subtle)]" dir="ltr">{`GET http://127.0.0.1:${mcpPort}/mcp/sse`}</pre>
+                </div>
+                <button
+                  onClick={() => void copyMcpSnippet('mcp-sse', `GET http://127.0.0.1:${mcpPort}/mcp/sse`)}
+                  className="p-1.5 rounded-lg hover:bg-[var(--bg-card-active)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] shrink-0 transition-colors"
+                  title="Copy SSE endpoint"
+                >
+                  {mcpCopiedId === 'mcp-sse' ? <Check className="w-3.5 h-3.5 text-[var(--signal-mint)]" /> : <Copy className="w-3.5 h-3.5" />}
+                </button>
+              </div>
+
+              {/* POST messages */}
+              <div className="p-4 flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="text-[11px] font-semibold text-[var(--text-primary)] mb-1">POST Messages</div>
+                  <pre className="text-[11px] font-mono text-[var(--text-secondary)] bg-[var(--bg-well)] p-2 rounded-lg overflow-x-auto border border-[var(--border-subtle)]" dir="ltr">{`POST http://127.0.0.1:${mcpPort}/mcp/messages`}</pre>
+                </div>
+                <button
+                  onClick={() => void copyMcpSnippet('mcp-post', `POST http://127.0.0.1:${mcpPort}/mcp/messages`)}
+                  className="p-1.5 rounded-lg hover:bg-[var(--bg-card-active)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] shrink-0 transition-colors"
+                  title="Copy POST endpoint"
+                >
+                  {mcpCopiedId === 'mcp-post' ? <Check className="w-3.5 h-3.5 text-[var(--signal-mint)]" /> : <Copy className="w-3.5 h-3.5" />}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </section>
+
       <section className="rounded-2xl bg-[var(--bg-card)] border border-[var(--border-subtle)] p-6 sm:p-7 space-y-6 shadow-sm">
         <div>
           <h2 className="text-lg font-semibold text-[var(--text-bright)] tracking-tight">
@@ -645,7 +889,7 @@ export const AgentBridge: React.FC = () => {
               <p className="text-[11px] font-mono text-[var(--text-muted)] mt-2.5">
                 {transport === 'stdio'
                   ? 'Connected directly through your IDE — no network address needed.'
-                  : 'Streams over http://127.0.0.1:8787/mcp/sse — use this if your assistant runs remotely.'}
+                  : `Streams over ${mcpUrl} — use this if your assistant runs remotely.`}
               </p>
             </div>
 
