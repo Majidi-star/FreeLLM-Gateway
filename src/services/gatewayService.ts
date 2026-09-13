@@ -20,7 +20,7 @@ import { generateId } from '../shared/ids.js';
 import { AllTargetsExhaustedError, NotFoundError } from '../shared/errors.js';
 import { DecisionTraceEntry } from '../shared/types.js';
 import { PoolStepInfo } from '../domain/routing/types.js';
-import { logger } from '../infra/logger.js';
+import { logger, redactSensitiveData } from '../infra/logger.js';
 
 export interface DispatchResult {
   response: OpenAIChatResponse;
@@ -379,7 +379,7 @@ export class GatewayService extends EventEmitter {
           tokens_out: oaiResponse.usage?.completion_tokens || 0,
           cost_usd: 0,
           error_code: null,
-          decision_trace: JSON.stringify(decisionTrace),
+          decision_trace: JSON.stringify(redactSensitiveData(decisionTrace)),
         });
 
         const promptTokens = oaiResponse.usage?.prompt_tokens || 0;
@@ -504,7 +504,7 @@ export class GatewayService extends EventEmitter {
       tokens_out: 0,
       cost_usd: 0,
       error_code: 'ALL_TARGETS_EXHAUSTED',
-      decision_trace: JSON.stringify(decisionTrace),
+      decision_trace: JSON.stringify(redactSensitiveData(decisionTrace)),
     });
 
     this.emitLogEvent({
@@ -738,7 +738,7 @@ export class GatewayService extends EventEmitter {
               tokens_out: usage.completionTokens,
               cost_usd: 0,
               error_code: null,
-              decision_trace: JSON.stringify(decisionTrace),
+              decision_trace: JSON.stringify(redactSensitiveData(decisionTrace)),
             });
 
             const isFallback = decisionTrace.some((t) => t.status === 'attempted_failed') || decisionTrace.length > 1;
@@ -890,7 +890,7 @@ export class GatewayService extends EventEmitter {
       tokens_out: 0,
       cost_usd: 0,
       error_code: 'ALL_TARGETS_EXHAUSTED',
-      decision_trace: JSON.stringify(decisionTrace),
+      decision_trace: JSON.stringify(redactSensitiveData(decisionTrace)),
     });
 
     this.emitLogEvent({

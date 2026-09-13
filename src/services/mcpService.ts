@@ -15,6 +15,7 @@ import { GoalService } from './goalService.js';
 import { PoolService } from './poolService.js';
 import { ProviderService } from './providerService.js';
 import { logger } from '../infra/logger.js';
+import pLimit from 'p-limit';
 
 export class McpService {
   private server: Server;
@@ -197,15 +198,18 @@ export class McpService {
 
   private async handleProbeProviderKeys() {
     const connections = this.connectionRepo.listAll();
+    const limit = pLimit(5);
     const testResults = await Promise.all(
-      connections.map(async (conn) => {
-        try {
-          const res = await this.providerService.testConnection(conn.id);
-          return { connectionId: conn.id, label: conn.label, ...res };
-        } catch (err: any) {
-          return { connectionId: conn.id, label: conn.label, ok: false, error: err.message };
-        }
-      })
+      connections.map((conn) =>
+        limit(async () => {
+          try {
+            const res = await this.providerService.testConnection(conn.id);
+            return { connectionId: conn.id, label: conn.label, ...res };
+          } catch (err: any) {
+            return { connectionId: conn.id, label: conn.label, ok: false, error: err.message };
+          }
+        })
+      )
     );
 
     return {

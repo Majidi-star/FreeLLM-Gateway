@@ -17,6 +17,9 @@ export interface OpenAIChatRequest {
   top_p?: number;
   max_tokens?: number;
   stream?: boolean;
+  response_format?: {
+    type: 'json_object' | 'text';
+  };
   tools?: Array<{ type: 'function'; function: { name: string; description?: string; parameters?: Record<string, unknown> } }>;
 }
 

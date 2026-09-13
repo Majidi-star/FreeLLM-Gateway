@@ -37,7 +37,7 @@ describe('GoalRoute End-to-End Integration Flow', () => {
     const healthRepo = new HealthRepository(db);
     const quotaRepo = new QuotaRepository(db);
 
-    const catalogService = new CatalogService(providerRepo, modelRepo);
+    const catalogService = new CatalogService(providerRepo, modelRepo, db);
     const providerService = new ProviderService(providerRepo, connectionRepo);
     const goalService = new GoalService(goalRepo, connectionRepo, providerRepo, modelRepo, healthRepo, quotaRepo);
     const poolService = new PoolService(poolRepo, goalService);

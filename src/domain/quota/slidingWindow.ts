@@ -6,6 +6,9 @@ export interface QuotaWindowInput {
 }
 
 export function getWindowStart(nowMs: number, windowSeconds: number): number {
+  if (!Number.isFinite(windowSeconds) || windowSeconds <= 0) {
+    throw new Error('windowSeconds must be a positive finite number');
+  }
   const windowMs = windowSeconds * 1000;
   return Math.floor(nowMs / windowMs) * windowMs;
 }

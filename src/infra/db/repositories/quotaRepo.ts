@@ -21,6 +21,12 @@ export class QuotaRepository {
   constructor(private db: Database.Database) {}
 
   public setPolicy(policy: Omit<QuotaPolicyRecord, 'id'> & { id?: string }): QuotaPolicyRecord {
+    if (!Number.isFinite(policy.window_seconds) || policy.window_seconds <= 0) {
+      throw new Error('window_seconds must be a positive finite number');
+    }
+    if (!Number.isFinite(policy.limit_value) || policy.limit_value <= 0) {
+      throw new Error('limit_value must be a positive finite number');
+    }
     const id = policy.id || generateId('qpol');
     const stmt = this.db.prepare(`
       INSERT INTO quota_policies (id, connection_id, dimension, window_seconds, limit_value, reset_anchor)

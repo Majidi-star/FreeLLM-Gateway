@@ -270,6 +270,7 @@ export const EndpointsManager: React.FC<EndpointsManagerProps> = ({ hideMcp = fa
                   className="w-20 px-2 py-1 bg-[var(--bg-card)] border border-[var(--border-subtle)] focus:border-[var(--accent-primary)] rounded-lg font-mono text-xs text-[var(--text-primary)] focus:outline-none"
                   dir="ltr"
                   disabled={busy}
+                  readOnly={endpoint.protocol === 'native'}
                 />
                 <button
                   disabled={busy || (portDrafts[endpoint.protocol] ?? '') === String(endpoint.port)}
@@ -287,6 +288,11 @@ export const EndpointsManager: React.FC<EndpointsManagerProps> = ({ hideMcp = fa
                 </button>
               </div>
             </div>
+            {endpoint.protocol === 'native' && (
+              <p className="text-[10px] text-[var(--text-muted)] leading-relaxed">
+                Native port is fixed to the main server (PORT env var) and requires a restart to change.
+              </p>
+            )}
             <div className="text-[10px] text-[var(--text-muted)] font-mono" dir="ltr">
               http://{activeStatus.host === '0.0.0.0' ? '127.0.0.1' : activeStatus.host}:{endpoint.port}
               {endpoint.pathPrefix}

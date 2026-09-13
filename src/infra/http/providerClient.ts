@@ -133,7 +133,17 @@ export async function callProviderEndpoint<T = unknown>(options: ProviderRequest
       headers,
       body: options.body ? JSON.stringify(options.body) : undefined,
       signal: controller.signal,
+      redirect: 'manual',
     });
+
+    if (response.status >= 300 && response.status < 400) {
+      const location = response.headers.get('location') || '(no location header)';
+      throw new AppError(
+        `Upstream provider returned a redirect to "${location}", which is blocked to prevent SSRF attacks.`,
+        'REDIRECT_BLOCKED',
+        502
+      );
+    }
 
     const latencyMs = Date.now() - startTime;
     clearTimeout(timer);
@@ -248,7 +258,17 @@ export async function callProviderEndpointStream(options: ProviderRequestOptions
       headers,
       body: options.body ? JSON.stringify(options.body) : undefined,
       signal: controller.signal,
+      redirect: 'manual',
     });
+
+    if (response.status >= 300 && response.status < 400) {
+      const location = response.headers.get('location') || '(no location header)';
+      throw new AppError(
+        `Upstream provider returned a redirect to "${location}", which is blocked to prevent SSRF attacks.`,
+        'REDIRECT_BLOCKED',
+        502
+      );
+    }
 
     const latencyMs = Date.now() - startTime;
     clearTimeout(timer);

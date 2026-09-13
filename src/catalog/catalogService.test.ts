@@ -19,7 +19,7 @@ describe('CatalogService', () => {
 
     providerRepo = new ProviderRepository(db);
     modelRepo = new ModelRepository(db);
-    service = new CatalogService(providerRepo, modelRepo);
+    service = new CatalogService(providerRepo, modelRepo, db);
   });
 
   afterEach(() => {

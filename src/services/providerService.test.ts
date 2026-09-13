@@ -39,8 +39,8 @@ describe('ProviderService', () => {
     closeDatabase();
   });
 
-  it('adds a provider connection and encrypts key at rest', () => {
-    const conn = service.addConnection({
+  it('adds a provider connection and encrypts key at rest', async () => {
+    const conn = await service.addConnection({
       providerSlug: 'groq',
       label: 'My Groq Free',
       apiKey: 'gsk_super_secret_key_12345',
@@ -61,18 +61,18 @@ describe('ProviderService', () => {
     expect(decrypted).toBe('gsk_super_secret_key_12345');
   });
 
-  it('throws NotFoundError for invalid provider slug', () => {
-    expect(() =>
+  it('throws NotFoundError for invalid provider slug', async () => {
+    await expect(
       service.addConnection({
         providerSlug: 'nonexistent',
         label: 'Bad',
         apiKey: 'key',
       })
-    ).toThrow(NotFoundError);
+    ).rejects.toThrow(NotFoundError);
   });
 
-  it('lists provider connections', () => {
-    service.addConnection({
+  it('lists provider connections', async () => {
+    await service.addConnection({
       providerSlug: 'groq',
       label: 'My Groq 1',
       apiKey: 'key-1',
@@ -83,8 +83,8 @@ describe('ProviderService', () => {
     expect(list[0].label).toBe('My Groq 1');
   });
 
-  it('removes provider connection', () => {
-    const conn = service.addConnection({
+  it('removes provider connection', async () => {
+    const conn = await service.addConnection({
       providerSlug: 'groq',
       label: 'To Delete',
       apiKey: 'key',

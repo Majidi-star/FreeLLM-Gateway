@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import Database from 'better-sqlite3';
 import { ProviderRepository } from '../infra/db/repositories/providerRepo.js';
 import { ModelRepository } from '../infra/db/repositories/modelRepo.js';
 import { providerSeedSchema, modelSeedSchema, ProviderSeed, ModelSeed } from './catalogTypes.js';
@@ -13,7 +14,8 @@ const __dirname = path.dirname(__filename);
 export class CatalogService {
   constructor(
     private providerRepo: ProviderRepository,
-    private modelRepo: ModelRepository
+    private modelRepo: ModelRepository,
+    private db: Database.Database
   ) {}
 
   public syncCatalog(customSeedDir?: string): { providersCount: number; modelsCount: number } {
@@ -34,45 +36,48 @@ export class CatalogService {
     const providers = z.array(providerSeedSchema).parse(rawProviders);
     const models = z.array(modelSeedSchema).parse(rawModels);
 
-    let providersCount = 0;
-    let modelsCount = 0;
+    const runSync = this.db.transaction(() => {
+      let providersCount = 0;
+      let modelsCount = 0;
 
-    for (const prov of providers) {
-      const pRecord = this.providerRepo.upsert({
-        slug: prov.slug,
-        display_name: prov.displayName,
-        base_url: prov.baseUrl,
-        auth_type: prov.authType,
-        protocol: prov.protocol,
-        docs_url: prov.docsUrl || null,
-        capabilities: JSON.stringify(prov.capabilities),
-        is_active: prov.isActive ? 1 : 0,
-      });
-      providersCount++;
-
-      const provModels = models.filter((m) => m.providerSlug === prov.slug);
-      for (const mdl of provModels) {
-        this.modelRepo.upsert({
-          provider_id: pRecord.id,
-          model_name: mdl.modelName,
-          display_name: mdl.displayName,
-          context_window: mdl.contextWindow,
-          supports_tools: mdl.supportsTools ? 1 : 0,
-          supports_vision: mdl.supportsVision ? 1 : 0,
-          cost_input_per_1k: mdl.costInputPer1k,
-          cost_output_per_1k: mdl.costOutputPer1k,
-          bench_tps: mdl.benchTps || null,
-          bench_ttft_ms: mdl.benchTtftMs || null,
-          bench_p95_latency_ms: mdl.benchP95LatencyMs || null,
-          task_fitness: JSON.stringify(mdl.taskFitness),
-          is_active: mdl.isActive ? 1 : 0,
+      for (const prov of providers) {
+        const pRecord = this.providerRepo.upsert({
+          slug: prov.slug,
+          display_name: prov.displayName,
+          base_url: prov.baseUrl,
+          auth_type: prov.authType,
+          protocol: prov.protocol,
+          docs_url: prov.docsUrl || null,
+          capabilities: JSON.stringify(prov.capabilities),
+          is_active: prov.isActive ? 1 : 0,
         });
-        modelsCount++;
-      }
-    }
+        providersCount++;
 
-    logger.info({ providersCount, modelsCount }, 'Catalog synced successfully');
-    return { providersCount, modelsCount };
+        const provModels = models.filter((m) => m.providerSlug === prov.slug);
+        for (const mdl of provModels) {
+          this.modelRepo.upsert({
+            provider_id: pRecord.id,
+            model_name: mdl.modelName,
+            display_name: mdl.displayName,
+            context_window: mdl.contextWindow,
+            supports_tools: mdl.supportsTools ? 1 : 0,
+            supports_vision: mdl.supportsVision ? 1 : 0,
+            cost_input_per_1k: mdl.costInputPer1k,
+            cost_output_per_1k: mdl.costOutputPer1k,
+            bench_tps: mdl.benchTps || null,
+            bench_ttft_ms: mdl.benchTtftMs || null,
+            bench_p95_latency_ms: mdl.benchP95LatencyMs || null,
+            task_fitness: JSON.stringify(mdl.taskFitness),
+            is_active: mdl.isActive ? 1 : 0,
+          });
+          modelsCount++;
+        }
+      }
+
+      return { providersCount, modelsCount };
+    });
+
+    return runSync();
   }
 
   public getProviders() {

@@ -41,7 +41,7 @@ function getServices() {
   const logRepo = new RequestLogRepository(db);
 
   const providerService = new ProviderService(providerRepo, connectionRepo);
-  const catalogService = new CatalogService(providerRepo, modelRepo);
+  const catalogService = new CatalogService(providerRepo, modelRepo, db);
   const goalService = new GoalService(goalRepo, connectionRepo, providerRepo, modelRepo, healthRepo, quotaRepo);
   const poolService = new PoolService(poolRepo, goalService);
   const gatewayService = new GatewayService(poolRepo, connectionRepo, modelRepo, providerRepo, healthRepo, quotaRepo, logRepo);
@@ -73,9 +73,9 @@ providerCmd
   .requiredOption('--key <apiKey>', 'Provider API Key')
   .option('--tier <tier>', 'Tier: free, paid, subscription', 'free')
   .option('--json', 'Emit output as JSON')
-  .action((slug, options) => {
+  .action(async (slug, options) => {
     const { providerService } = getServices();
-    const result = providerService.addConnection({
+    const result = await providerService.addConnection({
       providerSlug: slug,
       label: options.label,
       apiKey: options.key,

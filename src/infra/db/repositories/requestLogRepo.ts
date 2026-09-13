@@ -58,4 +58,10 @@ export class RequestLogRepository {
       return stmt.all(limit) as RequestLogRecord[];
     }
   }
+
+  public purgeOlderThan(cutoffMs: number): number {
+    const stmt = this.db.prepare('DELETE FROM request_logs WHERE created_at < ?');
+    const result = stmt.run(cutoffMs);
+    return result.changes;
+  }
 }

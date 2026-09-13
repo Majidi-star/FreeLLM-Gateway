@@ -219,6 +219,7 @@ export const CredentialVault: React.FC = () => {
   };
 
   const handleSaveKey = async () => {
+    if (isSavingKey) return;
     if (!inputApiKey.trim()) return;
     setIsSavingKey(true);
     setConnectError(null);

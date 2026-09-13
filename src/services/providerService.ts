@@ -9,6 +9,8 @@ import { NotFoundError, ValidationError } from '../shared/errors.js';
 import { ConnectionStatus, ConnectionTier } from '../shared/types.js';
 import { logger } from '../infra/logger.js';
 import { getWindowStart, computeSlidingWindowUsage } from '../domain/quota/slidingWindow.js';
+import { isIP } from 'node:net';
+import dns from 'node:dns/promises';
 
 export interface AddConnectionInput {
   providerSlug: string;
@@ -30,6 +32,50 @@ export interface ConnectionDTO {
   createdAt: number;
 }
 
+function isPrivateOrLocalIp(ip: string): boolean {
+  return (
+    ip === '127.0.0.1' ||
+    ip === '::1' ||
+    /^10\./.test(ip) ||
+    /^192\.168\./.test(ip) ||
+    /^169\.254\./.test(ip) ||
+    /^172\.(1[6-9]|2\d|3[01])\./.test(ip) ||
+    /^fc00:/i.test(ip) ||
+    /^fe80:/i.test(ip)
+  );
+}
+
+async function assertSafeProviderUrl(rawUrl: string): Promise<void> {
+  let url: URL;
+  try {
+    url = new URL(rawUrl);
+  } catch {
+    throw new ValidationError('Provider baseUrl is not a valid URL');
+  }
+  if (url.protocol !== 'https:') {
+    throw new ValidationError('Provider baseUrl must use the https:// protocol');
+  }
+  const hostname = url.hostname;
+  if (hostname === 'localhost' || hostname.endsWith('.localhost')) {
+    throw new ValidationError('Provider baseUrl cannot target localhost');
+  }
+  if (isIP(hostname)) {
+    if (isPrivateOrLocalIp(hostname)) {
+      throw new ValidationError('Provider baseUrl cannot target a private or link-local IP address');
+    }
+    return;
+  }
+  let resolved;
+  try {
+    resolved = await dns.lookup(hostname, { all: true });
+  } catch {
+    throw new ValidationError(`Provider baseUrl hostname "${hostname}" could not be resolved`);
+  }
+  if (resolved.some((addr: { address: string }) => isPrivateOrLocalIp(addr.address))) {
+    throw new ValidationError('Provider baseUrl resolves to a private or link-local IP address');
+  }
+}
+
 export class ProviderService {
   constructor(
     private providerRepo: ProviderRepository,
@@ -37,7 +83,7 @@ export class ProviderService {
     private quotaRepo?: QuotaRepository
   ) {}
 
-  public addConnection(input: AddConnectionInput): ConnectionDTO {
+  public async addConnection(input: AddConnectionInput): Promise<ConnectionDTO> {
     let provider = this.providerRepo.findBySlug(input.providerSlug);
     if (!provider) {
       throw new NotFoundError(`Provider with slug '${input.providerSlug}' not found. Check catalog or seed data.`);
@@ -51,6 +97,7 @@ export class ProviderService {
     // Only persists when non-empty and different from the catalog default.
     const trimmedBaseUrl = input.baseUrl?.trim();
     if (trimmedBaseUrl && trimmedBaseUrl !== provider.base_url) {
+      await assertSafeProviderUrl(trimmedBaseUrl);
       provider = this.providerRepo.upsert({ ...provider, base_url: trimmedBaseUrl });
       logger.info({ providerSlug: provider.slug, baseUrl: trimmedBaseUrl }, 'Provider base URL overridden');
     }
@@ -204,7 +251,12 @@ export class ProviderService {
       this.connectionRepo.updateStatus(conn.id, 'unavailable', errorMsg);
       logger.warn({ connectionId: conn.id, error: errorMsg }, 'Provider connection test failed');
 
-      return { success: false, error: errorMsg };
+      const isNetworkError = /ENOTFOUND|ECONNREFUSED|EAI_AGAIN|ETIMEDOUT|ECONNRESET/.test(errorMsg);
+      const safeMessage = isNetworkError
+        ? 'Unable to reach the configured endpoint. Check the base URL and network connectivity.'
+        : 'Connection test failed. Check the credentials and try again.';
+
+      return { success: false, error: safeMessage };
     }
   }
 

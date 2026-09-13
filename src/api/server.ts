@@ -1,5 +1,6 @@
 import Fastify, { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import cors from '@fastify/cors';
+import rateLimit from '@fastify/rate-limit';
 import { once } from 'events';
 import crypto from 'node:crypto';
 import { z } from 'zod';
@@ -71,8 +72,7 @@ function buildProtocolAuthHook(config: Config) {
       const token = authHeader.replace(/^Bearer\s+/i, '').trim();
       const isValid =
         safeCompareTokens(token, config.ADMIN_API_TOKEN) ||
-        safeCompareTokens(token, 'dev-admin-secret-token') ||
-        (isDev && safeCompareTokens(config.ADMIN_API_TOKEN, 'dev-admin-secret-token'));
+        (isDev && safeCompareTokens(token, 'dev-admin-secret-token'));
       if (!isValid) {
         return reply.status(401).send({ error: { message: 'Unauthorized', type: 'authentication_error' } });
       }
@@ -109,6 +109,16 @@ async function protocolErrorHandler(error: Error | AppError, req: FastifyRequest
 }
 
 
+function corsOriginValidator(origin: string | undefined, cb: (err: Error | null, allow: boolean) => void): void {
+  if (!origin) return cb(null, true);
+  try {
+    const { hostname } = new URL(origin);
+    if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.endsWith('.localhost')) {
+      return cb(null, true);
+    }
+  } catch {}
+  return cb(null, false);
+}
 export async function buildApp() {
   const config = getConfig();
   const db = getDatabase();
@@ -126,7 +136,7 @@ export async function buildApp() {
 
   // Initialize Services
   const providerService = new ProviderService(providerRepo, connectionRepo, quotaRepo);
-  const catalogService = new CatalogService(providerRepo, modelRepo);
+  const catalogService = new CatalogService(providerRepo, modelRepo, db);
   const modelSyncService = new ModelSyncService(providerRepo, connectionRepo, modelRepo);
   const goalService = new GoalService(goalRepo, connectionRepo, providerRepo, modelRepo, healthRepo, quotaRepo);
   const poolService = new PoolService(poolRepo, goalService);
@@ -152,19 +162,16 @@ export async function buildApp() {
     requestTimeout: 30000,
     connectionTimeout: 30000,
     keepAliveTimeout: 65000,
+      bodyLimit: 20 * 1024 * 1024, // 20MB — matches the 15MB upstream response cap plus headroom
   });
 
   await fastify.register(cors, {
-    origin: (origin, cb) => {
-      if (!origin) return cb(null, true);
-      try {
-        const { hostname } = new URL(origin);
-        if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.endsWith('.localhost')) {
-          return cb(null, true);
-        }
-      } catch {}
-      return cb(null, false);
-    },
+    origin: corsOriginValidator,
+  });
+
+  await fastify.register(rateLimit, {
+    max: 100,
+    timeWindow: '1 minute',
   });
 
   // Global Request Logging & Authentication Middleware
@@ -177,7 +184,7 @@ export async function buildApp() {
       return;
     }
 
-    if (url.startsWith('/api/v1/')) {
+    if (url.startsWith('/api/v1/') || url.startsWith('/mcp/')) {
 
       // Extract query token safely (Fastify req.query is not parsed yet during onRequest)
       const parsedUrl = new URL(req.url, 'http://localhost');
@@ -186,8 +193,7 @@ export async function buildApp() {
       if (url.startsWith('/api/v1/request-logs/stream')) {
         const isStreamTokenValid =
           safeCompareTokens(queryToken || '', config.ADMIN_API_TOKEN) ||
-          safeCompareTokens(queryToken || '', 'dev-admin-secret-token') ||
-          (config.NODE_ENV === 'development' && safeCompareTokens(config.ADMIN_API_TOKEN, 'dev-admin-secret-token'));
+          (config.NODE_ENV === 'development' && safeCompareTokens(queryToken || '', 'dev-admin-secret-token'));
         if (isStreamTokenValid) {
           return;
         }
@@ -201,8 +207,7 @@ export async function buildApp() {
 
       const isTokenValid =
         safeCompareTokens(token, config.ADMIN_API_TOKEN) ||
-        safeCompareTokens(token, 'dev-admin-secret-token') ||
-        (isDev && isDefaultConfigToken);
+        (isDev && safeCompareTokens(token, 'dev-admin-secret-token'));
 
       if (!isTokenValid) {
         return reply.status(401).send({ error: { message: 'Unauthorized', type: 'authentication_error' } });
@@ -377,8 +382,8 @@ export async function buildApp() {
 
   // Management Routes
   fastify.get('/api/v1/providers', async () => providerService.getProvidersWithConnections());
-  fastify.post('/api/v1/providers', async (req) => providerService.addConnection(req.body as any));
-  fastify.post('/api/v1/providers/keys', async (req) => providerService.addConnection(req.body as any));
+  fastify.post('/api/v1/providers', async (req) => await providerService.addConnection(req.body as any));
+  fastify.post('/api/v1/providers/keys', async (req) => await providerService.addConnection(req.body as any));
   fastify.post('/api/v1/providers/:id/test', async (req) => providerService.testConnection((req.params as any).id));
   fastify.delete('/api/v1/providers/:id', async (req) => providerService.revokeConnection((req.params as any).id, healthRepo));
 
@@ -406,6 +411,7 @@ export async function buildApp() {
   });
 
   fastify.get('/api/v1/request-logs/stream', async (req, reply) => {
+reply.raw.on('error', () => {});
     reply.raw.setHeader('Content-Type', 'text/event-stream');
     reply.raw.setHeader('Cache-Control', 'no-cache');
     reply.raw.setHeader('Connection', 'keep-alive');
@@ -526,7 +532,7 @@ export async function buildApp() {
       keepAliveTimeout: 65000,
     });
 
-    await app.register(cors, { origin: true });
+    await app.register(cors, { origin: corsOriginValidator });
     app.addHook('onRequest', buildProtocolAuthHook(config));
     app.setErrorHandler(protocolErrorHandler);
 
@@ -589,6 +595,12 @@ export async function buildApp() {
   return fastify;
 }
 
+export function getRequestLogRepoForMaintenance(): RequestLogRepository {
+  // Uses the same singleton db connection as buildApp
+  const db = getDatabase();
+  return new RequestLogRepository(db);
+}
+
 export async function startServer(port?: number) {
   const config = getConfig();
   const listenPort = port || config.PORT;
@@ -599,10 +611,51 @@ export async function startServer(port?: number) {
     logger.info({ address, port: listenPort }, 'GoalRoute HTTP server listening');
 
     await getActiveEndpointsService().startAll();
+
+    const retentionMs = config.LOG_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+    const purgeInterval = setInterval(() => {
+      try {
+        const repo = getRequestLogRepoForMaintenance();
+        const deleted = repo.purgeOlderThan(Date.now() - retentionMs);
+        if (deleted > 0) {
+          logger.info({ deleted, retentionDays: config.LOG_RETENTION_DAYS }, 'Purged old request logs');
+        }
+      } catch (err) {
+        logger.error({ err }, 'Scheduled request-log purge failed');
+      }
+    }, 6 * 60 * 60 * 1000);
+    purgeInterval.unref();
+
     logger.info(
       { endpoints: getActiveEndpointsService().getEndpointsStatus() },
       'Multi-protocol endpoints listening'
     );
+
+    let shuttingDown = false;
+    const shutdown = async (signal: string) => {
+      if (shuttingDown) return;
+      shuttingDown = true;
+      logger.info({ signal }, 'Received shutdown signal, closing gracefully');
+      const timeoutHandle = setTimeout(() => {
+        logger.error('Graceful shutdown timed out after 10s, forcing exit');
+        process.exit(1);
+      }, 10000);
+      timeoutHandle.unref();
+      try {
+        await app.close();
+        await getActiveEndpointsService().stopAll();
+        logger.info('Graceful shutdown complete');
+        clearTimeout(timeoutHandle);
+        process.exit(0);
+      } catch (err) {
+        logger.error({ err }, 'Error during graceful shutdown');
+        clearTimeout(timeoutHandle);
+        process.exit(1);
+      }
+    };
+    process.on('SIGTERM', () => { void shutdown('SIGTERM'); });
+    process.on('SIGINT', () => { void shutdown('SIGINT'); });
+
     return app;
   } catch (err) {
     logger.fatal({ err }, 'Failed to start GoalRoute HTTP server');
