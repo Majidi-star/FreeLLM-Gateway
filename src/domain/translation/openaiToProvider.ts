@@ -141,7 +141,12 @@ export function translateRequestToProvider(
       .map(s => (typeof s === 'string' ? s.trim() : ''))
       .filter(s => s.length > 0);
 
-    const systemPrompt = validSystemTexts.length > 0 ? validSystemTexts.join('\n\n') : undefined;
+    let systemPrompt = validSystemTexts.length > 0 ? validSystemTexts.join('\n\n') : undefined;
+
+    if (request.response_format?.type === 'json_object') {
+      const jsonInstruction = 'You must respond with valid JSON only, and nothing else.';
+      systemPrompt = systemPrompt ? `${systemPrompt}\n\n${jsonInstruction}` : jsonInstruction;
+    }
 
     const body: Record<string, unknown> = {
       model: targetModelName,
@@ -282,13 +287,19 @@ export function translateRequestToProvider(
 
     const action = request.stream ? 'streamGenerateContent?alt=sse' : 'generateContent';
 
+    const generationConfig: Record<string, unknown> = {
+      temperature: request.temperature,
+      topP: request.top_p,
+      maxOutputTokens: request.max_tokens,
+    };
+
+    if (request.response_format?.type === 'json_object') {
+      generationConfig.responseMimeType = 'application/json';
+    }
+
     const body: Record<string, unknown> = {
       contents,
-      generationConfig: {
-        temperature: request.temperature,
-        topP: request.top_p,
-        maxOutputTokens: request.max_tokens,
-      },
+      generationConfig,
     };
 
     if (systemInstruction !== undefined) {
