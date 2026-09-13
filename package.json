@@ -2,6 +2,7 @@
   "name": "goalroute",
   "version": "0.1.0",
   "description": "Multi-provider LLM gateway with goal-based self-healing routing",
+  "license": "Apache-2.0",
   "main": "dist/cli/index.js",
   "type": "module",
   "bin": {
@@ -22,7 +23,6 @@
     "@fastify/cors": "^10.0.2",
     "@fastify/rate-limit": "^11.2.0",
     "@modelcontextprotocol/sdk": "^1.30.0",
-    "@tanstack/react-query": "^5.66.9",
     "better-sqlite3": "^11.8.1",
     "commander": "^13.1.0",
     "dotenv": "^16.4.7",

@@ -1,0 +1,10 @@
+node_modules
+dist
+dist-web
+.git
+.github
+*.db
+*.log
+docs
+graphify-out
+C:\Users\Amirhosein\.gemini\antigravity\brain

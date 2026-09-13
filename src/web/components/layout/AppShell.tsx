@@ -117,7 +117,13 @@ export const AppShell: React.FC = () => {
       .then((res) => (res.ok ? res.json() : []))
       .then((providers) => {
         if (Array.isArray(providers)) {
-          setActiveKeys(providers.filter((p: any) => p && p.hasKey && p.status !== 'unconfigured').length);
+          const active = providers.filter((p: any) => p && p.hasKey && p.status !== 'unconfigured').length;
+          setActiveKeys(active);
+          if (active === 0) {
+            setConciergeMsg('No active enclave keys configured. Connect provider API keys in Credential Vault to start routing.');
+          } else {
+            setConciergeMsg(`GoalRoute Copilot active. Monitoring ${active} active provider key${active > 1 ? 's' : ''} with zero-latency failover.`);
+          }
         }
       })
       .catch(() => {});

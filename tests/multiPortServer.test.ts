@@ -60,6 +60,7 @@ beforeAll(async () => {
     PORT_OPENAI: openaiPort,
     PORT_ANTHROPIC: anthropicPort,
     PORT_MCP: mcpPort,
+    ADMIN_API_TOKEN: 'test-admin-secret-token-nondefault',
   });
   process.env.ALLOW_ANONYMOUS_DEV = 'true';
   adminToken = getConfig().ADMIN_API_TOKEN;
@@ -230,9 +231,10 @@ describe('Multi-Port Gateway Server (live bindings)', () => {
     expect(errBody.error.code).toBe('PORT_BIND_FAILED');
 
     // Original Anthropic binding must be restored and serving again.
+    await new Promise((r) => setTimeout(r, 50));
     const retry = await fetch(`http://127.0.0.1:${anthropicPort}/v1/messages`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', connection: 'close' },
       body: JSON.stringify({ model: 'm', max_tokens: 8, messages: [{ role: 'user', content: 'x' }] }),
     });
     expect(retry.status).toBe(400);

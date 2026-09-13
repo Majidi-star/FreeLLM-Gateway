@@ -291,18 +291,27 @@ export const CredentialVault: React.FC = () => {
     if (!targetKey || targetKey.hasKey === false || targetKey.status === 'unconfigured') {
       return;
     }
+    const startTime = Date.now();
     try {
       const res = await fetch(`/api/v1/providers/${id}/test`, {
         method: 'POST',
         headers: adminToken ? { authorization: `Bearer ${adminToken}` } : {},
       });
       const data = await res.json().catch(() => ({}));
+      const elapsed = Date.now() - startTime;
+      if (elapsed < 400) {
+        await new Promise<void>((resolve) => safeTimeout(resolve, 400 - elapsed));
+      }
       const latencyMs = typeof data.latencyMs === 'number' ? data.latencyMs : 0;
       const success = res.ok && data.success !== false;
       setKeys((prev) =>
         prev.map((k) => (k.id === id ? { ...k, status: success ? 'active' : 'degraded', lastPingMs: latencyMs, lastVerified: success ? 'Just now' : 'Failed' } : k))
       );
     } catch {
+      const elapsed = Date.now() - startTime;
+      if (elapsed < 400) {
+        await new Promise<void>((resolve) => safeTimeout(resolve, 400 - elapsed));
+      }
       setKeys((prev) =>
         prev.map((k) => (k.id === id ? { ...k, status: 'degraded', lastVerified: 'Failed' } : k))
       );

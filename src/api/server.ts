@@ -5,6 +5,7 @@ import { once } from 'events';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { z } from 'zod';
 import { getConfig, Config } from '../infra/config.js';
 import { logger } from '../infra/logger.js';
@@ -759,4 +760,8 @@ export async function startServer(port?: number) {
     logger.fatal({ err }, 'Failed to start GoalRoute HTTP server');
     process.exit(1);
   }
+}
+
+if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
+  void startServer();
 }

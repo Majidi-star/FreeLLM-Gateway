@@ -56,6 +56,25 @@ export function getSharedCircuitBreaker(
   return cb;
 }
 
+export const inFlightConnectionRequests = new Map<string, number>();
+
+export function getInFlightCount(connectionId: string): number {
+  return inFlightConnectionRequests.get(connectionId) || 0;
+}
+
+export function incrementInFlight(connectionId: string): void {
+  inFlightConnectionRequests.set(connectionId, (inFlightConnectionRequests.get(connectionId) || 0) + 1);
+}
+
+export function decrementInFlight(connectionId: string): void {
+  const current = inFlightConnectionRequests.get(connectionId) || 0;
+  if (current <= 1) {
+    inFlightConnectionRequests.delete(connectionId);
+  } else {
+    inFlightConnectionRequests.set(connectionId, current - 1);
+  }
+}
+
 export const locallyExpiredConnections = new Map<string, number>();
 
 export function pruneLocallyExpiredConnections(now: number = Date.now()): void {
@@ -348,17 +367,23 @@ export class GatewayService extends EventEmitter {
 
         const translated = translateRequestToProvider(request, step.providerProtocol, step.modelName);
 
-        const httpRes = await callProviderEndpoint({
-          baseUrl: step.providerBaseUrl,
-          endpoint: translated.endpoint,
-          apiKey,
-          protocol: step.providerProtocol,
-          method: 'POST',
-          headers: translated.headers,
-          body: translated.body,
-          timeoutMs: 30000,
-          signal,
-        });
+        incrementInFlight(conn.id);
+        let httpRes: any;
+        try {
+          httpRes = await callProviderEndpoint({
+            baseUrl: step.providerBaseUrl,
+            endpoint: translated.endpoint,
+            apiKey,
+            protocol: step.providerProtocol,
+            method: 'POST',
+            headers: translated.headers,
+            body: translated.body,
+            timeoutMs: 30000,
+            signal,
+          });
+        } finally {
+          decrementInFlight(conn.id);
+        }
 
         const oaiResponse = translateResponseToOpenAI(httpRes.data, step.providerProtocol, step.modelName);
 
