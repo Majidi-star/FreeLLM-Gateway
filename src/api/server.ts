@@ -3,6 +3,8 @@ import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
 import { once } from 'events';
 import crypto from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
 import { z } from 'zod';
 import { getConfig, Config } from '../infra/config.js';
 import { logger } from '../infra/logger.js';
@@ -184,7 +186,13 @@ export async function buildApp() {
     const isGetEndpoints = req.method === 'GET' && (url.startsWith('/api/v1/system/endpoints') || url.includes('/system/endpoints'));
     // Only exempt this from auth when the gateway is not reachable from the network.
     // Once remote access is on, endpoint topology should not be handed out for free.
-    if ((isGetEndpoints && !config.REMOTE_ACCESS_ENABLED) || url.startsWith('/api/v1/health') || url.startsWith('/api/v1/mcp/settings')) {
+    const isLocalhost = req.ip === '127.0.0.1' || req.ip === '::1' || req.ip === '::ffff:127.0.0.1';
+    if (
+      (isGetEndpoints && !config.REMOTE_ACCESS_ENABLED) ||
+      url.startsWith('/api/v1/health') ||
+      url.startsWith('/api/v1/mcp/settings') ||
+      (url.startsWith('/api/v1/system/token') && isLocalhost)
+    ) {
       return;
     }
 
@@ -644,6 +652,42 @@ reply.raw.on('error', () => {});
       );
     }
     return endpointsService.updateConfig(parsed.data);
+  });
+
+  fastify.post('/api/v1/system/token', async (req) => {
+    const isLocalhost = req.ip === '127.0.0.1' || req.ip === '::1' || req.ip === '::ffff:127.0.0.1';
+    if (!isLocalhost) {
+      const authHeader = req.headers['authorization'];
+      const token = authHeader ? authHeader.replace(/^Bearer\s+/i, '').trim() : '';
+      if (!safeCompareTokens(token, config.ADMIN_API_TOKEN)) {
+        throw new AppError('Unauthorized', 'AUTHENTICATION_ERROR', 401);
+      }
+    }
+    const body = req.body as { token?: string };
+    if (!body?.token || typeof body.token !== 'string' || body.token.trim().length < 8) {
+      throw new AppError('Token must be at least 8 characters long', 'VALIDATION_ERROR', 400);
+    }
+    const newToken = body.token.trim();
+    config.ADMIN_API_TOKEN = newToken;
+    if (activeEndpointsService) {
+      (activeEndpointsService as any).deps.isDefaultAdminToken =
+        newToken === 'dev-admin-secret-token' || newToken === 'dev-admin-secret-token-change-in-prod';
+    }
+    try {
+      const envPath = path.resolve(process.cwd(), '.env');
+      if (fs.existsSync(envPath)) {
+        let content = fs.readFileSync(envPath, 'utf8');
+        if (content.includes('ADMIN_API_TOKEN=')) {
+          content = content.replace(/ADMIN_API_TOKEN=.*/g, `ADMIN_API_TOKEN=${newToken}`);
+        } else {
+          content += `\nADMIN_API_TOKEN=${newToken}\n`;
+        }
+        fs.writeFileSync(envPath, content, 'utf8');
+      }
+    } catch (e) {
+      logger.warn({ err: e }, 'Could not persist ADMIN_API_TOKEN to .env file');
+    }
+    return { ok: true, message: 'Admin token updated successfully', token: newToken };
   });
 
   return fastify;

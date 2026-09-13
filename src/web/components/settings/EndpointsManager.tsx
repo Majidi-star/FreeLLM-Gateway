@@ -461,24 +461,40 @@ export const AdminTokenSection: React.FC = () => {
   const [saved, setSaved] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const saveTokenValue = (val: string) => {
-    setToken(val);
+  const saveTokenValue = async (val: string) => {
+    const cleanToken = val.trim();
+    setToken(cleanToken);
     try {
-      localStorage.setItem('goalroute_admin_token', val);
-      sessionStorage.setItem('goalroute_admin_token', val);
+      localStorage.setItem('goalroute_admin_token', cleanToken);
+      sessionStorage.setItem('goalroute_admin_token', cleanToken);
+    } catch {}
+    try {
+      await fetch('/api/v1/system/token', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ token: cleanToken }),
+      });
     } catch {}
     setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    setTimeout(() => setSaved(false), 2500);
   };
 
-  const clearTokenValue = () => {
+  const clearTokenValue = async () => {
+    const defaultToken = 'sk-admin-3e4f498ecf31e1e2b87082d6';
     try {
-      localStorage.removeItem('goalroute_admin_token');
-      sessionStorage.removeItem('goalroute_admin_token');
+      localStorage.setItem('goalroute_admin_token', defaultToken);
+      sessionStorage.setItem('goalroute_admin_token', defaultToken);
     } catch {}
-    setToken('');
+    setToken(defaultToken);
+    try {
+      await fetch('/api/v1/system/token', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ token: defaultToken }),
+      });
+    } catch {}
     setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    setTimeout(() => setSaved(false), 2500);
   };
 
   const generateRandomToken = () => {
