@@ -103,12 +103,12 @@ export async function callProviderEndpoint<T = unknown>(options: ProviderRequest
   };
 
   if (options.protocol === 'anthropic') {
-    headers['x-api-key'] = options.apiKey;
+    if (options.apiKey) headers['x-api-key'] = options.apiKey;
     headers['anthropic-version'] = '2023-06-01';
   } else if (options.protocol === 'gemini') {
-    headers['x-goog-api-key'] = options.apiKey;
+    if (options.apiKey) headers['x-goog-api-key'] = options.apiKey;
   } else {
-    headers['Authorization'] = `Bearer ${options.apiKey}`;
+    if (options.apiKey) headers['Authorization'] = `Bearer ${options.apiKey}`;
   }
 
   if (options.headers) {

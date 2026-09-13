@@ -24,6 +24,7 @@ import { PoolService } from '../services/poolService.js';
 import { GatewayService } from '../services/gatewayService.js';
 import { McpService } from '../services/mcpService.js';
 import { MultiPortServerService } from '../services/multiPortServerService.js';
+import { ExternalAgentService } from '../services/externalAgentService.js';
 import { ProtocolType, UpdateEndpointsInput } from '../domain/server/types.js';
 import { translateAnthropicToOpenAI, translateOpenAIToAnthropic } from '../domain/translation/anthropicProtocol.js';
 import { AnthropicMessagesRequest } from '../domain/translation/anthropicTypes.js';
@@ -460,6 +461,32 @@ reply.raw.on('error', () => {});
     }
 
     return reply;
+  });
+
+  // Agent Engine External Connection Routes
+  fastify.post('/api/v1/agent-engine/test-external', async (req) => {
+    const body = (req.body || {}) as any;
+    return ExternalAgentService.testConnection({
+      externalBaseUrl: body.externalBaseUrl || body.baseUrl || '',
+      externalApiKey: body.externalApiKey || body.apiKey || '',
+      externalModelName: body.externalModelName || body.modelName || '',
+      externalProtocol: body.externalProtocol || body.protocol || 'auto',
+    });
+  });
+
+  fastify.post('/api/v1/agent-engine/chat', async (req) => {
+    const body = (req.body || {}) as any;
+    const { engineConfig, ...chatRequest } = body;
+    const configToUse = engineConfig || {
+      externalBaseUrl: body.externalBaseUrl,
+      externalApiKey: body.externalApiKey,
+      externalModelName: body.externalModelName,
+      externalProtocol: body.externalProtocol,
+    };
+    if (!configToUse || !configToUse.externalBaseUrl) {
+      throw new AppError('externalBaseUrl is required for Agent Engine external chat', 'INVALID_REQUEST', 400);
+    }
+    return ExternalAgentService.executeChat(chatRequest, configToUse);
   });
 
   // MCP Remote Transports & Settings Routes

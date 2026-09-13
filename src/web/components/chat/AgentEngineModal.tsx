@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { X, Cpu, Server, Globe, Check, Sliders, Shield, Zap, Sparkles } from 'lucide-react';
+import { X, Cpu, Server, Globe, Check, Sliders, Shield, Zap, Sparkles, Activity, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 
 export type AgentEngineMode = 'pool' | 'model' | 'external';
+export type ExternalProtocol = 'auto' | 'openai' | 'anthropic' | 'gemini' | 'custom';
 
 export interface AgentEngineConfig {
   mode: AgentEngineMode;
@@ -15,6 +16,7 @@ export interface AgentEngineConfig {
   externalBaseUrl: string;
   externalApiKey: string;
   externalModelName: string;
+  externalProtocol?: ExternalProtocol;
 }
 
 export const DEFAULT_ENGINE_CONFIG: AgentEngineConfig = {
@@ -26,6 +28,7 @@ export const DEFAULT_ENGINE_CONFIG: AgentEngineConfig = {
   externalBaseUrl: 'http://localhost:11434/v1',
   externalApiKey: '',
   externalModelName: 'llama3.2',
+  externalProtocol: 'auto',
 };
 
 interface AgentEngineModalProps {
@@ -45,9 +48,48 @@ export const AgentEngineModal: React.FC<AgentEngineModalProps> = ({
   const [availablePools, setAvailablePools] = useState<Array<{ id: string; name: string }>>([]);
   const [availableModels, setAvailableModels] = useState<Array<{ modelName: string; providerSlug: string }>>([]);
 
+  const [testState, setTestState] = useState<{
+    status: 'idle' | 'testing' | 'success' | 'error';
+    message?: string;
+  }>({ status: 'idle' });
+
   useEffect(() => {
     setDraftConfig(config);
+    setTestState({ status: 'idle' });
   }, [config, isOpen]);
+
+  const handleTestConnection = async () => {
+    setTestState({ status: 'testing' });
+    try {
+      const res = await fetch('/api/v1/agent-engine/test-external', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          externalBaseUrl: draftConfig.externalBaseUrl,
+          externalApiKey: draftConfig.externalApiKey,
+          externalModelName: draftConfig.externalModelName,
+          externalProtocol: draftConfig.externalProtocol || 'auto',
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        setTestState({
+          status: 'success',
+          message: data.message || `Connected cleanly (${data.latencyMs}ms, ${data.resolvedProtocol.toUpperCase()})`,
+        });
+      } else {
+        setTestState({
+          status: 'error',
+          message: data.message || data.error || 'Connection failed',
+        });
+      }
+    } catch (err: any) {
+      setTestState({
+        status: 'error',
+        message: err.message || 'Unable to connect to gateway server',
+      });
+    }
+  };
 
   useEffect(() => {
     if (!isOpen) return;
@@ -231,29 +273,46 @@ export const AgentEngineModal: React.FC<AgentEngineModalProps> = ({
               <div className="p-3.5 rounded-xl bg-[var(--bg-card)] border border-[var(--border-subtle)] space-y-3">
                 <div>
                   <label className="text-[11px] font-semibold text-[var(--text-bright)] block uppercase tracking-wider mb-1">
+                    Connection Protocol
+                  </label>
+                  <select
+                    value={draftConfig.externalProtocol || 'auto'}
+                    onChange={(e) => setDraftConfig((prev) => ({ ...prev, externalProtocol: e.target.value as any }))}
+                    className="w-full p-2.5 bg-[var(--bg-well)] border border-[var(--border-subtle)] focus:border-[var(--accent-primary)] text-xs text-[var(--text-bright)] rounded-xl focus:outline-none"
+                  >
+                    <option value="auto">⚡ Auto-Detect Protocol (Recommended)</option>
+                    <option value="openai">OpenAI Compatible (Ollama, vLLM, LM Studio, Groq, OpenRouter)</option>
+                    <option value="anthropic">Anthropic Claude (/v1/messages)</option>
+                    <option value="gemini">Google Gemini (/v1beta/models)</option>
+                    <option value="custom">Custom Endpoint</option>
+                  </select>
+                  <p className="text-[10px] text-[var(--text-muted)] mt-1">
+                    Auto-detect inspects the URL/model string. Select explicit protocol to enforce exact API payload structures.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-semibold text-[var(--text-bright)] block uppercase tracking-wider mb-1">
                     External Endpoint Base URL
                   </label>
                   <input
                     type="text"
                     value={draftConfig.externalBaseUrl}
                     onChange={(e) => setDraftConfig((prev) => ({ ...prev, externalBaseUrl: e.target.value }))}
-                    placeholder="e.g. http://localhost:11434/v1 or https://api.openai.com/v1"
+                    placeholder="e.g. http://localhost:11434/v1, https://api.anthropic.com, or https://generativelanguage.googleapis.com"
                     className="w-full p-2.5 bg-[var(--bg-well)] border border-[var(--border-subtle)] focus:border-[var(--accent-primary)] text-xs text-[var(--text-bright)] rounded-xl font-mono focus:outline-none"
                   />
-                  <p className="text-[10px] text-[var(--text-muted)] mt-1">
-                    OpenAI-compatible chat completion base URL (Ollama, LM Studio, vLLM, or custom server).
-                  </p>
                 </div>
 
                 <div>
                   <label className="text-[11px] font-semibold text-[var(--text-bright)] block uppercase tracking-wider mb-1">
-                    API Key / Secret Token (Optional)
+                    API Key / Secret Token (Optional for Local Ollama)
                   </label>
                   <input
                     type="password"
                     value={draftConfig.externalApiKey}
                     onChange={(e) => setDraftConfig((prev) => ({ ...prev, externalApiKey: e.target.value }))}
-                    placeholder="sk-..."
+                    placeholder="sk-... or API key"
                     className="w-full p-2.5 bg-[var(--bg-well)] border border-[var(--border-subtle)] focus:border-[var(--accent-primary)] text-xs text-[var(--text-bright)] rounded-xl font-mono focus:outline-none"
                   />
                 </div>
@@ -266,9 +325,42 @@ export const AgentEngineModal: React.FC<AgentEngineModalProps> = ({
                     type="text"
                     value={draftConfig.externalModelName}
                     onChange={(e) => setDraftConfig((prev) => ({ ...prev, externalModelName: e.target.value }))}
-                    placeholder="e.g. llama3.2, mistral, gpt-4o-mini"
+                    placeholder="e.g. llama3.2, claude-3-5-sonnet-20241022, gemini-1.5-pro, gpt-4o-mini"
                     className="w-full p-2.5 bg-[var(--bg-well)] border border-[var(--border-subtle)] focus:border-[var(--accent-primary)] text-xs text-[var(--text-bright)] rounded-xl font-mono focus:outline-none"
                   />
+                </div>
+
+                {/* Connection Test Action */}
+                <div className="flex items-center justify-between pt-1 border-t border-[var(--border-subtle)]/60 mt-2">
+                  <button
+                    type="button"
+                    onClick={handleTestConnection}
+                    disabled={testState.status === 'testing'}
+                    className="px-3.5 py-1.5 rounded-lg bg-[var(--bg-well)] hover:bg-[var(--bg-card)] border border-[var(--border-subtle)] text-[11px] font-semibold text-[var(--text-bright)] flex items-center space-x-1.5 transition-all disabled:opacity-50 active:scale-95 cursor-pointer"
+                  >
+                    {testState.status === 'testing' ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-[var(--accent-primary)]" />
+                    ) : (
+                      <Activity className="w-3.5 h-3.5 text-[var(--accent-primary)]" />
+                    )}
+                    <span>{testState.status === 'testing' ? 'Testing Connection...' : 'Test Connection'}</span>
+                  </button>
+
+                  {testState.status === 'success' && (
+                    <div className="flex items-center space-x-1.5 text-[11px] font-medium text-emerald-400 font-mono">
+                      <CheckCircle className="w-3.5 h-3.5 shrink-0" />
+                      <span>{testState.message}</span>
+                    </div>
+                  )}
+
+                  {testState.status === 'error' && (
+                    <div className="flex items-center space-x-1.5 text-[11px] font-medium text-rose-400 font-mono">
+                      <XCircle className="w-3.5 h-3.5 shrink-0" />
+                      <span className="truncate max-w-[240px]" title={testState.message}>
+                        {testState.message}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
 

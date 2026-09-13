@@ -377,7 +377,17 @@ export const AgenticChat: React.FC = () => {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${adminToken}`,
       };
-      let targetModelName = 'auto';
+      let requestBody: any = {
+        model: 'auto',
+        messages: [
+          {
+            role: 'system',
+            content:
+              'You are GoalRoute Copilot, an expert AI routing agent. You analyze LLM capabilities, inspect provider quotas, solve latency constraints, and report MCP status cleanly.',
+          },
+          ...apiMessages,
+        ],
+      };
 
       if (engineConfig.mode === 'pool') {
         if (engineConfig.selectedPoolId && engineConfig.selectedPoolId !== 'auto') {
@@ -385,32 +395,26 @@ export const AgenticChat: React.FC = () => {
         }
       } else if (engineConfig.mode === 'model') {
         if (engineConfig.selectedModelName && engineConfig.selectedModelName !== 'auto') {
-          targetModelName = engineConfig.selectedModelName;
+          requestBody.model = engineConfig.selectedModelName;
         }
       } else if (engineConfig.mode === 'external') {
-        const cleanBase = (engineConfig.externalBaseUrl || 'http://localhost:11434/v1').replace(/\/+$/, '');
-        fetchUrl = cleanBase.endsWith('/chat/completions') ? cleanBase : `${cleanBase}/chat/completions`;
-        fetchHeaders = {
-          'Content-Type': 'application/json',
-          ...(engineConfig.externalApiKey ? { Authorization: `Bearer ${engineConfig.externalApiKey}` } : {}),
+        fetchUrl = '/api/v1/agent-engine/chat';
+        requestBody = {
+          ...requestBody,
+          model: engineConfig.externalModelName || 'default',
+          engineConfig: {
+            externalBaseUrl: engineConfig.externalBaseUrl,
+            externalApiKey: engineConfig.externalApiKey,
+            externalModelName: engineConfig.externalModelName,
+            externalProtocol: engineConfig.externalProtocol || 'auto',
+          },
         };
-        targetModelName = engineConfig.externalModelName || 'default';
       }
 
       const res = await fetch(fetchUrl, {
         method: 'POST',
         headers: fetchHeaders,
-        body: JSON.stringify({
-          model: targetModelName,
-          messages: [
-            {
-              role: 'system',
-              content:
-                'You are GoalRoute Copilot, an expert AI routing agent. You analyze LLM capabilities, inspect provider quotas, solve latency constraints, and report MCP status cleanly.',
-            },
-            ...apiMessages,
-          ],
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       if (!res.ok) {
