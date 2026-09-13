@@ -541,7 +541,7 @@ export const AgenticChat: React.FC = () => {
             >
               {/* Message Bubble */}
               <div
-                className={`max-w-[92%] rounded-2xl p-3.5 text-xs shadow-md transition-all relative ${
+                className={`max-w-[92%] rounded-2xl p-4 text-sm shadow-md transition-all relative ${
                   isUser
                     ? 'bg-[var(--accent-primary)] text-white rounded-br-none'
                     : 'bg-[var(--bg-card)] border border-[var(--border-subtle)] text-[var(--text-primary)] rounded-bl-none'
@@ -549,22 +549,22 @@ export const AgenticChat: React.FC = () => {
               >
                 {/* Visual Thinking Block */}
                 {!isUser && (msg.isThinking || msg.thinking) && (
-                  <div className="mb-2.5 rounded-xl bg-[var(--bg-well)] border border-[var(--border-subtle)] overflow-hidden">
+                  <div className="mb-3 rounded-xl bg-[var(--bg-well)] border border-[var(--border-subtle)] overflow-hidden">
                     <button
                       onClick={() =>
                         setExpandedThinks((prev) => ({ ...prev, [msg.id]: !isThinkExpanded }))
                       }
-                      className="w-full p-2 flex items-center justify-between text-[11px] font-mono text-[var(--accent-primary)] bg-[var(--bg-well)]/80 hover:bg-[var(--bg-card-active)] transition-colors"
+                      className="w-full p-2.5 flex items-center justify-between text-xs font-mono text-[var(--accent-primary)] bg-[var(--bg-well)]/80 hover:bg-[var(--bg-card-active)] transition-colors"
                     >
-                      <span className="flex items-center gap-1.5 font-semibold">
-                        <Brain className={`w-3.5 h-3.5 ${msg.isThinking ? 'animate-pulse text-[var(--signal-mint)]' : ''}`} />
+                      <span className="flex items-center gap-2 font-bold">
+                        <Brain className={`w-4 h-4 ${msg.isThinking ? 'animate-pulse text-[var(--signal-mint)]' : ''}`} />
                         {msg.isThinking ? 'Thinking...' : 'Reasoning Process'}
                       </span>
-                      {isThinkExpanded ? <ChevronDown className="w-3.5 h-3.5 text-[var(--text-muted)]" /> : <ChevronRight className="w-3.5 h-3.5 text-[var(--text-muted)]" />}
+                      {isThinkExpanded ? <ChevronDown className="w-4 h-4 text-[var(--text-muted)]" /> : <ChevronRight className="w-4 h-4 text-[var(--text-muted)]" />}
                     </button>
 
                     {(isThinkExpanded || msg.isThinking) && (
-                      <div className="p-2.5 text-[11px] font-mono text-[var(--text-secondary)] border-t border-[var(--border-subtle)] leading-relaxed whitespace-pre-wrap bg-slate-950/30">
+                      <div className="p-3 text-xs font-mono text-[var(--text-secondary)] border-t border-[var(--border-subtle)] leading-relaxed whitespace-pre-wrap bg-slate-950/30">
                         {msg.thinking || 'Evaluating routing policy, active pools, and quota budget...'}
                       </div>
                     )}
@@ -573,7 +573,7 @@ export const AgenticChat: React.FC = () => {
 
                 {/* Tool Calls Cards */}
                 {!isUser && msg.toolCalls && msg.toolCalls.length > 0 && (
-                  <div className="mb-2.5 space-y-2">
+                  <div className="mb-3 space-y-2">
                     {msg.toolCalls.map((tc) => {
                       const isToolExpanded = expandedTools[tc.id] ?? true;
                       return (
@@ -583,7 +583,7 @@ export const AgenticChat: React.FC = () => {
                         >
                           <div className="p-2.5 flex items-center justify-between text-xs bg-[var(--bg-card-active)]/50">
                             <div className="flex items-center space-x-2">
-                              <Wrench className="w-3.5 h-3.5 text-[var(--signal-mint)]" />
+                              <Wrench className="w-4 h-4 text-[var(--signal-mint)]" />
                               <span className="font-mono font-bold text-[var(--text-bright)]">
                                 {tc.name}
                               </span>
@@ -591,18 +591,18 @@ export const AgenticChat: React.FC = () => {
 
                             <div className="flex items-center space-x-2">
                               {tc.status === 'running' && (
-                                <span className="inline-flex items-center gap-1 text-[10px] font-mono text-[var(--signal-amber)] bg-[var(--signal-amber)]/10 border border-[var(--signal-amber)]/20 px-2 py-0.5 rounded-full">
-                                  <Loader2 className="w-3 h-3 animate-spin" /> Running
+                                <span className="inline-flex items-center gap-1 text-xs font-mono text-[var(--signal-amber)] bg-[var(--signal-amber)]/10 border border-[var(--signal-amber)]/20 px-2 py-0.5 rounded-full font-semibold">
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin" /> Running
                                 </span>
                               )}
                               {tc.status === 'success' && (
-                                <span className="inline-flex items-center gap-1 text-[10px] font-mono text-[var(--signal-mint)] bg-[var(--signal-mint)]/10 border border-[var(--signal-mint)]/20 px-2 py-0.5 rounded-full font-bold">
-                                  <Check className="w-3 h-3" /> Success
+                                <span className="inline-flex items-center gap-1 text-xs font-mono text-[var(--signal-mint)] bg-[var(--signal-mint)]/10 border border-[var(--signal-mint)]/20 px-2 py-0.5 rounded-full font-bold">
+                                  <Check className="w-3.5 h-3.5" /> Success
                                 </span>
                               )}
                               {tc.status === 'error' && (
-                                <span className="inline-flex items-center gap-1 text-[10px] font-mono text-[var(--signal-coral)] bg-[var(--signal-coral)]/10 border border-[var(--signal-coral)]/20 px-2 py-0.5 rounded-full font-bold">
-                                  <AlertCircle className="w-3 h-3" /> Error
+                                <span className="inline-flex items-center gap-1 text-xs font-mono text-[var(--signal-coral)] bg-[var(--signal-coral)]/10 border border-[var(--signal-coral)]/20 px-2 py-0.5 rounded-full font-bold">
+                                  <AlertCircle className="w-3.5 h-3.5" /> Error
                                 </span>
                               )}
                               <button
@@ -611,16 +611,16 @@ export const AgenticChat: React.FC = () => {
                                 }
                                 className="text-[var(--text-muted)] hover:text-[var(--text-bright)]"
                               >
-                                {isToolExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                                {isToolExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                               </button>
                             </div>
                           </div>
 
                           {isToolExpanded && (
-                            <div className="p-2.5 text-[11px] font-mono space-y-2 border-t border-[var(--border-subtle)] bg-slate-950/40">
+                            <div className="p-3 text-xs font-mono space-y-2 border-t border-[var(--border-subtle)] bg-slate-950/40">
                               {Object.keys(tc.args).length > 0 && (
                                 <div>
-                                  <div className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Arguments</div>
+                                  <div className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] font-semibold mb-1">Arguments</div>
                                   <pre className="p-2 rounded bg-[var(--bg-well)] text-[var(--text-secondary)] overflow-x-auto">
                                     {JSON.stringify(tc.args, null, 2)}
                                   </pre>
@@ -628,16 +628,16 @@ export const AgenticChat: React.FC = () => {
                               )}
                               {tc.result && (
                                 <div>
-                                  <div className="text-[9px] uppercase tracking-wider text-[var(--signal-mint)] mb-1">Execution Output</div>
-                                  <pre className="p-2 rounded bg-[var(--bg-well)] text-[var(--signal-mint)]/90 overflow-x-auto max-h-40">
+                                  <div className="text-[10px] uppercase tracking-wider text-[var(--signal-mint)] font-semibold mb-1">Execution Output</div>
+                                  <pre className="p-2.5 rounded bg-[var(--bg-well)] text-[var(--signal-mint)]/90 overflow-x-auto max-h-48 leading-relaxed">
                                     {typeof tc.result === 'string' ? tc.result : JSON.stringify(tc.result, null, 2)}
                                   </pre>
                                 </div>
                               )}
                               {tc.error && (
                                 <div>
-                                  <div className="text-[9px] uppercase tracking-wider text-[var(--signal-coral)] mb-1">Error Trace</div>
-                                  <div className="p-2 rounded bg-[var(--signal-coral)]/10 text-[var(--signal-coral)]">
+                                  <div className="text-[10px] uppercase tracking-wider text-[var(--signal-coral)] font-semibold mb-1">Error Trace</div>
+                                  <div className="p-2.5 rounded bg-[var(--signal-coral)]/10 text-[var(--signal-coral)] font-semibold">
                                     {tc.error}
                                   </div>
                                 </div>
@@ -652,38 +652,38 @@ export const AgenticChat: React.FC = () => {
 
                 {/* Main Content / Edit Input */}
                 {isEditing ? (
-                  <div className="space-y-2 min-w-[240px]">
+                  <div className="space-y-2 min-w-[260px]">
                     <textarea
                       value={editMsgDraft}
                       onChange={(e) => setEditMsgDraft(e.target.value)}
-                      className="w-full p-2 bg-[var(--bg-well)] border border-[var(--accent-primary)] text-xs text-[var(--text-bright)] rounded-lg focus:outline-none resize-none font-sans"
+                      className="w-full p-2.5 bg-[var(--bg-well)] border border-[var(--accent-primary)] text-sm text-[var(--text-bright)] rounded-lg focus:outline-none resize-none font-sans leading-relaxed"
                       rows={3}
                     />
                     <div className="flex justify-end space-x-2">
                       <button
                         onClick={() => setEditingMsgId(null)}
-                        className="px-2.5 py-1 rounded text-[11px] font-semibold text-[var(--text-muted)] hover:text-[var(--text-bright)]"
+                        className="px-3 py-1 rounded text-xs font-semibold text-[var(--text-muted)] hover:text-[var(--text-bright)]"
                       >
                         Cancel
                       </button>
                       <button
                         onClick={() => handleSaveEditMessage(msg.id)}
-                        className="px-3 py-1 rounded bg-[var(--accent-primary)] text-slate-950 font-bold text-[11px]"
+                        className="px-3.5 py-1.5 rounded bg-[var(--accent-primary)] text-slate-950 font-bold text-xs"
                       >
                         Save &amp; Submit
                       </button>
                     </div>
                   </div>
                 ) : (
-                  <div className="leading-relaxed whitespace-pre-wrap font-sans">
+                  <div className="text-sm leading-relaxed whitespace-pre-wrap font-sans font-normal">
                     {msg.content}
                   </div>
                 )}
 
                 {/* Timestamp */}
                 <div
-                  className={`text-[9px] font-mono mt-1 text-right ${
-                    isUser ? 'text-white/70' : 'text-[var(--text-muted)]'
+                  className={`text-[11px] font-mono mt-1.5 text-right ${
+                    isUser ? 'text-white/80' : 'text-[var(--text-muted)]'
                   }`}
                 >
                   {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -702,7 +702,7 @@ export const AgenticChat: React.FC = () => {
                     className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--text-bright)] hover:bg-[var(--bg-card-active)] transition-colors"
                     title="Copy message"
                   >
-                    {isCopied ? <Check className="w-3 h-3 text-[var(--signal-mint)]" /> : <Copy className="w-3 h-3" />}
+                    {isCopied ? <Check className="w-3.5 h-3.5 text-[var(--signal-mint)]" /> : <Copy className="w-3.5 h-3.5" />}
                   </button>
 
                   {isUser && (
@@ -711,7 +711,7 @@ export const AgenticChat: React.FC = () => {
                       className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--text-bright)] hover:bg-[var(--bg-card-active)] transition-colors"
                       title="Edit message"
                     >
-                      <Edit2 className="w-3 h-3" />
+                      <Edit2 className="w-3.5 h-3.5" />
                     </button>
                   )}
 
@@ -720,7 +720,7 @@ export const AgenticChat: React.FC = () => {
                     className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--signal-coral)] hover:bg-[var(--bg-card-active)] transition-colors"
                     title="Delete message"
                   >
-                    <Trash2 className="w-3 h-3" />
+                    <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 </div>
               )}
@@ -753,21 +753,21 @@ export const AgenticChat: React.FC = () => {
             placeholder="Ask agent copilot or query MCP tools..."
             disabled={isProcessing}
             autoFocus
-            className="w-full pr-12 pl-3 py-2.5 bg-[var(--bg-well)] border border-[var(--border-subtle)] focus:border-[var(--accent-primary)] text-xs text-[var(--text-bright)] rounded-xl focus:outline-none resize-none transition-all custom-scrollbar leading-relaxed"
-            style={{ minHeight: '44px', maxHeight: '180px' }}
+            className="w-full pr-12 pl-3.5 py-3 bg-[var(--bg-well)] border border-[var(--border-subtle)] focus:border-[var(--accent-primary)] text-sm text-[var(--text-bright)] rounded-xl focus:outline-none resize-none transition-all custom-scrollbar leading-relaxed font-sans"
+            style={{ minHeight: '48px', maxHeight: '200px' }}
           />
           <button
             type="submit"
             disabled={!inputText.trim() || isProcessing}
-            className="absolute right-2 bottom-2 p-2 rounded-lg bg-[var(--accent-primary)] hover:bg-[var(--accent-primary-hover)] text-slate-950 font-bold disabled:opacity-40 transition-all shadow-md active:scale-95"
+            className="absolute right-2 bottom-2.5 p-2 rounded-lg bg-[var(--accent-primary)] hover:bg-[var(--accent-primary-hover)] text-slate-950 font-bold disabled:opacity-40 transition-all shadow-md active:scale-95"
           >
             {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
           </button>
         </form>
 
-        <div className="flex items-center justify-between text-[10px] text-[var(--text-muted)] font-mono px-1">
+        <div className="flex items-center justify-between text-xs text-[var(--text-muted)] font-mono px-1">
           <span>Press Enter to send • Shift+Enter for new line</span>
-          <span className="text-[var(--signal-mint)]">MCP Active</span>
+          <span className="text-[var(--signal-mint)] font-semibold">MCP Active</span>
         </div>
       </div>
 

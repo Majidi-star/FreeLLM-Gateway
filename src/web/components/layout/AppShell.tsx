@@ -105,8 +105,8 @@ export const AppShell: React.FC = () => {
 
             {/* Active Workspace Switcher */}
             <div className="bg-[var(--bg-well)] p-2.5 rounded-xl border border-[var(--border-subtle)] text-xs space-y-1">
-              <div className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider font-semibold">Active Workspace</div>
-              <div className="font-bold text-[var(--text-primary)] truncate font-mono" dir="ltr">FreeLLM-Gateway</div>
+              <div className="text-xs text-[var(--text-muted)] uppercase tracking-wider font-bold">Active Workspace</div>
+              <div className="font-bold text-sm text-[var(--text-primary)] truncate font-mono" dir="ltr">FreeLLM-Gateway</div>
             </div>
           </div>
 
@@ -114,100 +114,100 @@ export const AppShell: React.FC = () => {
           <nav className="space-y-1.5">
             <button
               onClick={() => setActiveTab('cockpit')}
-              className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+              className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all ${
                 activeTab === 'cockpit'
                   ? 'bg-[var(--bg-card-active)] text-[var(--text-primary)] border border-[var(--border-hover)] shadow-md'
                   : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)]'
               }`}
             >
-              <LayoutDashboard className="w-4 h-4 shrink-0" />
+              <LayoutDashboard className="w-4.5 h-4.5 shrink-0" />
               <span>Cockpit Dashboard</span>
             </button>
 
             <button
               onClick={() => setActiveTab('vault')}
-              className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+              className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all ${
                 activeTab === 'vault'
                   ? 'bg-[var(--bg-card-active)] text-[var(--text-primary)] border border-[var(--border-hover)] shadow-md'
                   : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)]'
               }`}
             >
-              <Key className="w-4 h-4 shrink-0" />
+              <Key className="w-4.5 h-4.5 shrink-0" />
               <span>Credential Vault</span>
             </button>
 
             <button
               onClick={() => setActiveTab('bridge')}
-              className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+              className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all ${
                 activeTab === 'bridge'
                   ? 'bg-[var(--bg-card-active)] text-[var(--text-primary)] border border-[var(--border-hover)] shadow-md'
                   : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)]'
               }`}
             >
-              <Zap className="w-4 h-4 shrink-0" />
+              <Zap className="w-4.5 h-4.5 shrink-0" />
               <span>Agent Bridge</span>
             </button>
 
             <button
               onClick={() => setIsGoalStudioOpen(true)}
-              className="w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)] transition-all cursor-pointer"
+              className="w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)] transition-all cursor-pointer"
             >
-              <Sparkles className="w-4 h-4 shrink-0" />
+              <Sparkles className="w-4.5 h-4.5 shrink-0" />
               <span>Goal Studio</span>
             </button>
 
             <button
               onClick={() => setActiveTab('settings')}
-              className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+              className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all ${
                 activeTab === 'settings'
                   ? 'bg-[var(--bg-card-active)] text-[var(--text-primary)] border border-[var(--border-hover)] shadow-md'
                   : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)]'
               }`}
             >
-              <Palette className="w-4 h-4 shrink-0" />
+              <Palette className="w-4.5 h-4.5 shrink-0" />
               <span>Settings Studio</span>
             </button>
           </nav>
 
-          {/* System & Telemetry Monitor Section (Relocated from right panel, formatted as distinct cards) */}
+          {/* System & Telemetry Monitor Section */}
           <div className="pt-3 border-t border-[var(--border-subtle)] space-y-3">
-            <div className="text-[10px] font-mono uppercase tracking-wider text-[var(--text-muted)] px-1 font-semibold flex items-center justify-between">
+            <div className="text-xs font-mono uppercase tracking-wider text-[var(--text-muted)] px-1 font-bold flex items-center justify-between">
               <span>Telemetry Monitor</span>
               <span className="w-2 h-2 rounded-full bg-[var(--signal-mint)] animate-pulse" />
             </div>
 
             {/* Route Advisor Card */}
             <div className="p-3 rounded-xl bg-[var(--bg-well)] border border-[var(--border-subtle)] space-y-1.5 shadow-inner">
-              <div className="flex items-center justify-between text-[11px] text-[var(--accent-primary)] font-semibold">
-                <span className="flex items-center gap-1">
-                  <Activity className="w-3 h-3 text-[var(--signal-mint)]" />
+              <div className="flex items-center justify-between text-xs text-[var(--accent-primary)] font-bold">
+                <span className="flex items-center gap-1.5">
+                  <Activity className="w-3.5 h-3.5 text-[var(--signal-mint)]" />
                   Advisor
                 </span>
-                <span className="text-[9px] font-mono bg-[var(--signal-mint)]/10 text-[var(--signal-mint)] px-1.5 py-0.5 rounded">LIVE</span>
+                <span className="text-[10px] font-mono bg-[var(--signal-mint)]/10 text-[var(--signal-mint)] px-2 py-0.5 rounded font-bold">LIVE</span>
               </div>
-              <p className="text-[11px] text-[var(--text-secondary)] leading-snug">
+              <p className="text-xs text-[var(--text-secondary)] leading-relaxed font-sans font-medium">
                 "{conciergeMsg}"
               </p>
             </div>
 
             {/* Stream Feed Snapshot */}
-            <div className="space-y-1.5">
-              <div className="p-2.5 rounded-xl bg-[var(--bg-well)] border border-[var(--border-subtle)] text-[11px] space-y-1">
-                <div className="flex justify-between text-[9px] text-[var(--text-muted)] font-mono" dir="ltr">
+            <div className="space-y-2">
+              <div className="p-3 rounded-xl bg-[var(--bg-well)] border border-[var(--border-subtle)] text-xs space-y-1">
+                <div className="flex justify-between text-[11px] text-[var(--text-muted)] font-mono" dir="ltr">
                   <span>TR-94A20F18</span>
-                  <span className="text-[var(--signal-mint)]">42ms</span>
+                  <span className="text-[var(--signal-mint)] font-bold">42ms</span>
                 </div>
-                <div className="font-semibold text-[var(--text-primary)] truncate" dir="ltr">DeepSeek-R1</div>
-                <div className="text-[10px] text-[var(--text-muted)]">Greedy Set-Cover code route.</div>
+                <div className="font-bold text-xs text-[var(--text-primary)] truncate" dir="ltr">DeepSeek-R1</div>
+                <div className="text-xs text-[var(--text-secondary)]">Greedy Set-Cover code route.</div>
               </div>
 
-              <div className="p-2.5 rounded-xl bg-[var(--bg-well)] border border-[var(--border-subtle)] text-[11px] space-y-1">
-                <div className="flex justify-between text-[9px] text-[var(--text-muted)] font-mono" dir="ltr">
+              <div className="p-3 rounded-xl bg-[var(--bg-well)] border border-[var(--border-subtle)] text-xs space-y-1">
+                <div className="flex justify-between text-[11px] text-[var(--text-muted)] font-mono" dir="ltr">
                   <span>TR-88C11B02</span>
-                  <span className="text-[var(--signal-mint)]">85ms</span>
+                  <span className="text-[var(--signal-mint)] font-bold">85ms</span>
                 </div>
-                <div className="font-semibold text-[var(--text-primary)] truncate" dir="ltr">Gemini 2.5 Flash</div>
-                <div className="text-[10px] text-[var(--text-muted)]">Zero-cost throughput route.</div>
+                <div className="font-bold text-xs text-[var(--text-primary)] truncate" dir="ltr">Gemini 2.5 Flash</div>
+                <div className="text-xs text-[var(--text-secondary)]">Zero-cost throughput route.</div>
               </div>
             </div>
           </div>
@@ -217,11 +217,11 @@ export const AppShell: React.FC = () => {
         {/* Left Rail Footer: System Health & Profile */}
         <div className="space-y-3 pt-3 border-t border-[var(--border-subtle)] mt-4">
           <div className="bg-[var(--bg-well)] p-2.5 rounded-xl border border-[var(--border-subtle)] space-y-1">
-            <div className="flex items-center justify-between text-[11px]">
-              <span className="text-[var(--text-muted)] font-medium">Engine SLA</span>
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-[var(--text-muted)] font-semibold">Engine SLA</span>
               <span className="text-[var(--signal-mint)] font-mono font-bold">100%</span>
             </div>
-            <div className="text-[10px] text-[var(--text-secondary)]">
+            <div className="text-xs text-[var(--text-secondary)]">
               {activeKeys !== null
                 ? `${activeKeys} / ${activeKeys} Free Enclave Keys`
                 : 'Loading enclave keys…'}
@@ -229,12 +229,12 @@ export const AppShell: React.FC = () => {
           </div>
 
           <div className="flex items-center space-x-2.5 px-2">
-            <div className="w-7 h-7 rounded-full bg-[var(--bg-card-active)] border border-[var(--border-hover)] flex items-center justify-center font-bold text-xs text-[var(--accent-primary)]">
+            <div className="w-8 h-8 rounded-full bg-[var(--bg-card-active)] border border-[var(--border-hover)] flex items-center justify-center font-bold text-xs text-[var(--accent-primary)]">
               DEV
             </div>
             <div className="truncate">
               <div className="text-xs font-bold text-[var(--text-primary)] truncate">Developer Station</div>
-              <div className="text-[10px] text-[var(--text-muted)] truncate">Local Workstation</div>
+              <div className="text-xs text-[var(--text-muted)] truncate">Local Workstation</div>
             </div>
           </div>
         </div>
