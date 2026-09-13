@@ -310,7 +310,7 @@ export const GoalStudioModal: React.FC<GoalStudioModalProps> = ({ isOpen, onClos
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-md p-3 sm:p-4 overflow-y-auto">
-      <div className="relative w-full max-w-3xl max-h-[92vh] flex flex-col bg-[var(--bg-card)] border border-[var(--border-subtle)] rounded-[24px] shadow-2xl overflow-hidden text-slate-100 animate-in fade-in zoom-in duration-200">
+      <div className="relative w-full max-w-3xl max-h-[92vh] flex flex-col bg-[var(--bg-card)] border border-[var(--border-subtle)] rounded-[24px] shadow-2xl overflow-hidden text-[var(--text-primary)] animate-in fade-in zoom-in duration-200">
         
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-[var(--border-subtle)] bg-[var(--bg-card)] sticky top-0 z-10">
@@ -428,8 +428,8 @@ export const GoalStudioModal: React.FC<GoalStudioModalProps> = ({ isOpen, onClos
                     }}
                     className={`px-2.5 py-1 rounded-lg text-[11px] font-mono font-medium transition-all ${
                       taskType === t.id
-                        ? 'bg-[var(--accent-primary)] text-slate-950 shadow-sm font-semibold'
-                        : 'bg-slate-900/60 text-[var(--text-secondary)] hover:bg-slate-800'
+                        ? 'bg-[var(--accent-primary)] text-white shadow-sm font-semibold'
+                        : 'bg-[var(--bg-card-active)] text-[var(--text-secondary)] hover:text-[var(--text-bright)] border border-[var(--border-subtle)]'
                     }`}
                   >
                     {t.label}
@@ -464,7 +464,7 @@ export const GoalStudioModal: React.FC<GoalStudioModalProps> = ({ isOpen, onClos
                     setTargetTokensPerDay(Number(e.target.value));
                     setSelectedIntent('custom');
                   }}
-                  className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-[var(--accent-primary)]"
+                  className="w-full h-1.5 bg-[var(--bg-card-active)] rounded-lg appearance-none cursor-pointer accent-[var(--accent-primary)]"
                 />
                 <div className="flex justify-between text-[10px] text-[var(--text-muted)] font-mono">
                   <span>500k</span>
@@ -491,7 +491,7 @@ export const GoalStudioModal: React.FC<GoalStudioModalProps> = ({ isOpen, onClos
                     setTargetRequestsPerDay(Number(e.target.value));
                     setSelectedIntent('custom');
                   }}
-                  className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-[var(--signal-mint)]"
+                  className="w-full h-1.5 bg-[var(--bg-card-active)] rounded-lg appearance-none cursor-pointer accent-[var(--signal-mint)]"
                 />
                 <div className="flex justify-between text-[10px] text-[var(--text-muted)] font-mono">
                   <span>500</span>
@@ -518,7 +518,7 @@ export const GoalStudioModal: React.FC<GoalStudioModalProps> = ({ isOpen, onClos
                     setSafetyMarginPct(Number(e.target.value));
                     setSelectedIntent('custom');
                   }}
-                  className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-[var(--signal-amber)]"
+                  className="w-full h-1.5 bg-[var(--bg-card-active)] rounded-lg appearance-none cursor-pointer accent-[var(--signal-amber)]"
                 />
                 <div className="text-[10px] text-[var(--text-muted)] font-mono text-right">
                   Target + Headroom: {(effectiveTargetTokens / 1000000).toFixed(2)}M tokens
@@ -543,7 +543,7 @@ export const GoalStudioModal: React.FC<GoalStudioModalProps> = ({ isOpen, onClos
                   </span>
                   <span className="text-[10px] font-mono text-[var(--text-muted)]">{exhaustionPref}</span>
                 </div>
-                <div className="grid grid-cols-2 gap-2 p-1 bg-slate-900 rounded-xl border border-slate-800">
+                <div className="grid grid-cols-2 gap-2 p-1 bg-[var(--bg-card-active)] rounded-xl border border-[var(--border-subtle)]">
                   <button
                     type="button"
                     onClick={() => {
@@ -552,8 +552,8 @@ export const GoalStudioModal: React.FC<GoalStudioModalProps> = ({ isOpen, onClos
                     }}
                     className={`px-3 py-2 rounded-lg text-xs font-medium transition-all text-center ${
                       exhaustionPref === 'fill_first'
-                        ? 'bg-[var(--accent-primary)] text-slate-950 font-bold shadow-md'
-                        : 'text-[var(--text-secondary)] hover:text-white'
+                        ? 'bg-[var(--accent-primary)] text-white font-bold shadow-md'
+                        : 'text-[var(--text-secondary)] hover:text-[var(--text-bright)]'
                     }`}
                   >
                     Drain Free First
@@ -566,8 +566,8 @@ export const GoalStudioModal: React.FC<GoalStudioModalProps> = ({ isOpen, onClos
                     }}
                     className={`px-3 py-2 rounded-lg text-xs font-medium transition-all text-center ${
                       exhaustionPref === 'preserve_backup'
-                        ? 'bg-[var(--accent-primary)] text-slate-950 font-bold shadow-md'
-                        : 'text-[var(--text-secondary)] hover:text-white'
+                        ? 'bg-[var(--accent-primary)] text-white font-bold shadow-md'
+                        : 'text-[var(--text-secondary)] hover:text-[var(--text-bright)]'
                     }`}
                   >
                     Balance & Preserve
@@ -589,7 +589,7 @@ export const GoalStudioModal: React.FC<GoalStudioModalProps> = ({ isOpen, onClos
                   </span>
                   <span className="text-[10px] font-mono text-[var(--text-muted)]">{reliabilityPref}</span>
                 </div>
-                <div className="grid grid-cols-2 gap-2 p-1 bg-slate-900 rounded-xl border border-slate-800">
+                <div className="grid grid-cols-2 gap-2 p-1 bg-[var(--bg-card-active)] rounded-xl border border-[var(--border-subtle)]">
                   <button
                     type="button"
                     onClick={() => {
@@ -598,8 +598,8 @@ export const GoalStudioModal: React.FC<GoalStudioModalProps> = ({ isOpen, onClos
                     }}
                     className={`px-3 py-2 rounded-lg text-xs font-medium transition-all text-center ${
                       reliabilityPref === 'standard'
-                        ? 'bg-[var(--signal-mint)] text-slate-950 font-bold shadow-md'
-                        : 'text-[var(--text-secondary)] hover:text-white'
+                        ? 'bg-[var(--signal-mint)] text-[var(--bg-obsidian)] font-bold shadow-md'
+                        : 'text-[var(--text-secondary)] hover:text-[var(--text-bright)]'
                     }`}
                   >
                     Standard Single
@@ -612,8 +612,8 @@ export const GoalStudioModal: React.FC<GoalStudioModalProps> = ({ isOpen, onClos
                     }}
                     className={`px-3 py-2 rounded-lg text-xs font-medium transition-all text-center ${
                       reliabilityPref === 'maximum'
-                        ? 'bg-[var(--signal-amber)] text-slate-950 font-bold shadow-md'
-                        : 'text-[var(--text-secondary)] hover:text-white'
+                        ? 'bg-[var(--signal-amber)] text-[var(--bg-obsidian)] font-bold shadow-md'
+                        : 'text-[var(--text-secondary)] hover:text-[var(--text-bright)]'
                     }`}
                   >
                     Maximum Redundant
@@ -639,7 +639,7 @@ export const GoalStudioModal: React.FC<GoalStudioModalProps> = ({ isOpen, onClos
                 </span>
               </div>
 
-              <div className="grid grid-cols-3 gap-2 p-1 bg-slate-900 rounded-xl border border-slate-800">
+              <div className="grid grid-cols-3 gap-2 p-1 bg-[var(--bg-card-active)] rounded-xl border border-[var(--border-subtle)]">
                 <button
                   type="button"
                   onClick={() => {
@@ -648,8 +648,8 @@ export const GoalStudioModal: React.FC<GoalStudioModalProps> = ({ isOpen, onClos
                   }}
                   className={`px-3 py-2 rounded-lg text-xs font-medium transition-all text-center ${
                     budgetPref === 'free'
-                      ? 'bg-[var(--signal-mint)] text-slate-950 font-bold shadow-md'
-                      : 'text-[var(--text-secondary)] hover:text-white'
+                      ? 'bg-[var(--signal-mint)] text-[var(--bg-obsidian)] font-bold shadow-md'
+                      : 'text-[var(--text-secondary)] hover:text-[var(--text-bright)]'
                   }`}
                 >
                   Free Only ($0.00)
@@ -662,8 +662,8 @@ export const GoalStudioModal: React.FC<GoalStudioModalProps> = ({ isOpen, onClos
                   }}
                   className={`px-3 py-2 rounded-lg text-xs font-medium transition-all text-center ${
                     budgetPref === 'capped'
-                      ? 'bg-[var(--signal-amber)] text-slate-950 font-bold shadow-md'
-                      : 'text-[var(--text-secondary)] hover:text-white'
+                      ? 'bg-[var(--signal-amber)] text-[var(--bg-obsidian)] font-bold shadow-md'
+                      : 'text-[var(--text-secondary)] hover:text-[var(--text-bright)]'
                   }`}
                 >
                   Capped Paid Fallback
@@ -676,8 +676,8 @@ export const GoalStudioModal: React.FC<GoalStudioModalProps> = ({ isOpen, onClos
                   }}
                   className={`px-3 py-2 rounded-lg text-xs font-medium transition-all text-center ${
                     budgetPref === 'unlimited'
-                      ? 'bg-purple-400 text-slate-950 font-bold shadow-md'
-                      : 'text-[var(--text-secondary)] hover:text-white'
+                      ? 'bg-purple-500 text-white font-bold shadow-md'
+                      : 'text-[var(--text-secondary)] hover:text-[var(--text-bright)]'
                   }`}
                 >
                   Unlimited Paid
@@ -695,7 +695,7 @@ export const GoalStudioModal: React.FC<GoalStudioModalProps> = ({ isOpen, onClos
                       max="1000"
                       value={budgetCapUsdMonthly}
                       onChange={(e) => setBudgetCapUsdMonthly(Number(e.target.value))}
-                      className="w-full pl-7 pr-3 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs font-mono text-[var(--text-bright)] focus:border-[var(--accent-primary)] outline-none"
+                      className="w-full pl-7 pr-3 py-1.5 bg-[var(--bg-card-active)] border border-[var(--border-subtle)] rounded-lg text-xs font-mono text-[var(--text-bright)] focus:border-[var(--accent-primary)] outline-none"
                     />
                   </div>
                   <span className="text-[11px] text-[var(--text-muted)]">Monthly budget limit</span>
@@ -709,7 +709,7 @@ export const GoalStudioModal: React.FC<GoalStudioModalProps> = ({ isOpen, onClos
           <div className="p-4 rounded-2xl bg-[var(--bg-rail)] border border-[var(--border-subtle)] space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[var(--border-subtle)] pb-3">
               <div className="flex items-center space-x-2">
-                <ShieldCheck className={`w-5 h-5 ${solvePlan?.feasible ? 'text-[var(--signal-mint)]' : 'text-amber-400'}`} />
+                <ShieldCheck className={`w-5 h-5 ${solvePlan?.feasible ? 'text-[var(--signal-mint)]' : 'text-[var(--signal-amber)]'}`} />
                 <div>
                   <div className="font-semibold text-xs text-[var(--text-bright)] flex items-center gap-2">
                     <span>Greedy Set-Cover Dynamic Receipt</span>
@@ -727,7 +727,7 @@ export const GoalStudioModal: React.FC<GoalStudioModalProps> = ({ isOpen, onClos
                     <Check className="w-3.5 h-3.5" /> 100% COVERAGE GUARANTEE
                   </span>
                 ) : (
-                  <span className="text-[11px] text-amber-400 bg-amber-400/10 px-2.5 py-1 rounded-lg font-mono border border-amber-400/30 font-bold flex items-center gap-1">
+                  <span className="text-[11px] text-[var(--signal-amber)] bg-[var(--signal-amber)]/10 px-2.5 py-1 rounded-lg font-mono border border-[var(--signal-amber)]/30 font-bold flex items-center gap-1">
                     <AlertTriangle className="w-3.5 h-3.5" /> CAPACITY SHORTFALL
                   </span>
                 )}
@@ -740,13 +740,13 @@ export const GoalStudioModal: React.FC<GoalStudioModalProps> = ({ isOpen, onClos
               <div className="space-y-1.5">
                 <div className="flex justify-between text-[11px] font-mono">
                   <span className="text-[var(--text-secondary)]">Token Capacity Coverage</span>
-                  <span className={`font-bold ${tokenCoveragePct >= 100 ? 'text-[var(--signal-mint)]' : 'text-amber-400'}`}>
+                  <span className={`font-bold ${tokenCoveragePct >= 100 ? 'text-[var(--signal-mint)]' : 'text-[var(--signal-amber)]'}`}>
                     {tokenCoveragePct}% ({((solvePlan?.projectedDailyTokenCapacity || 0) / 1000000).toFixed(2)}M / {(effectiveTargetTokens / 1000000).toFixed(2)}M)
                   </span>
                 </div>
-                <div className="h-2 w-full bg-slate-900 rounded-full overflow-hidden border border-slate-800">
+                <div className="h-2 w-full bg-[var(--bg-card-active)] rounded-full overflow-hidden border border-[var(--border-subtle)]">
                   <div
-                    className={`h-full transition-all duration-300 ${tokenCoveragePct >= 100 ? 'bg-[var(--signal-mint)]' : 'bg-amber-400'}`}
+                    className={`h-full transition-all duration-300 ${tokenCoveragePct >= 100 ? 'bg-[var(--signal-mint)]' : 'bg-[var(--signal-amber)]'}`}
                     style={{ width: `${tokenCoveragePct}%` }}
                   />
                 </div>
@@ -756,13 +756,13 @@ export const GoalStudioModal: React.FC<GoalStudioModalProps> = ({ isOpen, onClos
               <div className="space-y-1.5">
                 <div className="flex justify-between text-[11px] font-mono">
                   <span className="text-[var(--text-secondary)]">Request Capacity Coverage</span>
-                  <span className={`font-bold ${requestCoveragePct >= 100 ? 'text-[var(--signal-mint)]' : 'text-amber-400'}`}>
+                  <span className={`font-bold ${requestCoveragePct >= 100 ? 'text-[var(--signal-mint)]' : 'text-[var(--signal-amber)]'}`}>
                     {requestCoveragePct}% ({((solvePlan?.projectedDailyRequestCapacity || 0)).toLocaleString()} / {effectiveTargetRequests.toLocaleString()})
                   </span>
                 </div>
-                <div className="h-2 w-full bg-slate-900 rounded-full overflow-hidden border border-slate-800">
+                <div className="h-2 w-full bg-[var(--bg-card-active)] rounded-full overflow-hidden border border-[var(--border-subtle)]">
                   <div
-                    className={`h-full transition-all duration-300 ${requestCoveragePct >= 100 ? 'bg-[var(--signal-mint)]' : 'bg-amber-400'}`}
+                    className={`h-full transition-all duration-300 ${requestCoveragePct >= 100 ? 'bg-[var(--signal-mint)]' : 'bg-[var(--signal-amber)]'}`}
                     style={{ width: `${requestCoveragePct}%` }}
                   />
                 </div>
@@ -779,12 +779,12 @@ export const GoalStudioModal: React.FC<GoalStudioModalProps> = ({ isOpen, onClos
                   {solvePlan.steps.map((step, idx) => (
                     <div
                       key={idx}
-                      className="px-2.5 py-1 rounded-lg bg-slate-900/80 border border-slate-800 text-[11px] font-mono flex items-center space-x-1.5"
+                      className="px-2.5 py-1 rounded-lg bg-[var(--bg-card-active)] border border-[var(--border-subtle)] text-[11px] font-mono flex items-center space-x-1.5"
                     >
                       <span className={`w-2 h-2 rounded-full ${step.role === 'primary' ? 'bg-[var(--signal-mint)]' : 'bg-sky-400'}`} />
                       <span className="text-[var(--text-bright)] font-semibold">{step.candidate.providerDisplayName}</span>
                       <span className="text-[var(--text-muted)]">({step.candidate.modelDisplayName})</span>
-                      <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-[var(--text-secondary)]">{step.role}</span>
+                      <span className="text-[10px] px-1.5 py-0.2 rounded bg-[var(--bg-well)] text-[var(--text-secondary)]">{step.role}</span>
                     </div>
                   ))}
                 </div>
@@ -793,16 +793,16 @@ export const GoalStudioModal: React.FC<GoalStudioModalProps> = ({ isOpen, onClos
 
             {/* Paid Gap Suggestion Card */}
             {solvePlan && !solvePlan.feasible && solvePlan.gapSuggestion && (
-              <div className="p-3.5 rounded-xl bg-amber-950/30 border border-amber-500/40 space-y-2 text-xs">
-                <div className="flex items-center space-x-2 text-amber-400 font-semibold">
+              <div className="p-3.5 rounded-xl bg-[var(--signal-amber)]/10 border border-[var(--signal-amber)]/30 space-y-2 text-xs">
+                <div className="flex items-center space-x-2 text-[var(--signal-amber)] font-semibold">
                   <TrendingUp className="w-4 h-4" />
                   <span>Solver Capacity Gap Suggestion:</span>
                 </div>
-                <p className="text-[11px] text-amber-200/90 leading-relaxed">
+                <p className="text-[11px] text-[var(--text-primary)] leading-relaxed">
                   {solvePlan.gapSuggestion.reason}
                 </p>
                 <div className="flex items-center justify-between pt-1">
-                  <span className="text-[11px] font-mono text-amber-300">
+                  <span className="text-[11px] font-mono text-[var(--signal-amber)] font-bold">
                     Est. Cost: ${solvePlan.gapSuggestion.estimatedMonthlyCostUsd.toFixed(2)}/mo
                   </span>
                   <button
@@ -811,7 +811,7 @@ export const GoalStudioModal: React.FC<GoalStudioModalProps> = ({ isOpen, onClos
                       setBudgetPref('capped');
                       setSelectedIntent('custom');
                     }}
-                    className="px-3 py-1 rounded-lg bg-[var(--signal-amber)] hover:opacity-90 text-slate-950 font-bold text-[11px] transition-all"
+                    className="px-3 py-1 rounded-lg bg-[var(--signal-amber)] hover:opacity-90 text-[var(--bg-obsidian)] font-bold text-[11px] transition-all"
                   >
                     Enable Capped Paid Fallback
                   </button>
@@ -831,10 +831,10 @@ export const GoalStudioModal: React.FC<GoalStudioModalProps> = ({ isOpen, onClos
                   <span>{showTrace ? 'Hide' : 'View'} Solver Decision Trace ({solvePlan.decisionTrace.length} steps)</span>
                 </button>
                 {showTrace && (
-                  <div className="mt-2 p-3 bg-slate-950 rounded-xl border border-slate-800 max-h-36 overflow-y-auto font-mono text-[10px] text-slate-300 space-y-1">
+                  <div className="mt-2 p-3 bg-[var(--bg-well)] rounded-xl border border-[var(--border-subtle)] max-h-36 overflow-y-auto font-mono text-[10px] text-[var(--text-primary)] space-y-1">
                     {solvePlan.decisionTrace.map((log, i) => (
-                      <div key={i} className="leading-snug text-slate-400">
-                        <span className="text-slate-600 mr-2">#{i + 1}</span>
+                      <div key={i} className="leading-snug text-[var(--text-secondary)]">
+                        <span className="text-[var(--text-muted)] mr-2">#{i + 1}</span>
                         {log}
                       </div>
                     ))}
@@ -863,7 +863,7 @@ export const GoalStudioModal: React.FC<GoalStudioModalProps> = ({ isOpen, onClos
             type="button"
             onClick={handleSave}
             disabled={isSaving}
-            className="px-6 py-2.5 rounded-xl text-xs font-semibold bg-[var(--accent-primary)] hover:bg-[var(--accent-primary-hover)] text-slate-950 flex items-center space-x-2 transition-all shadow-lg shadow-[var(--accent-primary)]/20 active:scale-95 disabled:opacity-50"
+            className="px-6 py-2.5 rounded-xl text-xs font-semibold bg-[var(--accent-primary)] hover:bg-[var(--accent-primary-hover)] text-white flex items-center space-x-2 transition-all shadow-lg shadow-[var(--accent-primary)]/20 active:scale-95 disabled:opacity-50"
           >
             {applied ? (
               <>
