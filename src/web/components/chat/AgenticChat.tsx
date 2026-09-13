@@ -19,9 +19,13 @@ import {
   Terminal,
   ShieldCheck,
   X,
+  Sliders,
+  Cpu,
+  Globe,
 } from 'lucide-react';
 import { sanitizeForClipboard } from '../../utils/clipboardSanitizer.js';
 import { ChatHistoryDrawer, ChatSession } from './ChatHistoryDrawer.js';
+import { AgentEngineModal, AgentEngineConfig, DEFAULT_ENGINE_CONFIG } from './AgentEngineModal.js';
 
 export interface ToolCallState {
   id: string;
@@ -44,6 +48,7 @@ export interface ChatMessage {
 
 const STORAGE_SESSIONS_KEY = 'goalroute_chat_sessions_v1';
 const STORAGE_MESSAGES_KEY_PREFIX = 'goalroute_chat_msgs_v1_';
+const STORAGE_ENGINE_CONFIG_KEY = 'goalroute_agent_engine_config_v1';
 
 export const AgenticChat: React.FC = () => {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
@@ -52,7 +57,24 @@ export const AgenticChat: React.FC = () => {
   const [inputText, setInputText] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isHistoryDrawerOpen, setIsHistoryDrawerOpen] = useState(false);
+  const [isEngineModalOpen, setIsEngineModalOpen] = useState(false);
   const [availableTools, setAvailableTools] = useState<Array<{ name: string; description: string; inputSchema: any }>>([]);
+
+  // Engine Configuration State (Pool / Model / External Endpoint)
+  const [engineConfig, setEngineConfig] = useState<AgentEngineConfig>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_ENGINE_CONFIG_KEY);
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return DEFAULT_ENGINE_CONFIG;
+  });
+
+  const handleSaveEngineConfig = (newConfig: AgentEngineConfig) => {
+    setEngineConfig(newConfig);
+    try {
+      localStorage.setItem(STORAGE_ENGINE_CONFIG_KEY, JSON.stringify(newConfig));
+    } catch {}
+  };
   
   // Message edit state
   const [editingMsgId, setEditingMsgId] = useState<string | null>(null);
@@ -329,7 +351,7 @@ export const AgenticChat: React.FC = () => {
         }
       }
 
-      // Call GoalRoute OpenAI Chat Completions API
+      // Prepare API Request according to active Engine Mode (Pool / Model / External)
       const apiMessages = updatedMsgs.map((m) => ({
         role: m.role,
         content: m.content,
@@ -342,14 +364,36 @@ export const AgenticChat: React.FC = () => {
         });
       }
 
-      const res = await fetch('/v1/chat/completions', {
-        method: 'POST',
-        headers: {
+      let fetchUrl = '/v1/chat/completions';
+      let fetchHeaders: Record<string, string> = {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${adminToken}`,
+      };
+      let targetModelName = 'auto';
+
+      if (engineConfig.mode === 'pool') {
+        if (engineConfig.selectedPoolId && engineConfig.selectedPoolId !== 'auto') {
+          fetchHeaders['x-goalroute-pool'] = engineConfig.selectedPoolId;
+        }
+      } else if (engineConfig.mode === 'model') {
+        if (engineConfig.selectedModelName && engineConfig.selectedModelName !== 'auto') {
+          targetModelName = engineConfig.selectedModelName;
+        }
+      } else if (engineConfig.mode === 'external') {
+        const cleanBase = (engineConfig.externalBaseUrl || 'http://localhost:11434/v1').replace(/\/+$/, '');
+        fetchUrl = cleanBase.endsWith('/chat/completions') ? cleanBase : `${cleanBase}/chat/completions`;
+        fetchHeaders = {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${adminToken}`,
-        },
+          ...(engineConfig.externalApiKey ? { Authorization: `Bearer ${engineConfig.externalApiKey}` } : {}),
+        };
+        targetModelName = engineConfig.externalModelName || 'default';
+      }
+
+      const res = await fetch(fetchUrl, {
+        method: 'POST',
+        headers: fetchHeaders,
         body: JSON.stringify({
-          model: 'auto',
+          model: targetModelName,
           messages: [
             {
               role: 'system',
@@ -363,7 +407,7 @@ export const AgenticChat: React.FC = () => {
 
       if (!res.ok) {
         const errorText = await res.text();
-        throw new Error(`Gateway returned error HTTP ${res.status}: ${errorText.slice(0, 100)}`);
+        throw new Error(`Engine (${engineConfig.mode.toUpperCase()}) returned error HTTP ${res.status}: ${errorText.slice(0, 100)}`);
       }
 
       const data = await res.json();
@@ -451,6 +495,20 @@ export const AgenticChat: React.FC = () => {
         </div>
 
         <div className="flex items-center space-x-1 shrink-0">
+          {/* Engine Settings Badge & Button */}
+          <button
+            onClick={() => setIsEngineModalOpen(true)}
+            className="flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-[var(--bg-well)] hover:bg-[var(--bg-card-active)] border border-[var(--border-subtle)] hover:border-[var(--accent-primary)]/50 text-[11px] text-[var(--text-secondary)] hover:text-[var(--text-bright)] transition-all cursor-pointer"
+            title="Configure Agent Engine (Pool / Model / External Endpoint)"
+          >
+            <Sliders className="w-3.5 h-3.5 text-[var(--accent-primary)]" />
+            <span className="font-mono font-medium truncate max-w-[110px]">
+              {engineConfig.mode === 'pool' && `Pool: ${engineConfig.selectedPoolId === 'auto' ? 'Auto' : engineConfig.selectedPoolId}`}
+              {engineConfig.mode === 'model' && `Model: ${engineConfig.selectedModelName}`}
+              {engineConfig.mode === 'external' && `Ext: ${engineConfig.externalModelName || 'Custom'}`}
+            </span>
+          </button>
+
           <button
             onClick={() => setIsHistoryDrawerOpen(true)}
             className="p-1.5 rounded-lg text-[var(--text-secondary)] hover:text-[var(--text-bright)] hover:bg-[var(--bg-card-active)] transition-colors"
@@ -723,6 +781,14 @@ export const AgenticChat: React.FC = () => {
         onNewChat={createNewSession}
         onRenameSession={handleRenameSession}
         onDeleteSession={handleDeleteSession}
+      />
+
+      {/* Engine Modal Component */}
+      <AgentEngineModal
+        isOpen={isEngineModalOpen}
+        onClose={() => setIsEngineModalOpen(false)}
+        config={engineConfig}
+        onSaveConfig={handleSaveEngineConfig}
       />
     </div>
   );
