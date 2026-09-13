@@ -199,6 +199,9 @@ goalCmd
       exhaustion_pref: options.exhaustion as any,
       reliability_pref: options.reliability as any,
       safety_margin_pct: 20.0,
+      max_latency: null,
+      target_quality: null,
+      min_availability: null,
     });
 
     if (options.json) {

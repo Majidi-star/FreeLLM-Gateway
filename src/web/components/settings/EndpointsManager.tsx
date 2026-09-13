@@ -93,7 +93,12 @@ export const EndpointsManager: React.FC<EndpointsManagerProps> = ({ hideMcp = fa
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch('/api/v1/system/endpoints');
+      const adminToken = getAdminToken();
+      const headers: Record<string, string> = {};
+      if (adminToken) {
+        headers['authorization'] = `Bearer ${adminToken}`;
+      }
+      const res = await fetch('/api/v1/system/endpoints', { headers });
       if (!res.ok) {
         // Fallback gracefully without locking the UI in an error state
         setStatus(DEFAULT_FALLBACK_STATUS);

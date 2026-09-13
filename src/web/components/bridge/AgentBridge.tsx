@@ -142,12 +142,19 @@ export const AgentBridge: React.FC = () => {
   // the MCP SSE URL from the user-configured port/host rather than
   // hardcoding it. See EndpointsManager.tsx for the canonical pattern.
   useEffect(() => {
-    fetch('/api/v1/system/endpoints')
-      .then((res) => res.json())
+    const adminToken = getAdminToken();
+    const headers: Record<string, string> = {};
+    if (adminToken) {
+      headers['authorization'] = `Bearer ${adminToken}`;
+    }
+    fetch('/api/v1/system/endpoints', { headers })
+      .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        setEndpointsStatus(data);
-        if (data?.endpoints?.mcp?.port !== undefined) {
-          setMcpPortDraft(String(data.endpoints.mcp.port));
+        if (data && data.endpoints) {
+          setEndpointsStatus(data);
+          if (data?.endpoints?.mcp?.port !== undefined) {
+            setMcpPortDraft(String(data.endpoints.mcp.port));
+          }
         }
       })
       .catch(() => {});

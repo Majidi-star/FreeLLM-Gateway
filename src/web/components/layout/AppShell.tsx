@@ -8,6 +8,7 @@ import { GoalStudioModal } from '../modals/GoalStudioModal.js';
 import { DecisionInspectorDrawer, DecisionTrace } from '../drawers/DecisionInspectorDrawer.js';
 import { GlossaryTerm } from '../common/GlossaryTerm.js';
 import { AgenticChat } from '../chat/AgenticChat.js';
+import { getAdminToken } from '../settings/EndpointsManager.js';
 
 export const AppShell: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'cockpit' | 'bridge' | 'vault' | 'settings'>('cockpit');
@@ -109,11 +110,7 @@ export const AppShell: React.FC = () => {
   }, [isResizingRight]);
 
   useEffect(() => {
-    const adminToken =
-      sessionStorage.getItem('goalroute_admin_token') ||
-      localStorage.getItem('goalroute_admin_token') ||
-      (import.meta as any).env?.VITE_ADMIN_API_TOKEN ||
-      '';
+    const adminToken = getAdminToken();
     fetch('/api/v1/providers', {
       headers: adminToken ? { authorization: `Bearer ${adminToken}` } : {},
     })
