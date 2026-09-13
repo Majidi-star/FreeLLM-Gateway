@@ -343,6 +343,127 @@ export const EndpointsManager: React.FC<EndpointsManagerProps> = ({ hideMcp = fa
           </div>
         ))}
       </div>
+
+      {/* Admin Security Token & Bearer Authentication Section */}
+      <AdminTokenSection />
+    </div>
+  );
+};
+
+export const AdminTokenSection: React.FC = () => {
+  const [token, setToken] = useState(() => getAdminToken());
+  const [saved, setSaved] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const saveTokenValue = (val: string) => {
+    setToken(val);
+    try {
+      localStorage.setItem('goalroute_admin_token', val);
+      sessionStorage.setItem('goalroute_admin_token', val);
+    } catch {}
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
+
+  const generateRandomToken = () => {
+    const bytes = new Uint8Array(16);
+    if (typeof window !== 'undefined' && window.crypto && window.crypto.getRandomValues) {
+      window.crypto.getRandomValues(bytes);
+    } else {
+      for (let i = 0; i < 16; i++) bytes[i] = Math.floor(Math.random() * 256);
+    }
+    const hex = Array.from(bytes)
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join('');
+    const newToken = `sk-admin-${hex}`;
+    saveTokenValue(newToken);
+  };
+
+  const copyToken = async () => {
+    try {
+      if (navigator.clipboard) {
+        await navigator.clipboard.writeText(sanitizeForClipboard(token));
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1800);
+      }
+    } catch {}
+  };
+
+  return (
+    <div className="p-5 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-subtle)] space-y-4 shadow-md">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div className="flex items-center space-x-2">
+          <div className="p-2 rounded-xl bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] border border-[var(--accent-primary)]/20">
+            <Lock className="w-4 h-4" />
+          </div>
+          <div>
+            <h3 className="font-bold text-sm text-[var(--text-bright)] flex items-center gap-2">
+              Admin Security Token &amp; Bearer Authentication
+            </h3>
+            <p className="text-xs text-[var(--text-secondary)] mt-0.5">
+              Bearer authentication key used for securing all local and network management APIs (<code className="font-mono text-[var(--signal-mint)]">/api/v1/*</code>).
+            </p>
+          </div>
+        </div>
+        {saved && (
+          <span className="text-xs text-[var(--signal-mint)] font-bold flex items-center gap-1 font-mono shrink-0">
+            <Check className="w-4 h-4" /> Token Saved &amp; Active!
+          </span>
+        )}
+      </div>
+
+      {/* Explanatory Banner */}
+      <div className="p-3.5 rounded-xl bg-[var(--bg-well)] border border-[var(--border-subtle)] text-xs text-[var(--text-secondary)] space-y-1.5 leading-relaxed">
+        <div className="font-semibold text-[var(--text-bright)] flex items-center gap-1.5">
+          <AlertCircle className="w-4 h-4 text-[var(--accent-primary)] shrink-0" />
+          Why is this token required?
+        </div>
+        <p>
+          GoalRoute enforces token authentication to prevent unauthorized local or network access to your configured provider API keys and routing policies. The workstation UI automatically attaches this token to all request headers.
+        </p>
+        <div className="font-mono text-[11px] text-[var(--text-muted)] pt-1" dir="ltr">
+          Header format: <span className="text-[var(--signal-mint)]">Authorization: Bearer &lt;token&gt;</span>
+        </div>
+      </div>
+
+      {/* Token Input & Buttons */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+        <div className="relative flex-1">
+          <input
+            type="text"
+            value={token}
+            onChange={(e) => saveTokenValue(e.target.value)}
+            placeholder="e.g. dev-admin-secret-token"
+            className="w-full p-2.5 pr-10 bg-[var(--bg-well)] border border-[var(--border-subtle)] focus:border-[var(--accent-primary)] rounded-xl font-mono text-xs text-[var(--text-bright)] focus:outline-none"
+            dir="ltr"
+          />
+          <button
+            onClick={copyToken}
+            className="absolute right-2 top-2 p-1 rounded hover:bg-[var(--bg-card-active)] text-[var(--text-secondary)] hover:text-[var(--text-bright)] transition-colors"
+            title="Copy Token to clipboard"
+          >
+            {copied ? <Check className="w-3.5 h-3.5 text-[var(--signal-mint)]" /> : <Copy className="w-3.5 h-3.5" />}
+          </button>
+        </div>
+
+        <button
+          type="button"
+          onClick={generateRandomToken}
+          className="py-2.5 px-3.5 rounded-xl bg-[var(--bg-well)] hover:bg-[var(--bg-card-active)] border border-[var(--border-subtle)] hover:border-[var(--accent-primary)] text-xs font-semibold text-[var(--text-bright)] flex items-center justify-center space-x-1.5 transition-all shrink-0 cursor-pointer active:scale-95"
+          title="Generate a high-entropy random token"
+        >
+          <RefreshCw className="w-3.5 h-3.5 text-[var(--signal-mint)]" />
+          <span>Generate Token</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => saveTokenValue(token)}
+          className="py-2.5 px-4 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-primary-hover)] text-slate-950 font-bold text-xs shrink-0 transition-all shadow-sm active:scale-95 cursor-pointer"
+        >
+          Save Token
+        </button>
+      </div>
     </div>
   );
 };

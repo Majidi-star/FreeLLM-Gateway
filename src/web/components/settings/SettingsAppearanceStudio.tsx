@@ -1,4 +1,5 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
+import { AdminTokenSection } from './EndpointsManager.js';
 import { Sliders, Palette, Download, Upload, RotateCcw, Check, Sparkles, AlertCircle } from 'lucide-react';
 import { useTheme, PRESET_THEMES, ThemePreset, ColorTokens } from '../../context/ThemeContext.js';
 import { sanitizeForClipboard } from '../../utils/clipboardSanitizer.js';
@@ -51,10 +52,6 @@ export const SettingsAppearanceStudio: React.FC = () => {
   const [importJsonText, setImportJsonText] = useState('');
   const [importStatus, setImportStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [copiedJson, setCopiedJson] = useState(false);
-  const [adminToken, setAdminToken] = useState(() =>
-    localStorage.getItem('goalroute_admin_token') || sessionStorage.getItem('goalroute_admin_token') || ''
-  );
-  const [tokenSaved, setTokenSaved] = useState(false);
   const activeTimersRef = React.useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
 
   React.useEffect(() => {
@@ -282,49 +279,8 @@ export const SettingsAppearanceStudio: React.FC = () => {
         </div>
 
         {/* Admin Security Token */}
-        <div className="p-5 rounded-[24px] bg-[var(--bg-card)] border border-[var(--border-subtle)] space-y-3 col-span-full">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <Sparkles className="w-4 h-4 text-[var(--accent-primary)]" />
-              <h3 className="font-bold text-sm text-[var(--text-primary)]">Admin Security Token</h3>
-            </div>
-            {tokenSaved && (
-              <span className="text-xs text-[var(--signal-mint)] font-semibold flex items-center gap-1 font-mono">
-                <Check className="w-3.5 h-3.5" /> Token Saved!
-              </span>
-            )}
-          </div>
-          <p className="text-xs text-[var(--text-muted)] leading-relaxed">
-            Configure the bearer token used for authenticating local gateway management requests.
-          </p>
-          <div className="flex items-center gap-3">
-            <input
-              type="text"
-              value={adminToken}
-              onChange={(e) => {
-                const val = e.target.value;
-                setAdminToken(val);
-                localStorage.setItem('goalroute_admin_token', val);
-                sessionStorage.setItem('goalroute_admin_token', val);
-                setTokenSaved(true);
-                safeTimeout(() => setTokenSaved(false), 2000);
-              }}
-              placeholder="e.g. dev-admin-secret-token"
-              className="flex-1 p-2.5 bg-[var(--bg-well)] border border-[var(--border-subtle)] focus:border-[var(--accent-primary)] rounded-xl font-mono text-xs text-[var(--text-primary)] focus:outline-none"
-              dir="ltr"
-            />
-            <button
-              onClick={() => {
-                localStorage.setItem('goalroute_admin_token', adminToken);
-                sessionStorage.setItem('goalroute_admin_token', adminToken);
-                setTokenSaved(true);
-                safeTimeout(() => setTokenSaved(false), 2000);
-              }}
-              className="py-2.5 px-4 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-primary-hover)] text-slate-950 font-bold text-xs shrink-0 transition-all"
-            >
-              Save Token
-            </button>
-          </div>
+        <div className="col-span-full">
+          <AdminTokenSection />
         </div>
 
       </div>
