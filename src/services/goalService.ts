@@ -47,7 +47,11 @@ export class GoalService {
       safetyMarginPct: goalRecord.safety_margin_pct,
     };
 
-    const candidateSources = this.buildCandidateSources(goalRecord.task_type);
+    return this.solveGoalInput(goalInput);
+  }
+
+  public solveGoalInput(goalInput: GoalInput): PoolPlan {
+    const candidateSources = this.buildCandidateSources(goalInput.taskType || 'general');
     return solveGoal(goalInput, candidateSources);
   }
 

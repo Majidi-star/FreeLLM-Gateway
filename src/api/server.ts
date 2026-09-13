@@ -403,6 +403,20 @@ export async function buildApp() {
 
   fastify.get('/api/v1/goals', async () => goalService.listGoals());
   fastify.post('/api/v1/goals', async (req) => goalService.createGoal(req.body as any));
+  fastify.post('/api/v1/goals/preview-solve', async (req) => {
+    const body = (req.body || {}) as any;
+    return goalService.solveGoalInput({
+      taskType: body.taskType || body.task_type || 'general',
+      targetRequestsPerDay: body.targetRequestsPerDay ?? body.target_requests_per_day ?? undefined,
+      targetTokensPerDay: body.targetTokensPerDay ?? body.target_tokens_per_day ?? undefined,
+      latencyPref: body.latencyPref || body.latency_pref || 'relaxed',
+      budgetPref: body.budgetPref || body.budget_pref || 'free',
+      budgetCapUsdMonthly: body.budgetCapUsdMonthly ?? body.budget_cap_usd_monthly ?? undefined,
+      exhaustionPref: body.exhaustionPref || body.exhaustion_pref || 'preserve_backup',
+      reliabilityPref: body.reliabilityPref || body.reliability_pref || 'standard',
+      safetyMarginPct: body.safetyMarginPct ?? body.safety_margin_pct ?? 20,
+    });
+  });
   fastify.post('/api/v1/goals/:id/solve', async (req) => goalService.solveGoalById((req.params as any).id));
 
   fastify.get('/api/v1/pools', async () => poolService.listPools());

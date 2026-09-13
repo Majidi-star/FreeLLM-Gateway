@@ -38,18 +38,29 @@ export class GoalRepository {
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
+    const g = goal as any;
+    const taskType = goal.task_type || g.taskType || 'general';
+    const targetReqs = goal.target_requests_per_day ?? g.targetRequestsPerDay ?? null;
+    const targetTokens = goal.target_tokens_per_day ?? g.targetTokensPerDay ?? null;
+    const latencyPref = goal.latency_pref || g.latencyPref || 'relaxed';
+    const budgetPref = goal.budget_pref || g.budgetPref || 'free';
+    const budgetCap = goal.budget_cap_usd_monthly ?? g.budgetCapUsdMonthly ?? null;
+    const exhaustionPref = goal.exhaustion_pref || g.exhaustionPref || 'preserve_backup';
+    const reliabilityPref = goal.reliability_pref || g.reliabilityPref || 'standard';
+    const safetyMarginPct = goal.safety_margin_pct ?? g.safetyMarginPct ?? 20.0;
+
     stmt.run(
       id,
       goal.name,
-      goal.task_type,
-      goal.target_requests_per_day ?? null,
-      goal.target_tokens_per_day ?? null,
-      goal.latency_pref || 'relaxed',
-      goal.budget_pref || 'free',
-      goal.budget_cap_usd_monthly ?? null,
-      goal.exhaustion_pref || 'preserve_backup',
-      goal.reliability_pref || 'standard',
-      goal.safety_margin_pct ?? 20.0,
+      taskType,
+      targetReqs,
+      targetTokens,
+      latencyPref,
+      budgetPref,
+      budgetCap,
+      exhaustionPref,
+      reliabilityPref,
+      safetyMarginPct,
       now,
       now
     );
