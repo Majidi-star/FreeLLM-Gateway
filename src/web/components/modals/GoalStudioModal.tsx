@@ -662,7 +662,7 @@ export const GoalStudioModal: React.FC<GoalStudioModalProps> = ({ isOpen, onClos
                   }}
                   className={`px-3 py-2 rounded-lg text-xs font-medium transition-all text-center ${
                     budgetPref === 'capped'
-                      ? 'bg-amber-400 text-slate-950 font-bold shadow-md'
+                      ? 'bg-[var(--signal-amber)] text-slate-950 font-bold shadow-md'
                       : 'text-[var(--text-secondary)] hover:text-white'
                   }`}
                 >
@@ -811,7 +811,7 @@ export const GoalStudioModal: React.FC<GoalStudioModalProps> = ({ isOpen, onClos
                       setBudgetPref('capped');
                       setSelectedIntent('custom');
                     }}
-                    className="px-3 py-1 rounded-lg bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-[11px] transition-all"
+                    className="px-3 py-1 rounded-lg bg-[var(--signal-amber)] hover:opacity-90 text-slate-950 font-bold text-[11px] transition-all"
                   >
                     Enable Capped Paid Fallback
                   </button>
