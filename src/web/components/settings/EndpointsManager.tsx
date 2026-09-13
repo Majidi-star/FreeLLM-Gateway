@@ -471,6 +471,16 @@ export const AdminTokenSection: React.FC = () => {
     setTimeout(() => setSaved(false), 2000);
   };
 
+  const clearTokenValue = () => {
+    try {
+      localStorage.removeItem('goalroute_admin_token');
+      sessionStorage.removeItem('goalroute_admin_token');
+    } catch {}
+    setToken('');
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
+
   const generateRandomToken = () => {
     const bytes = new Uint8Array(16);
     if (typeof window !== 'undefined' && window.crypto && window.crypto.getRandomValues) {
@@ -560,6 +570,15 @@ export const AdminTokenSection: React.FC = () => {
         >
           <RefreshCw className="w-3.5 h-3.5 text-[var(--signal-mint)]" />
           <span>Generate Token</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={clearTokenValue}
+          className="py-2.5 px-3.5 rounded-xl bg-[var(--bg-well)] hover:bg-[var(--bg-card-active)] border border-[var(--border-subtle)] hover:border-red-500/50 text-xs font-semibold text-[var(--text-secondary)] hover:text-red-400 flex items-center justify-center space-x-1.5 transition-all shrink-0 cursor-pointer active:scale-95"
+          title="Clear saved browser token"
+        >
+          <span>Reset Token</span>
         </button>
 
         <button
