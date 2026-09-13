@@ -11,16 +11,20 @@ describe('ExternalAgentService Helpers', () => {
       expect(resolveExternalProtocol('https://api.openai.com', 'gpt-4o', 'gemini')).toBe('gemini');
     });
 
-    it('should auto-detect Anthropic from URL or model name', () => {
+    it('should auto-detect Anthropic for native Anthropic URL', () => {
       expect(resolveExternalProtocol('https://api.anthropic.com', 'claude-3-5-sonnet', 'auto')).toBe('anthropic');
-      expect(resolveExternalProtocol('http://custom-proxy.internal', 'claude-3-opus', 'auto')).toBe('anthropic');
+      // Custom proxy URLs default to OpenAI-compatible protocol to prevent proxy protocol mismatch
+      expect(resolveExternalProtocol('http://custom-proxy.internal', 'claude-3-opus', 'auto')).toBe('openai');
+      expect(resolveExternalProtocol('http://custom-proxy.internal', 'claude-3-opus', 'anthropic')).toBe('anthropic');
     });
 
-    it('should auto-detect Gemini from URL or model name', () => {
+    it('should auto-detect Gemini for native Gemini URL', () => {
       expect(
         resolveExternalProtocol('https://generativelanguage.googleapis.com', 'gemini-1.5-pro', 'auto')
       ).toBe('gemini');
-      expect(resolveExternalProtocol('http://my-proxy', 'gemini-flash', 'auto')).toBe('gemini');
+      // Custom proxy URLs default to OpenAI-compatible protocol
+      expect(resolveExternalProtocol('http://my-proxy', 'gemini-flash', 'auto')).toBe('openai');
+      expect(resolveExternalProtocol('http://my-proxy', 'gemini-flash', 'gemini')).toBe('gemini');
     });
 
     it('should default to OpenAI protocol', () => {

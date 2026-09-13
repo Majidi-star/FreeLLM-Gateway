@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Cpu, Server, Globe, Check, Sliders, Shield, Zap, Sparkles, Activity, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { getAdminToken } from '../settings/EndpointsManager.js';
 
 export type AgentEngineMode = 'pool' | 'model' | 'external';
 export type ExternalProtocol = 'auto' | 'openai' | 'anthropic' | 'gemini' | 'custom';
@@ -31,6 +32,20 @@ export const DEFAULT_ENGINE_CONFIG: AgentEngineConfig = {
   externalProtocol: 'auto',
 };
 
+function extractStringError(data: unknown, fallback: string): string {
+  if (!data) return fallback;
+  if (typeof data === 'string') return data;
+  if (typeof data === 'object' && data !== null) {
+    const d = data as any;
+    if (typeof d.message === 'string' && d.message) return d.message;
+    if (typeof d.error === 'string' && d.error) return d.error;
+    if (typeof d.error === 'object' && d.error !== null) {
+      if (typeof d.error.message === 'string' && d.error.message) return d.error.message;
+    }
+  }
+  return fallback;
+}
+
 interface AgentEngineModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -61,9 +76,13 @@ export const AgentEngineModal: React.FC<AgentEngineModalProps> = ({
   const handleTestConnection = async () => {
     setTestState({ status: 'testing' });
     try {
+      const token = getAdminToken();
       const res = await fetch('/api/v1/agent-engine/test-external', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
           externalBaseUrl: draftConfig.externalBaseUrl,
           externalApiKey: draftConfig.externalApiKey,
@@ -71,16 +90,17 @@ export const AgentEngineModal: React.FC<AgentEngineModalProps> = ({
           externalProtocol: draftConfig.externalProtocol || 'auto',
         }),
       });
-      const data = await res.json();
-      if (res.ok && data.ok) {
+      const data = await res.json().catch(() => null);
+      if (res.ok && data?.ok) {
         setTestState({
           status: 'success',
-          message: data.message || `Connected cleanly (${data.latencyMs}ms, ${data.resolvedProtocol.toUpperCase()})`,
+          message: typeof data.message === 'string' ? data.message : `Connected cleanly (${data.latencyMs}ms, ${data.resolvedProtocol?.toUpperCase()})`,
         });
       } else {
+        const errorMsg = extractStringError(data, `Connection failed (HTTP ${res.status})`);
         setTestState({
           status: 'error',
-          message: data.message || data.error || 'Connection failed',
+          message: errorMsg,
         });
       }
     } catch (err: any) {
@@ -94,8 +114,11 @@ export const AgentEngineModal: React.FC<AgentEngineModalProps> = ({
   useEffect(() => {
     if (!isOpen) return;
 
+    const token = getAdminToken();
+    const authHeaders: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
+
     // Fetch pools
-    fetch('/api/v1/pools')
+    fetch('/api/v1/pools', { headers: authHeaders })
       .then((res) => (res.ok ? res.json() : []))
       .then((data) => {
         if (Array.isArray(data)) {
@@ -105,7 +128,7 @@ export const AgentEngineModal: React.FC<AgentEngineModalProps> = ({
       .catch(() => {});
 
     // Fetch models
-    fetch('/api/v1/catalog/models')
+    fetch('/api/v1/catalog/models', { headers: authHeaders })
       .then((res) => (res.ok ? res.json() : []))
       .then((data) => {
         if (Array.isArray(data)) {

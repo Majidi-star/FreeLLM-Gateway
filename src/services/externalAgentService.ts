@@ -25,22 +25,20 @@ export interface TestExternalResult {
 
 export function resolveExternalProtocol(
   baseUrl: string,
-  modelName?: string,
+  _modelName?: string,
   requestedProtocol?: ExternalProtocol
 ): 'openai' | 'anthropic' | 'gemini' | 'custom' {
   if (requestedProtocol && requestedProtocol !== 'auto') {
     return requestedProtocol;
   }
   const lowerUrl = (baseUrl || '').toLowerCase();
-  const lowerModel = (modelName || '').toLowerCase();
 
-  if (lowerUrl.includes('anthropic') || lowerModel.startsWith('claude')) {
+  if (lowerUrl.includes('api.anthropic.com')) {
     return 'anthropic';
   }
   if (
-    lowerUrl.includes('generativelanguage.googleapis') ||
-    lowerUrl.includes('gemini') ||
-    lowerModel.startsWith('gemini')
+    lowerUrl.includes('generativelanguage.googleapis.com') ||
+    lowerUrl.includes('googleapis.com/v1beta')
   ) {
     return 'gemini';
   }
@@ -111,12 +109,21 @@ export class ExternalAgentService {
         };
       }
 
+      let errorMsg = '';
+      if (typeof res.data === 'string') {
+        errorMsg = res.data;
+      } else if (res.data && typeof res.data === 'object') {
+        const d = res.data as any;
+        errorMsg = d.error?.message || d.message || d.error || JSON.stringify(res.data);
+      }
+      if (typeof errorMsg !== 'string') errorMsg = String(errorMsg);
+
       return {
         ok: false,
         latencyMs,
         resolvedProtocol: protocol,
         modelName,
-        message: `Upstream HTTP ${res.statusCode}: ${JSON.stringify(res.data).slice(0, 150)}`,
+        message: `Upstream HTTP ${res.statusCode}: ${errorMsg.slice(0, 150)}`,
       };
     } catch (err: any) {
       const latencyMs = Date.now() - startTime;
