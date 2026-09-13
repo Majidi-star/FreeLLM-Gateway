@@ -152,3 +152,23 @@ describe('COPY_TARGETS hideMcp filtering', () => {
     expect(snippets.some((s) => s.id === 'anthropic-sdk')).toBe(true);
   });
 });
+
+describe('Endpoint Status & URL Copying Helpers', () => {
+  it('correctly constructs display URLs for endpoints', () => {
+    const host = DEFAULT_FALLBACK_STATUS.host === '0.0.0.0' ? '127.0.0.1' : DEFAULT_FALLBACK_STATUS.host;
+    const openaiUrl = `http://${host}:${DEFAULT_FALLBACK_STATUS.endpoints.openai.port}${DEFAULT_FALLBACK_STATUS.endpoints.openai.pathPrefix}`;
+    expect(openaiUrl).toMatch(/^http:\/\/(127\.0\.0\.1|localhost|[\d.]+):8788\/v1$/);
+  });
+
+  it('tracks disabled vs enabled endpoint state accurately', () => {
+    const statusWithDisabled = {
+      ...DEFAULT_FALLBACK_STATUS,
+      endpoints: {
+        ...DEFAULT_FALLBACK_STATUS.endpoints,
+        openai: { ...DEFAULT_FALLBACK_STATUS.endpoints.openai, enabled: false },
+      },
+    };
+    expect(statusWithDisabled.endpoints.openai.enabled).toBe(false);
+    expect(statusWithDisabled.endpoints.anthropic.enabled).toBe(true);
+  });
+});

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Activity, Zap, Cpu, ArrowUpRight, CheckCircle2, AlertTriangle, Sparkles, Sliders, ChevronRight, ChevronDown, Network } from 'lucide-react';
+import { Activity, Zap, Cpu, ArrowUpRight, CheckCircle2, AlertTriangle, Sparkles, Sliders, ChevronRight, ChevronDown, Network, Copy, Check } from 'lucide-react';
 import { DecisionTrace } from '../drawers/DecisionInspectorDrawer.js';
 import { GlossaryTerm } from '../common/GlossaryTerm.js';
 import { EndpointsManager } from '../settings/EndpointsManager.js';
@@ -93,6 +93,7 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
   });
   const [endpointSummary, setEndpointSummary] = useState('3/3 Active');
   const [endpointUrls, setEndpointUrls] = useState<string[]>([]);
+  const [copiedHeaderUrl, setCopiedHeaderUrl] = useState<string | null>(null);
 
   React.useEffect(() => {
     const adminToken = getAdminToken();
@@ -282,9 +283,29 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
                   {endpointSummary}
                 </span>
                 {endpointsCollapsed && endpointUrls.length > 0 && (
-                  <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1">
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
                     {endpointUrls.map((url) => (
-                      <span key={url} className="text-[10px] font-mono text-[var(--text-muted)]" dir="ltr">{url}</span>
+                      <span
+                        key={url}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          try {
+                            void navigator.clipboard.writeText(url);
+                            setCopiedHeaderUrl(url);
+                            setTimeout(() => setCopiedHeaderUrl(null), 1500);
+                          } catch {}
+                        }}
+                        className="inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-md bg-[var(--bg-well)] hover:bg-[var(--accent-primary)]/15 border border-[var(--border-subtle)] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-all cursor-pointer"
+                        dir="ltr"
+                        title="Click to copy endpoint URL ASAP"
+                      >
+                        {url}
+                        {copiedHeaderUrl === url ? (
+                          <Check className="w-3 h-3 text-[var(--signal-mint)]" />
+                        ) : (
+                          <Copy className="w-3 h-3 text-[var(--text-muted)] opacity-70" />
+                        )}
+                      </span>
                     ))}
                   </div>
                 )}

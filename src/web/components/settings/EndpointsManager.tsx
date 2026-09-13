@@ -240,77 +240,172 @@ export const EndpointsManager: React.FC<EndpointsManagerProps> = ({ hideMcp = fa
 
 
       {/* Exposed Endpoints List */}
-      <div className="space-y-2">
-        <div className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
-          Exposed Endpoints
-        </div>
-        {Object.values(activeStatus.endpoints).filter((endpoint) => !hideMcp || endpoint.protocol !== 'mcp').map((endpoint) => (
-          <div
-            key={endpoint.protocol}
-            className="p-3 rounded-xl bg-[var(--bg-well)] border border-[var(--border-subtle)] space-y-2"
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span
-                  className={`w-1.5 h-1.5 rounded-full ${
-                    endpoint.enabled ? 'bg-[var(--signal-mint)]' : 'bg-[var(--signal-coral)]'
-                  }`}
-                />
-                <span className="text-xs font-bold text-[var(--text-primary)]">
-                  {PROTOCOL_LABELS[endpoint.protocol] ?? endpoint.protocol}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  min={1}
-                  max={65535}
-                  value={portDrafts[endpoint.protocol] ?? String(endpoint.port)}
-                  onChange={(e) => setPortDrafts((prev) => ({ ...prev, [endpoint.protocol]: e.target.value }))}
-                  className="w-20 px-2 py-1 bg-[var(--bg-card)] border border-[var(--border-subtle)] focus:border-[var(--accent-primary)] rounded-lg font-mono text-xs text-[var(--text-primary)] focus:outline-none"
-                  dir="ltr"
-                  disabled={busy}
-                  readOnly={endpoint.protocol === 'native'}
-                />
-                <button
-                  disabled={busy || (portDrafts[endpoint.protocol] ?? '') === String(endpoint.port)}
-                  onClick={() => void applyUpdate({ ports: { [endpoint.protocol]: Number(portDrafts[endpoint.protocol]) } })}
-                  className="px-2.5 py-1 rounded-lg bg-[var(--accent-primary)] hover:bg-[var(--accent-primary-hover)] disabled:opacity-40 text-slate-950 font-bold text-[10px] transition-all"
-                >
-                  Apply
-                </button>
-                <button
-                  disabled={busy}
-                  onClick={() => void applyUpdate({ enabledProtocols: { [endpoint.protocol]: !endpoint.enabled } })}
-                  className="text-[10px] font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)] disabled:opacity-40"
-                >
-                  {endpoint.enabled ? 'Disable' : 'Enable'}
-                </button>
-              </div>
-            </div>
-            {endpoint.protocol === 'native' && (
-              <p className="text-[10px] text-[var(--text-muted)] leading-relaxed">
-                Native port is fixed to the main server (PORT env var) and requires a restart to change.
-              </p>
-            )}
-            <div className="text-[10px] text-[var(--text-muted)] font-mono" dir="ltr">
-              http://{activeStatus.host === '0.0.0.0' ? '127.0.0.1' : activeStatus.host}:{endpoint.port}
-              {endpoint.pathPrefix}
-            </div>
-            <div className="text-[10px] text-[var(--text-secondary)]">{endpoint.description}</div>
-            <button
-              onClick={() => void copy(`curl-${endpoint.protocol}`, endpoint.sampleCurl)}
-              className="flex items-center gap-1.5 text-[10px] text-[var(--accent-primary)] hover:underline"
-            >
-              {copiedId === `curl-${endpoint.protocol}` ? (
-                <Check className="w-3 h-3 text-[var(--signal-mint)]" />
-              ) : (
-                <Copy className="w-3 h-3" />
-              )}
-              {copiedId === `curl-${endpoint.protocol}` ? 'Copied!' : 'Copy connection snippet'}
-            </button>
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
+            Exposed Endpoints
           </div>
-        ))}
+          <div className="text-[10px] text-[var(--text-muted)] hidden sm:block">
+            Quickly copy endpoint URLs or toggle availability
+          </div>
+        </div>
+        {Object.values(activeStatus.endpoints)
+          .filter((endpoint) => !hideMcp || endpoint.protocol !== 'mcp')
+          .map((endpoint) => {
+            const displayHost = activeStatus.host === '0.0.0.0' ? '127.0.0.1' : activeStatus.host;
+            const endpointUrl = `http://${displayHost}:${endpoint.port}${endpoint.pathPrefix}`;
+            const isNative = endpoint.protocol === 'native';
+            const isEnabled = endpoint.enabled;
+
+            return (
+              <div
+                key={endpoint.protocol}
+                className={`p-3.5 rounded-xl border transition-all space-y-3 ${
+                  isEnabled
+                    ? 'bg-[var(--bg-well)] border-[var(--border-subtle)] shadow-sm'
+                    : 'bg-[var(--bg-well)]/40 border-dashed border-[var(--border-subtle)] opacity-75'
+                }`}
+              >
+                {/* Header: Status Badge, Protocol Name & Controls */}
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2.5">
+                    <span
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono border transition-colors ${
+                        isEnabled
+                          ? 'bg-[var(--signal-mint)]/10 text-[var(--signal-mint)] border-[var(--signal-mint)]/30'
+                          : 'bg-[var(--signal-coral)]/10 text-[var(--signal-coral)] border-[var(--signal-coral)]/30'
+                      }`}
+                    >
+                      <span
+                        className={`w-1.5 h-1.5 rounded-full ${
+                          isEnabled ? 'bg-[var(--signal-mint)] animate-pulse' : 'bg-[var(--signal-coral)]'
+                        }`}
+                      />
+                      {isEnabled ? 'ACTIVE' : 'DISABLED'}
+                    </span>
+                    <span className="text-xs font-bold text-[var(--text-primary)]">
+                      {PROTOCOL_LABELS[endpoint.protocol] ?? endpoint.protocol}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-[var(--text-muted)] font-mono">Port:</span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={65535}
+                      value={portDrafts[endpoint.protocol] ?? String(endpoint.port)}
+                      onChange={(e) => setPortDrafts((prev) => ({ ...prev, [endpoint.protocol]: e.target.value }))}
+                      className="w-20 px-2 py-1 bg-[var(--bg-card)] border border-[var(--border-subtle)] focus:border-[var(--accent-primary)] rounded-lg font-mono text-xs text-[var(--text-primary)] focus:outline-none"
+                      dir="ltr"
+                      disabled={busy}
+                      readOnly={isNative}
+                    />
+                    <button
+                      disabled={busy || (portDrafts[endpoint.protocol] ?? '') === String(endpoint.port)}
+                      onClick={() => void applyUpdate({ ports: { [endpoint.protocol]: Number(portDrafts[endpoint.protocol]) } })}
+                      className="px-2.5 py-1 rounded-lg bg-[var(--accent-primary)] hover:bg-[var(--accent-primary-hover)] disabled:opacity-40 text-slate-950 font-bold text-[10px] transition-all cursor-pointer"
+                    >
+                      Apply
+                    </button>
+
+                    {/* Enable / Disable Toggle Switch Button */}
+                    <button
+                      disabled={busy}
+                      onClick={() => void applyUpdate({ enabledProtocols: { [endpoint.protocol]: !isEnabled } })}
+                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold border transition-all disabled:opacity-40 cursor-pointer ${
+                        isEnabled
+                          ? 'bg-[var(--signal-mint)]/10 hover:bg-[var(--signal-mint)]/20 text-[var(--signal-mint)] border-[var(--signal-mint)]/30'
+                          : 'bg-[var(--bg-card)] hover:bg-[var(--bg-card-active)] text-[var(--text-muted)] hover:text-[var(--text-primary)] border-[var(--border-subtle)]'
+                      }`}
+                      title={isEnabled ? 'Click to disable endpoint' : 'Click to enable endpoint'}
+                    >
+                      {isEnabled ? (
+                        <>
+                          <ToggleRight className="w-4 h-4 text-[var(--signal-mint)]" />
+                          <span>Active</span>
+                        </>
+                      ) : (
+                        <>
+                          <ToggleLeft className="w-4 h-4 text-[var(--text-muted)]" />
+                          <span>Disabled</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {isNative && (
+                  <p className="text-[10px] text-[var(--text-muted)] leading-relaxed">
+                    Native port is fixed to the main server (PORT env var) and requires a restart to change.
+                  </p>
+                )}
+
+                {/* Instant Copyable Endpoint URL Box */}
+                <div className="flex items-center justify-between gap-2 p-2 rounded-lg bg-[var(--bg-card)] border border-[var(--border-subtle)]">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wider shrink-0">
+                      URL:
+                    </span>
+                    <code
+                      className={`text-xs font-mono truncate select-all ${
+                        isEnabled
+                          ? 'text-[var(--accent-primary)] font-semibold'
+                          : 'text-[var(--text-muted)] line-through decoration-[var(--signal-coral)]/60'
+                      }`}
+                      dir="ltr"
+                    >
+                      {endpointUrl}
+                    </code>
+                    {!isEnabled && (
+                      <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-[var(--signal-coral)]/10 text-[var(--signal-coral)] border border-[var(--signal-coral)]/20 shrink-0">
+                        Inactive
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => void copy(`url-${endpoint.protocol}`, endpointUrl)}
+                    className="px-2.5 py-1 rounded-lg bg-[var(--bg-well)] hover:bg-[var(--accent-primary)]/15 border border-[var(--border-subtle)] hover:border-[var(--accent-primary)]/40 text-[10px] font-semibold flex items-center gap-1.5 shrink-0 transition-all cursor-pointer"
+                    title={`Copy ${PROTOCOL_LABELS[endpoint.protocol] ?? endpoint.protocol} endpoint URL`}
+                  >
+                    {copiedId === `url-${endpoint.protocol}` ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-[var(--signal-mint)]" />
+                        <span className="text-[var(--signal-mint)] font-bold">Copied!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3.5 h-3.5 text-[var(--text-secondary)]" />
+                        <span className="text-[var(--text-primary)]">Copy URL</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {/* Description & Optional cURL Snippet */}
+                <div className="flex items-center justify-between text-[10px] gap-2 pt-0.5">
+                  <div className="text-[var(--text-secondary)] truncate">{endpoint.description}</div>
+                  <button
+                    onClick={() =>
+                      void copy(
+                        `curl-${endpoint.protocol}`,
+                        endpoint.sampleCurl || `curl ${endpointUrl} -H "Content-Type: application/json"`
+                      )
+                    }
+                    className="flex items-center gap-1 text-[var(--accent-primary)] hover:underline shrink-0 font-medium cursor-pointer"
+                  >
+                    {copiedId === `curl-${endpoint.protocol}` ? (
+                      <Check className="w-3 h-3 text-[var(--signal-mint)]" />
+                    ) : (
+                      <Copy className="w-3 h-3" />
+                    )}
+                    {copiedId === `curl-${endpoint.protocol}` ? 'Copied Snippet!' : 'Copy Snippet'}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
       </div>
 
       {/* Copyable SDK Connection Snippets */}
@@ -331,13 +426,19 @@ export const EndpointsManager: React.FC<EndpointsManagerProps> = ({ hideMcp = fa
             </div>
             <button
               onClick={() => void copy(snippet.id, snippet.text)}
-              className="p-1.5 rounded-lg hover:bg-[var(--bg-card-active)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] shrink-0 transition-colors"
+              className="px-2.5 py-1 rounded-lg bg-[var(--bg-card)] hover:bg-[var(--bg-card-active)] border border-[var(--border-subtle)] text-[10px] font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)] shrink-0 transition-colors flex items-center gap-1.5 cursor-pointer"
               title={`Copy ${snippet.label}`}
             >
               {copiedId === snippet.id ? (
-                <Check className="w-3.5 h-3.5 text-[var(--signal-mint)]" />
+                <>
+                  <Check className="w-3.5 h-3.5 text-[var(--signal-mint)]" />
+                  <span className="text-[var(--signal-mint)] font-bold">Copied!</span>
+                </>
               ) : (
-                <Copy className="w-3.5 h-3.5" />
+                <>
+                  <Copy className="w-3.5 h-3.5" />
+                  <span>Copy</span>
+                </>
               )}
             </button>
           </div>
