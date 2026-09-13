@@ -413,10 +413,26 @@ export const AgenticChat: React.FC = () => {
     handleSendMessage(editMsgDraft.trim());
   };
 
+  // Auto-focus input when processing finishes
+  useEffect(() => {
+    if (!isProcessing) {
+      setTimeout(() => inputRef.current?.focus(), 50);
+    }
+  }, [isProcessing]);
+
+  // Auto-expand input height as text grows multi-line
+  useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.style.height = 'auto';
+      const newHeight = Math.min(Math.max(inputRef.current.scrollHeight, 44), 180);
+      inputRef.current.style.height = `${newHeight}px`;
+    }
+  }, [inputText]);
+
   const activeSession = sessions.find((s) => s.id === activeSessionId);
 
   return (
-    <div className="flex flex-col h-full bg-[var(--bg-rail)] border-l border-[var(--border-subtle)] relative overflow-hidden">
+    <div className="flex flex-col h-full bg-[var(--bg-rail)] relative overflow-hidden">
       {/* 1. Header Bar */}
       <div className="p-3.5 border-b border-[var(--border-subtle)] flex items-center justify-between bg-[var(--bg-card)]/50 shrink-0">
         <div className="flex items-center space-x-2.5 min-w-0">
@@ -663,11 +679,11 @@ export const AgenticChat: React.FC = () => {
             e.preventDefault();
             handleSendMessage();
           }}
-          className="relative flex items-center"
+          className="relative flex items-end"
         >
           <textarea
             ref={inputRef}
-            rows={2}
+            rows={1}
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             onKeyDown={(e) => {
@@ -678,19 +694,21 @@ export const AgenticChat: React.FC = () => {
             }}
             placeholder="Ask agent copilot or query MCP tools..."
             disabled={isProcessing}
-            className="w-full pr-12 pl-3 py-2 bg-[var(--bg-well)] border border-[var(--border-subtle)] focus:border-[var(--accent-primary)] text-xs text-[var(--text-bright)] rounded-xl focus:outline-none resize-none transition-colors custom-scrollbar"
+            autoFocus
+            className="w-full pr-12 pl-3 py-2.5 bg-[var(--bg-well)] border border-[var(--border-subtle)] focus:border-[var(--accent-primary)] text-xs text-[var(--text-bright)] rounded-xl focus:outline-none resize-none transition-all custom-scrollbar leading-relaxed"
+            style={{ minHeight: '44px', maxHeight: '180px' }}
           />
           <button
             type="submit"
             disabled={!inputText.trim() || isProcessing}
-            className="absolute right-2 p-2 rounded-lg bg-[var(--accent-primary)] hover:bg-[var(--accent-primary-hover)] text-slate-950 font-bold disabled:opacity-40 transition-all shadow-md active:scale-95"
+            className="absolute right-2 bottom-2 p-2 rounded-lg bg-[var(--accent-primary)] hover:bg-[var(--accent-primary-hover)] text-slate-950 font-bold disabled:opacity-40 transition-all shadow-md active:scale-95"
           >
             {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
           </button>
         </form>
 
         <div className="flex items-center justify-between text-[10px] text-[var(--text-muted)] font-mono px-1">
-          <span>Press Enter to send</span>
+          <span>Press Enter to send • Shift+Enter for new line</span>
           <span className="text-[var(--signal-mint)]">MCP Active</span>
         </div>
       </div>
