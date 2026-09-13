@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { LayoutDashboard, Key, Palette, Sparkles, Activity, ShieldCheck, Cpu, Terminal, ArrowUpRight, CheckCircle2, ChevronRight, Zap, RefreshCw, MessageSquare } from 'lucide-react';
+import { LayoutDashboard, Key, Palette, Sparkles, Activity, ShieldCheck, Cpu, Terminal, ArrowUpRight, CheckCircle2, ChevronRight, Zap, RefreshCw, MessageSquare, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 import { CockpitDashboard } from '../cockpit/CockpitDashboard.js';
 import { AgentBridge } from '../bridge/AgentBridge.js';
 import { CredentialVault } from '../vault/CredentialVault.js';
@@ -15,6 +15,23 @@ export const AppShell: React.FC = () => {
   const [selectedTrace, setSelectedTrace] = useState<DecisionTrace | null>(null);
   const [conciergeMsg, setConciergeMsg] = useState('GoalRoute Copilot active. Monitoring your configured enclave keys with 0ms overhead.');
   const [activeKeys, setActiveKeys] = useState<number | null>(null);
+  const [zoomLevel, setZoomLevel] = useState<number>(100);
+
+  // Ctrl + Mouse Wheel Zoom Listener
+  useEffect(() => {
+    const handleWheel = (e: WheelEvent) => {
+      if (e.ctrlKey) {
+        e.preventDefault();
+        setZoomLevel((prev) => {
+          const delta = e.deltaY < 0 ? 10 : -10;
+          return Math.min(200, Math.max(50, prev + delta));
+        });
+      }
+    };
+
+    window.addEventListener('wheel', handleWheel, { passive: false });
+    return () => window.removeEventListener('wheel', handleWheel);
+  }, []);
 
   useEffect(() => {
     const adminToken =
@@ -124,7 +141,7 @@ export const AppShell: React.FC = () => {
             </button>
           </nav>
 
-          {/* System & Telemetry Monitor Section (Relocated from right panel, formatted as distinct cards) */}
+          {/* System & Telemetry Monitor Section */}
           <div className="pt-3 border-t border-[var(--border-subtle)] space-y-3">
             <div className="text-[10px] font-mono uppercase tracking-wider text-[var(--text-muted)] px-1 font-semibold flex items-center justify-between">
               <span>Telemetry Monitor</span>
@@ -195,22 +212,84 @@ export const AppShell: React.FC = () => {
         </div>
       </aside>
 
-      {/* 2. FLEXIBLE VIEWPORT CANVAS (MIDDLE CONTENT) */}
-      <main className="flex-1 h-full overflow-y-auto p-6 md:p-8 custom-scrollbar bg-[var(--bg-obsidian)]">
-        {activeTab === 'cockpit' && (
-          <CockpitDashboard
-            onOpenGoalStudio={() => setIsGoalStudioOpen(true)}
-            onSelectTrace={(trace) => setSelectedTrace(trace)}
-          />
-        )}
-        {activeTab === 'bridge' && <AgentBridge />}
-        {activeTab === 'vault' && <CredentialVault />}
-        {activeTab === 'settings' && (
-          <div className="max-w-4xl mx-auto">
-            <SettingsAppearanceStudio />
+      {/* 2. MIDDLE VIEWPORT CONTAINER WITH TOP UTILITY BAR */}
+      <div className="flex-1 h-full flex flex-col min-w-0 bg-[var(--bg-obsidian)] overflow-hidden">
+        {/* TOP UTILITY BAR (Higher than editorial/content tabs) */}
+        <header className="h-11 border-b border-[var(--border-subtle)] bg-[var(--bg-rail)]/80 backdrop-blur-xs px-4 sm:px-6 flex items-center justify-between shrink-0 z-30 font-mono text-xs">
+          <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-2 text-[var(--text-secondary)]">
+              <span className="font-bold text-[var(--text-bright)] uppercase tracking-wider text-[11px]">
+                {activeTab === 'cockpit' ? 'Cockpit Dashboard' : activeTab === 'bridge' ? 'Agent Bridge' : activeTab === 'vault' ? 'Credential Vault' : 'Settings Studio'}
+              </span>
+              <span className="text-[var(--text-muted)]">/</span>
+              <span className="text-[10px] text-[var(--signal-mint)] bg-[var(--signal-mint)]/10 px-2 py-0.5 rounded-full border border-[var(--signal-mint)]/20 font-semibold">
+                Workstation Mode
+              </span>
+            </div>
           </div>
-        )}
-      </main>
+
+          {/* Interactive Zoom Controls */}
+          <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-1 bg-[var(--bg-well)] border border-[var(--border-subtle)] rounded-xl p-1 shadow-inner">
+              <button
+                type="button"
+                onClick={() => setZoomLevel((z) => Math.max(50, z - 10))}
+                className="p-1 rounded-lg hover:bg-[var(--bg-card-active)] text-[var(--text-secondary)] hover:text-[var(--text-bright)] transition-colors cursor-pointer"
+                title="Zoom Out (Ctrl + Scroll Down)"
+              >
+                <ZoomOut className="w-3.5 h-3.5" />
+              </button>
+
+              <span className="px-2 py-0.5 font-bold text-[11px] text-[var(--accent-primary)] min-w-[42px] text-center select-none font-mono">
+                {zoomLevel}%
+              </span>
+
+              <button
+                type="button"
+                onClick={() => setZoomLevel((z) => Math.min(200, z + 10))}
+                className="p-1 rounded-lg hover:bg-[var(--bg-card-active)] text-[var(--text-secondary)] hover:text-[var(--text-bright)] transition-colors cursor-pointer"
+                title="Zoom In (Ctrl + Scroll Up)"
+              >
+                <ZoomIn className="w-3.5 h-3.5" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setZoomLevel(100)}
+                disabled={zoomLevel === 100}
+                className="p-1 rounded-lg hover:bg-[var(--bg-card-active)] text-[var(--text-muted)] hover:text-[var(--text-bright)] disabled:opacity-30 transition-colors border-l border-[var(--border-subtle)] pl-1.5 cursor-pointer"
+                title="Reset Zoom (100%)"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            <span className="hidden sm:inline-block text-[10px] text-[var(--text-muted)] font-mono">
+              <kbd className="px-1.5 py-0.5 bg-[var(--bg-well)] border border-[var(--border-subtle)] rounded font-mono">Ctrl</kbd> + <kbd className="px-1.5 py-0.5 bg-[var(--bg-well)] border border-[var(--border-subtle)] rounded font-mono">Wheel</kbd>
+            </span>
+          </div>
+        </header>
+
+        {/* CANVAS WORKSPACE VIEWPORT */}
+        <main
+          className="flex-1 h-full overflow-y-auto p-6 md:p-8 custom-scrollbar bg-[var(--bg-obsidian)]"
+          style={{ zoom: `${zoomLevel}%` }}
+        >
+          {activeTab === 'cockpit' && (
+            <CockpitDashboard
+              onOpenGoalStudio={() => setIsGoalStudioOpen(true)}
+              onSelectTrace={(trace) => setSelectedTrace(trace)}
+            />
+          )}
+          {activeTab === 'bridge' && <AgentBridge />}
+          {activeTab === 'vault' && <CredentialVault />}
+          {activeTab === 'settings' && (
+            <div className="max-w-4xl mx-auto">
+              <SettingsAppearanceStudio />
+            </div>
+          )}
+        </main>
+      </div>
 
       {/* 3. AGENTIC CHAT INTERFACE (RIGHT RAIL) */}
       <aside className="w-full md:w-[380px] lg:w-[420px] h-full bg-[var(--bg-rail)] border-l border-[var(--border-subtle)] flex flex-col shrink-0 overflow-hidden z-10">
