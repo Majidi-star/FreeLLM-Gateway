@@ -20,6 +20,9 @@ export interface GoalRecord {
   exhaustion_pref: ExhaustionPreference;
   reliability_pref: ReliabilityPreference;
   safety_margin_pct: number;
+  max_latency: number | null;
+  target_quality: number | null;
+  min_availability: number | null;
   created_at: number;
   updated_at: number;
 }
@@ -34,8 +37,9 @@ export class GoalRepository {
     const stmt = this.db.prepare(`
       INSERT INTO goals (
         id, name, task_type, target_requests_per_day, target_tokens_per_day, latency_pref, budget_pref,
-        budget_cap_usd_monthly, exhaustion_pref, reliability_pref, safety_margin_pct, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        budget_cap_usd_monthly, exhaustion_pref, reliability_pref, safety_margin_pct,
+        max_latency, target_quality, min_availability, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     const g = goal as any;
@@ -48,6 +52,9 @@ export class GoalRepository {
     const exhaustionPref = goal.exhaustion_pref || g.exhaustionPref || 'preserve_backup';
     const reliabilityPref = goal.reliability_pref || g.reliabilityPref || 'standard';
     const safetyMarginPct = goal.safety_margin_pct ?? g.safetyMarginPct ?? 20.0;
+    const maxLatency = goal.max_latency ?? g.maxLatency ?? null;
+    const targetQuality = goal.target_quality ?? g.targetQuality ?? null;
+    const minAvailability = goal.min_availability ?? g.minAvailability ?? null;
 
     stmt.run(
       id,
@@ -61,6 +68,9 @@ export class GoalRepository {
       exhaustionPref,
       reliabilityPref,
       safetyMarginPct,
+      maxLatency,
+      targetQuality,
+      minAvailability,
       now,
       now
     );

@@ -6,6 +6,7 @@ import { ProviderRepository } from '../infra/db/repositories/providerRepo.js';
 import { HealthRepository } from '../infra/db/repositories/healthRepo.js';
 import { QuotaRepository } from '../infra/db/repositories/quotaRepo.js';
 import { RequestLogRepository } from '../infra/db/repositories/requestLogRepo.js';
+import { GoalRepository } from '../infra/db/repositories/goalRepo.js';
 import { CircuitBreaker } from '../domain/resilience/circuitBreaker.js';
 import { calculateCooldownMs } from '../domain/resilience/cooldown.js';
 import { computeSlidingWindowUsage, getWindowStart, wouldQuotaExceed } from '../domain/quota/slidingWindow.js';
@@ -121,7 +122,8 @@ export class GatewayService extends EventEmitter {
     private providerRepo: ProviderRepository,
     private healthRepo: HealthRepository,
     private quotaRepo: QuotaRepository,
-    private logRepo: RequestLogRepository
+    private logRepo: RequestLogRepository,
+    private goalRepo?: GoalRepository
   ) {
     super();
   }
@@ -150,6 +152,9 @@ export class GatewayService extends EventEmitter {
     if (!pool || !pool.is_active) {
       throw new NotFoundError(`Active pool with ID '${poolId}' not found`);
     }
+
+    const goalRecord = pool.goal_id && this.goalRepo ? this.goalRepo.findById(pool.goal_id) : null;
+    const taskType = goalRecord?.task_type || 'general';
 
     const rawSteps = this.poolRepo.getPoolSteps(poolId);
     if (rawSteps.length === 0) {
@@ -192,6 +197,7 @@ export class GatewayService extends EventEmitter {
       }
 
       const taskFitnessMap = safeParseTaskFitness(mdl.task_fitness);
+      const fitness = taskFitnessMap[taskType] ?? taskFitnessMap.general ?? taskFitnessMap.coding_agent ?? 0.8;
 
       stepInfos.push({
         id: step.id,
@@ -211,7 +217,7 @@ export class GatewayService extends EventEmitter {
         benchTtftMs: mdl.bench_ttft_ms || undefined,
         benchP95LatencyMs: mdl.bench_p95_latency_ms || undefined,
         costPer1kUsd: mdl.cost_input_per_1k + mdl.cost_output_per_1k,
-        taskFitness: taskFitnessMap.coding_agent || 0.8,
+        taskFitness: fitness,
       });
     }
 
@@ -263,26 +269,56 @@ export class GatewayService extends EventEmitter {
         continue;
       }
 
-      // 3. Quota Gate (Atomic Reservation)
-      let hasReservedQuota = false;
+      // 3. Dual Quota Gate (Atomic Reservation for Tokens & Requests)
+      let hasReservedTokens = false;
+      let hasReservedRequests = false;
       let quotaExceeded = false;
       const estimatedTokens = request.max_tokens || 1000;
-      let currentWindowStart = Date.now();
+
+      let dailyTokenPolicy: any = null;
+      let dailyReqPolicy: any = null;
+      let tokenWindowStart = Date.now();
+      let reqWindowStart = Date.now();
+
       try {
-        const dailyPolicy = this.quotaRepo.getPolicy(conn.id, 'daily_tokens');
-        if (dailyPolicy) {
-          currentWindowStart = getWindowStart(Date.now(), dailyPolicy.window_seconds);
+        dailyTokenPolicy = this.quotaRepo.getPolicy(conn.id, 'daily_tokens');
+        dailyReqPolicy = this.quotaRepo.getPolicy(conn.id, 'daily_requests');
+
+        if (dailyTokenPolicy) {
+          tokenWindowStart = getWindowStart(Date.now(), dailyTokenPolicy.window_seconds);
           const reserved = this.quotaRepo.reserveQuota(
             conn.id,
             'daily_tokens',
-            currentWindowStart,
+            tokenWindowStart,
             estimatedTokens,
-            dailyPolicy.limit_value
+            dailyTokenPolicy.limit_value
           );
           if (!reserved) {
             quotaExceeded = true;
           } else {
-            hasReservedQuota = true;
+            hasReservedTokens = true;
+          }
+        }
+
+        if (!quotaExceeded && dailyReqPolicy) {
+          reqWindowStart = getWindowStart(Date.now(), dailyReqPolicy.window_seconds);
+          const reserved = this.quotaRepo.reserveQuota(
+            conn.id,
+            'daily_requests',
+            reqWindowStart,
+            1,
+            dailyReqPolicy.limit_value
+          );
+          if (!reserved) {
+            quotaExceeded = true;
+            if (hasReservedTokens && dailyTokenPolicy) {
+              try {
+                this.quotaRepo.recordUsage(conn.id, 'daily_tokens', tokenWindowStart, -estimatedTokens);
+              } catch {}
+              hasReservedTokens = false;
+            }
+          } else {
+            hasReservedRequests = true;
           }
         }
       } catch (quotaErr: any) {
@@ -350,10 +386,12 @@ export class GatewayService extends EventEmitter {
 
         try {
           const deltaTokens = actualTokens - estimatedTokens;
-          if (deltaTokens !== 0) {
-            this.quotaRepo.recordUsage(conn.id, 'daily_tokens', currentWindowStart, deltaTokens);
+          if (hasReservedTokens && dailyTokenPolicy && deltaTokens !== 0) {
+            this.quotaRepo.recordUsage(conn.id, 'daily_tokens', tokenWindowStart, deltaTokens);
           }
-          this.quotaRepo.recordUsage(conn.id, 'daily_requests', currentWindowStart, 1);
+          if (!hasReservedRequests && dailyReqPolicy) {
+            this.quotaRepo.recordUsage(conn.id, 'daily_requests', reqWindowStart, 1);
+          }
         } catch (recErr: any) {
           logger.warn({ connectionId: conn.id, error: recErr.message }, 'Failed to record quota usage');
         }
@@ -409,14 +447,22 @@ export class GatewayService extends EventEmitter {
           latencyMs: httpRes.latencyMs,
         };
       } catch (err: any) {
-        // Refund pre-reserved tokens on dispatch failure
-        if (hasReservedQuota) {
+        // Refund pre-reserved quotas on dispatch failure
+        if (hasReservedTokens && dailyTokenPolicy) {
           try {
-            this.quotaRepo.recordUsage(conn.id, 'daily_tokens', currentWindowStart, -estimatedTokens);
+            this.quotaRepo.recordUsage(conn.id, 'daily_tokens', tokenWindowStart, -estimatedTokens);
           } catch (refundErr: any) {
-            logger.warn({ connectionId: conn.id, error: refundErr.message }, 'Failed to refund pre-reserved quota');
+            logger.warn({ connectionId: conn.id, error: refundErr.message }, 'Failed to refund pre-reserved token quota');
           }
         }
+        if (hasReservedRequests && dailyReqPolicy) {
+          try {
+            this.quotaRepo.recordUsage(conn.id, 'daily_requests', reqWindowStart, -1);
+          } catch (refundErr: any) {
+            logger.warn({ connectionId: conn.id, error: refundErr.message }, 'Failed to refund pre-reserved request quota');
+          }
+        }
+
         const statusCode = err.statusCode;
         const prov = this.providerRepo.findById(conn.provider_id);
         const authType = prov?.auth_type || 'api_key';
@@ -425,6 +471,7 @@ export class GatewayService extends EventEmitter {
         const isTerminalAuth = statusCode === 401 || (statusCode === 403 && !isHtmlWaf);
 
         if (isTerminalAuth) {
+          cb.releaseProbe();
           locallyExpiredConnectionIds.add(conn.id);
           this.connectionRepo.updateStatus(conn.id, 'expired', err.message);
           decisionTrace.push({
@@ -466,6 +513,8 @@ export class GatewayService extends EventEmitter {
             opened_at: snapshot.openedAt,
             cooldown_until: cooldownUntil,
           });
+        } else {
+          cb.releaseProbe();
         }
 
         decisionTrace.push({
@@ -531,6 +580,9 @@ export class GatewayService extends EventEmitter {
       throw new NotFoundError(`Active pool with ID '${poolId}' not found`);
     }
 
+    const goalRecord = pool.goal_id && this.goalRepo ? this.goalRepo.findById(pool.goal_id) : null;
+    const taskType = goalRecord?.task_type || 'general';
+
     const rawSteps = this.poolRepo.getPoolSteps(poolId);
     if (rawSteps.length === 0) {
       throw new AllTargetsExhaustedError([], `Pool '${poolId}' has no target steps configured`);
@@ -569,6 +621,7 @@ export class GatewayService extends EventEmitter {
       }
 
       const taskFitnessMap = safeParseTaskFitness(mdl.task_fitness);
+      const fitness = taskFitnessMap[taskType] ?? taskFitnessMap.general ?? taskFitnessMap.coding_agent ?? 0.8;
 
       stepInfos.push({
         id: step.id,
@@ -588,7 +641,7 @@ export class GatewayService extends EventEmitter {
         benchTtftMs: mdl.bench_ttft_ms || undefined,
         benchP95LatencyMs: mdl.bench_p95_latency_ms || undefined,
         costPer1kUsd: mdl.cost_input_per_1k + mdl.cost_output_per_1k,
-        taskFitness: taskFitnessMap.coding_agent || 0.8,
+        taskFitness: fitness,
       });
     }
 
@@ -638,26 +691,52 @@ export class GatewayService extends EventEmitter {
         continue;
       }
 
-      // Quota Gate (Atomic Reservation)
-      let hasReservedQuota = false;
+      // Dual Quota Gate (Atomic Reservation for Tokens & Requests)
+      let hasReservedTokens = false;
+      let hasReservedRequests = false;
       let quotaExceeded = false;
       const estimatedTokens = request.max_tokens || 1000;
-      let currentWindowStart = Date.now();
+
+      const dailyTokenPolicy = this.quotaRepo.getPolicy(conn.id, 'daily_tokens');
+      const dailyReqPolicy = this.quotaRepo.getPolicy(conn.id, 'daily_requests');
+
+      const tokenWindowStart = dailyTokenPolicy ? getWindowStart(Date.now(), dailyTokenPolicy.window_seconds) : Date.now();
+      const reqWindowStart = dailyReqPolicy ? getWindowStart(Date.now(), dailyReqPolicy.window_seconds) : Date.now();
+
       try {
-        const dailyPolicy = this.quotaRepo.getPolicy(conn.id, 'daily_tokens');
-        if (dailyPolicy) {
-          currentWindowStart = getWindowStart(Date.now(), dailyPolicy.window_seconds);
+        if (dailyTokenPolicy) {
           const reserved = this.quotaRepo.reserveQuota(
             conn.id,
             'daily_tokens',
-            currentWindowStart,
+            tokenWindowStart,
             estimatedTokens,
-            dailyPolicy.limit_value
+            dailyTokenPolicy.limit_value
           );
           if (!reserved) {
             quotaExceeded = true;
           } else {
-            hasReservedQuota = true;
+            hasReservedTokens = true;
+          }
+        }
+
+        if (!quotaExceeded && dailyReqPolicy) {
+          const reserved = this.quotaRepo.reserveQuota(
+            conn.id,
+            'daily_requests',
+            reqWindowStart,
+            1,
+            dailyReqPolicy.limit_value
+          );
+          if (!reserved) {
+            quotaExceeded = true;
+            if (hasReservedTokens && dailyTokenPolicy) {
+              try {
+                this.quotaRepo.recordUsage(conn.id, 'daily_tokens', tokenWindowStart, -estimatedTokens);
+              } catch {}
+              hasReservedTokens = false;
+            }
+          } else {
+            hasReservedRequests = true;
           }
         }
       } catch (quotaErr: any) {
@@ -678,10 +757,24 @@ export class GatewayService extends EventEmitter {
       }
 
       let quotaSettled = false;
-      const settleQuotaDelta = (delta: number) => {
-        if (quotaSettled || !hasReservedQuota) return;
+      const settleStreamQuota = (actualTokens?: number, isSuccess: boolean = true) => {
+        if (quotaSettled) return;
         quotaSettled = true;
-        this.quotaRepo.recordUsage(conn.id, 'daily_tokens', currentWindowStart, delta);
+
+        if (isSuccess) {
+          const finalTokens = actualTokens ?? estimatedTokens;
+          const deltaTokens = finalTokens - estimatedTokens;
+          if (hasReservedTokens && dailyTokenPolicy && deltaTokens !== 0) {
+            try { this.quotaRepo.recordUsage(conn.id, 'daily_tokens', tokenWindowStart, deltaTokens); } catch {}
+          }
+        } else {
+          if (hasReservedTokens && dailyTokenPolicy) {
+            try { this.quotaRepo.recordUsage(conn.id, 'daily_tokens', tokenWindowStart, -estimatedTokens); } catch {}
+          }
+          if (hasReservedRequests && dailyReqPolicy) {
+            try { this.quotaRepo.recordUsage(conn.id, 'daily_requests', reqWindowStart, -1); } catch {}
+          }
+        }
       };
 
       try {
@@ -722,8 +815,7 @@ export class GatewayService extends EventEmitter {
           step.modelName,
           (usage) => {
             try {
-              settleQuotaDelta(usage.totalTokens - estimatedTokens);
-              this.quotaRepo.recordUsage(conn.id, 'daily_requests', currentWindowStart, 1);
+              settleStreamQuota(usage.totalTokens, true);
             } catch (recErr: any) {
               logger.warn({ connectionId: conn.id, error: recErr.message }, 'Failed to record quota usage');
             }
@@ -759,6 +851,7 @@ export class GatewayService extends EventEmitter {
             });
           },
           () => {
+            settleStreamQuota(estimatedTokens, true);
             cb.recordSuccess();
             const snapshot = cb.getSnapshot();
             this.healthRepo.upsert({
@@ -770,9 +863,7 @@ export class GatewayService extends EventEmitter {
             });
           },
           (err) => {
-            try {
-              settleQuotaDelta(-estimatedTokens);
-            } catch {}
+            settleStreamQuota(undefined, false);
             if (signal?.aborted) {
               cb.releaseProbe();
               return;
@@ -801,9 +892,7 @@ export class GatewayService extends EventEmitter {
           latencyMs: httpRes.latencyMs,
         };
       } catch (err: any) {
-        try {
-          settleQuotaDelta(-estimatedTokens);
-        } catch {}
+        settleStreamQuota(undefined, false);
         const statusCode = err.statusCode;
         const prov = this.providerRepo.findById(conn.provider_id);
         const authType = prov?.auth_type || 'api_key';
@@ -812,6 +901,7 @@ export class GatewayService extends EventEmitter {
         const isTerminalAuth = statusCode === 401 || (statusCode === 403 && !isHtmlWaf);
 
         if (isTerminalAuth) {
+          cb.releaseProbe();
           locallyExpiredConnectionIds.add(conn.id);
           this.connectionRepo.updateStatus(conn.id, 'expired', err.message);
           decisionTrace.push({
@@ -853,6 +943,8 @@ export class GatewayService extends EventEmitter {
             opened_at: snapshot.openedAt,
             cooldown_until: cooldownUntil,
           });
+        } else {
+          cb.releaseProbe();
         }
 
         decisionTrace.push({

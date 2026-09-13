@@ -105,7 +105,7 @@ export const AgenticChat: React.FC = () => {
       sessionStorage.getItem('goalroute_admin_token') ||
       localStorage.getItem('goalroute_admin_token') ||
       (import.meta as any).env?.VITE_ADMIN_API_TOKEN ||
-      'dev-admin-secret-token';
+      '';
 
     fetch('/api/v1/mcp/tools', {
       headers: adminToken ? { authorization: `Bearer ${adminToken}` } : {},
@@ -237,7 +237,7 @@ export const AgenticChat: React.FC = () => {
     const adminToken =
       sessionStorage.getItem('goalroute_admin_token') ||
       localStorage.getItem('goalroute_admin_token') ||
-      'dev-admin-secret-token';
+      '';
 
     const res = await fetch('/api/v1/mcp/call', {
       method: 'POST',
@@ -302,7 +302,7 @@ export const AgenticChat: React.FC = () => {
       const adminToken =
         sessionStorage.getItem('goalroute_admin_token') ||
         localStorage.getItem('goalroute_admin_token') ||
-        'dev-admin-secret-token';
+        '';
 
       // Check if user prompt requests tool execution
       const lowerPrompt = promptText.toLowerCase();

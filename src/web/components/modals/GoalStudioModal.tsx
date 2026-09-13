@@ -82,7 +82,7 @@ const getAdminToken = () =>
   sessionStorage.getItem('goalroute_admin_token') ||
   localStorage.getItem('goalroute_admin_token') ||
   (import.meta as any).env?.VITE_ADMIN_API_TOKEN ||
-  'dev-admin-secret-token';
+  '';
 
 export const GoalStudioModal: React.FC<GoalStudioModalProps> = ({ isOpen, onClose, onApplyGoal }) => {
   // Preset Intent
@@ -154,6 +154,9 @@ export const GoalStudioModal: React.FC<GoalStudioModalProps> = ({ isOpen, onClos
           exhaustionPref,
           reliabilityPref,
           safetyMarginPct,
+          maxLatency,
+          targetQuality,
+          minAvailability,
         }),
       });
 
@@ -187,6 +190,9 @@ export const GoalStudioModal: React.FC<GoalStudioModalProps> = ({ isOpen, onClos
     exhaustionPref,
     reliabilityPref,
     latencyPref,
+    maxLatency,
+    targetQuality,
+    minAvailability,
   ]);
 
   const handleIntentSelect = (intent: 'coding' | 'chat' | 'reasoning' | 'custom') => {
@@ -260,6 +266,9 @@ export const GoalStudioModal: React.FC<GoalStudioModalProps> = ({ isOpen, onClos
           exhaustion_pref: exhaustionPref,
           reliability_pref: reliabilityPref,
           safety_margin_pct: safetyMarginPct,
+          max_latency: maxLatency,
+          target_quality: targetQuality,
+          min_availability: minAvailability,
         }),
       });
 
@@ -270,12 +279,17 @@ export const GoalStudioModal: React.FC<GoalStudioModalProps> = ({ isOpen, onClos
 
       const createdGoal = await res.json();
 
-      // Solve goal immediately to update pool plan if endpoint available
-      fetch(`/api/v1/goals/${createdGoal.id}/solve`, {
+      // Solve goal and materialize routing pool immediately
+      await fetch('/api/v1/pools', {
         method: 'POST',
         headers: {
+          'Content-Type': 'application/json',
           ...(getAdminToken() ? { authorization: `Bearer ${getAdminToken()}` } : {}),
         },
+        body: JSON.stringify({
+          goalId: createdGoal.id,
+          name: `Pool for ${createdGoal.name}`,
+        }),
       }).catch(() => {});
 
       setApplied(true);

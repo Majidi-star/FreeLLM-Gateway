@@ -113,7 +113,7 @@ export const AppShell: React.FC = () => {
       sessionStorage.getItem('goalroute_admin_token') ||
       localStorage.getItem('goalroute_admin_token') ||
       (import.meta as any).env?.VITE_ADMIN_API_TOKEN ||
-      'dev-admin-secret-token';
+      '';
     fetch('/api/v1/providers', {
       headers: adminToken ? { authorization: `Bearer ${adminToken}` } : {},
     })

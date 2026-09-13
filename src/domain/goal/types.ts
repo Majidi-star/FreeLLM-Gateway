@@ -18,6 +18,9 @@ export interface GoalInput {
   exhaustionPref?: ExhaustionPreference;
   reliabilityPref?: ReliabilityPreference;
   safetyMarginPct?: number; // default 20
+  maxLatency?: number;
+  targetQuality?: number;
+  minAvailability?: number;
 }
 
 export interface CandidateSource {
@@ -33,6 +36,8 @@ export interface CandidateSource {
   tier: 'free' | 'paid' | 'subscription';
   dailyTokenCapacity: number;
   dailyRequestCapacity: number;
+  hasTokenQuotaPolicy?: boolean;
+  hasRequestQuotaPolicy?: boolean;
   costPerRequestUsd: number;
   costPer1kTokensUsd: number;
   benchTps: number;

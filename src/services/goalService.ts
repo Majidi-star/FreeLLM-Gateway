@@ -45,6 +45,9 @@ export class GoalService {
       exhaustionPref: goalRecord.exhaustion_pref,
       reliabilityPref: goalRecord.reliability_pref,
       safetyMarginPct: goalRecord.safety_margin_pct,
+      maxLatency: goalRecord.max_latency || undefined,
+      targetQuality: goalRecord.target_quality || undefined,
+      minAvailability: goalRecord.min_availability || undefined,
     };
 
     return this.solveGoalInput(goalInput);
@@ -85,8 +88,10 @@ export class GoalService {
           modelName: model.model_name,
           modelDisplayName: model.display_name,
           tier: conn.tier,
-          dailyTokenCapacity: tokenPolicy ? tokenPolicy.limit_value : 5000000,
-          dailyRequestCapacity: reqPolicy ? reqPolicy.limit_value : 2000,
+          dailyTokenCapacity: tokenPolicy ? tokenPolicy.limit_value : 0,
+          dailyRequestCapacity: reqPolicy ? reqPolicy.limit_value : 0,
+          hasTokenQuotaPolicy: Boolean(tokenPolicy),
+          hasRequestQuotaPolicy: Boolean(reqPolicy),
           costPerRequestUsd: 0,
           costPer1kTokensUsd: model.cost_input_per_1k + model.cost_output_per_1k,
           benchTps: model.bench_tps || 100,

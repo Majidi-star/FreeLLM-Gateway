@@ -68,19 +68,15 @@ const updateEndpointsSchema = z.object({
 function buildProtocolAuthHook(config: Config) {
   return async (req: FastifyRequest, reply: FastifyReply) => {
     const authHeader = req.headers['authorization'];
-    const isDev = config.NODE_ENV === 'development';
     if (authHeader) {
       const token = authHeader.replace(/^Bearer\s+/i, '').trim();
-      const isValid =
-        safeCompareTokens(token, config.ADMIN_API_TOKEN) ||
-        (isDev && safeCompareTokens(token, 'dev-admin-secret-token'));
+      const isValid = safeCompareTokens(token, config.ADMIN_API_TOKEN);
       if (!isValid) {
         return reply.status(401).send({ error: { message: 'Unauthorized', type: 'authentication_error' } });
       }
     } else {
       const isDevAllowed =
-        config.NODE_ENV === 'development' &&
-        (safeCompareTokens(config.ADMIN_API_TOKEN, 'dev-admin-secret-token') || process.env.ALLOW_ANONYMOUS_DEV === 'true');
+        config.NODE_ENV === 'development' && process.env.ALLOW_ANONYMOUS_DEV === 'true';
       if (!isDevAllowed) {
         return reply.status(401).send({ error: { message: 'Unauthorized', type: 'authentication_error' } });
       }
@@ -141,7 +137,7 @@ export async function buildApp() {
   const modelSyncService = new ModelSyncService(providerRepo, connectionRepo, modelRepo);
   const goalService = new GoalService(goalRepo, connectionRepo, providerRepo, modelRepo, healthRepo, quotaRepo);
   const poolService = new PoolService(poolRepo, goalService);
-  const gatewayService = new GatewayService(poolRepo, connectionRepo, modelRepo, providerRepo, healthRepo, quotaRepo, logRepo);
+  const gatewayService = new GatewayService(poolRepo, connectionRepo, modelRepo, providerRepo, healthRepo, quotaRepo, logRepo, goalRepo);
   const mcpService = new McpService(quotaRepo, healthRepo, connectionRepo, providerRepo, goalService, poolService, providerService);
 
   // Auto-sync catalog on server boot
@@ -199,9 +195,7 @@ export async function buildApp() {
       const queryToken = parsedUrl.searchParams.get('token');
 
       if (url.startsWith('/api/v1/request-logs/stream')) {
-        const isStreamTokenValid =
-          safeCompareTokens(queryToken || '', config.ADMIN_API_TOKEN) ||
-          (config.NODE_ENV === 'development' && safeCompareTokens(queryToken || '', 'dev-admin-secret-token'));
+        const isStreamTokenValid = safeCompareTokens(queryToken || '', config.ADMIN_API_TOKEN);
         if (isStreamTokenValid) {
           return;
         }
@@ -210,12 +204,7 @@ export async function buildApp() {
       const authHeader = req.headers['authorization'];
       const token = authHeader ? authHeader.replace(/^Bearer\s+/i, '').trim() : '';
 
-      const isDev = config.NODE_ENV === 'development';
-      const isDefaultConfigToken = safeCompareTokens(config.ADMIN_API_TOKEN, 'dev-admin-secret-token');
-
-      const isTokenValid =
-        safeCompareTokens(token, config.ADMIN_API_TOKEN) ||
-        (isDev && safeCompareTokens(token, 'dev-admin-secret-token'));
+      const isTokenValid = safeCompareTokens(token, config.ADMIN_API_TOKEN);
 
       if (!isTokenValid) {
         return reply.status(401).send({ error: { message: 'Unauthorized', type: 'authentication_error' } });
@@ -228,7 +217,7 @@ export async function buildApp() {
           return reply.status(401).send({ error: { message: 'Unauthorized', type: 'authentication_error' } });
         }
       } else {
-        const isDevAllowed = config.NODE_ENV === 'development' && (safeCompareTokens(config.ADMIN_API_TOKEN, 'dev-admin-secret-token') || process.env.ALLOW_ANONYMOUS_DEV === 'true');
+        const isDevAllowed = config.NODE_ENV === 'development' && process.env.ALLOW_ANONYMOUS_DEV === 'true';
         if (!isDevAllowed) {
           return reply.status(401).send({ error: { message: 'Unauthorized', type: 'authentication_error' } });
         }

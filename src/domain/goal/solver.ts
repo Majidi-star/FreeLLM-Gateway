@@ -9,18 +9,30 @@ export function solveGoal(goal: GoalInput, candidates: CandidateSource[]): PoolP
   const targetRequests = goal.targetRequestsPerDay || 1000;
   const safetyMarginPct = goal.safetyMarginPct ?? 20;
   const marginMultiplier = 1 + safetyMarginPct / 100;
+  const marginedTargetTokens = targetTokens * marginMultiplier;
+  const marginedTargetRequests = targetRequests * marginMultiplier;
 
   decisionTrace.push(`Solving goal for task '${goal.taskType}' with target ${targetRequests} req/day, ${targetTokens} tokens/day (margin ${safetyMarginPct}%)`);
 
   // 1. Filter Phase
   const MIN_FITNESS = 0.4;
+  const qualityThreshold = goal.targetQuality ? goal.targetQuality / 100 : MIN_FITNESS;
+
   const eligible = candidates.filter((c) => {
     if (c.currentHealthState === 'open') {
       decisionTrace.push(`Filtered out connection ${c.connectionId} (${c.providerSlug}): health state is open`);
       return false;
     }
-    if (c.taskFitness < MIN_FITNESS) {
-      decisionTrace.push(`Filtered out model ${c.modelName} (${c.providerSlug}): fitness ${c.taskFitness} < ${MIN_FITNESS}`);
+    if (c.taskFitness < MIN_FITNESS || (goal.targetQuality && c.taskFitness < qualityThreshold)) {
+      decisionTrace.push(`Filtered out model ${c.modelName} (${c.providerSlug}): fitness ${c.taskFitness} < required ${qualityThreshold}`);
+      return false;
+    }
+    if (goal.maxLatency && c.benchTtftMs > goal.maxLatency) {
+      decisionTrace.push(`Filtered out model ${c.modelName} (${c.providerSlug}): TTFT ${c.benchTtftMs}ms exceeds maxLatency threshold ${goal.maxLatency}ms`);
+      return false;
+    }
+    if (goal.minAvailability && goal.minAvailability > 99.0 && c.currentHealthState !== 'closed') {
+      decisionTrace.push(`Filtered out connection ${c.connectionId} (${c.providerSlug}): state ${c.currentHealthState} does not satisfy minAvailability ${goal.minAvailability}%`);
       return false;
     }
     if (goal.budgetPref === 'free' && c.tier !== 'free') {
@@ -31,7 +43,7 @@ export function solveGoal(goal: GoalInput, candidates: CandidateSource[]): PoolP
   });
 
   if (eligible.length === 0) {
-    decisionTrace.push('Infeasible plan: 0 eligible candidate connections match task type and budget preferences');
+    decisionTrace.push('Infeasible plan: 0 eligible candidate connections match task type and constraint preferences');
     return {
       steps: [],
       policy: selectPolicy(goal),
@@ -41,7 +53,7 @@ export function solveGoal(goal: GoalInput, candidates: CandidateSource[]): PoolP
       feasible: false,
       estimatedMonthlyCostUsd: 0,
       decisionTrace,
-      warnings: ['No active or healthy provider connections match the required task type and budget tier.'],
+      warnings: ['No active or healthy provider connections match the required task type, quality, latency, or budget constraints.'],
     };
   }
 
@@ -51,6 +63,12 @@ export function solveGoal(goal: GoalInput, candidates: CandidateSource[]): PoolP
     warnings.push(`Only 1 provider (${eligible[0].providerDisplayName}) covers your task requirements; lack of provider diversity increases failure risk.`);
   }
 
+  // Check for missing quota policies
+  const unconstrainedCandidates = eligible.filter((c) => c.hasTokenQuotaPolicy === false || c.hasRequestQuotaPolicy === false);
+  if (unconstrainedCandidates.length > 0) {
+    warnings.push('One or more candidate connections lack explicit quota limits; capacity projections assume untracked capacity.');
+  }
+
   // 2. Fitness-order candidates
   const ordered = [...eligible].sort((a, b) => {
     const scoreA = calculateCandidateScore(a, goal);
@@ -58,20 +76,17 @@ export function solveGoal(goal: GoalInput, candidates: CandidateSource[]): PoolP
     return scoreB - scoreA;
   });
 
-  // 3. Greedy Set-Cover
+  // 3. Greedy Set-Cover (Deduplicate per-connection capacity)
   const selectedSteps: PoolPlanStep[] = [];
+  const coveredConnections = new Set<string>();
   let coveredTokens = 0;
   let coveredRequests = 0;
   let orderIndex = 0;
 
   for (const candidate of ordered) {
-    if (coveredTokens >= targetTokens * marginMultiplier && coveredRequests >= targetRequests * marginMultiplier) {
+    if (coveredTokens >= marginedTargetTokens && coveredRequests >= marginedTargetRequests) {
       break;
     }
-
-    // Daily capacity default estimates if 0
-    const candTokens = candidate.dailyTokenCapacity > 0 ? candidate.dailyTokenCapacity : 5000000;
-    const candRequests = candidate.dailyRequestCapacity > 0 ? candidate.dailyRequestCapacity : 2000;
 
     selectedSteps.push({
       candidate,
@@ -81,9 +96,21 @@ export function solveGoal(goal: GoalInput, candidates: CandidateSource[]): PoolP
       reason: `Primary cover: fitness ${candidate.taskFitness.toFixed(2)}, speed ${candidate.benchTtftMs}ms`,
     });
 
-    coveredTokens += candTokens;
-    coveredRequests += candRequests;
-    decisionTrace.push(`Selected primary target ${candidate.providerSlug}/${candidate.modelName} (added capacity +${candTokens} tokens/day)`);
+    if (!coveredConnections.has(candidate.connectionId)) {
+      coveredConnections.add(candidate.connectionId);
+      const candTokens = candidate.dailyTokenCapacity > 0
+        ? candidate.dailyTokenCapacity
+        : (candidate.hasTokenQuotaPolicy === false ? 5000000 : 0);
+      const candRequests = candidate.dailyRequestCapacity > 0
+        ? candidate.dailyRequestCapacity
+        : (candidate.hasRequestQuotaPolicy === false ? 2000 : 0);
+
+      coveredTokens += candTokens;
+      coveredRequests += candRequests;
+      decisionTrace.push(`Selected primary target ${candidate.providerSlug}/${candidate.modelName} (added connection capacity +${candTokens} tokens/day)`);
+    } else {
+      decisionTrace.push(`Selected primary target ${candidate.providerSlug}/${candidate.modelName} (shares existing connection capacity)`);
+    }
   }
 
   // 4. Reliability pass: Add backup capacity if maximum reliability requested
@@ -107,12 +134,16 @@ export function solveGoal(goal: GoalInput, candidates: CandidateSource[]): PoolP
   const reqConfidence = coveredRequests / Math.max(targetRequests, 1);
   const tokenConfidence = coveredTokens / Math.max(targetTokens, 1);
   const confidenceScore = Math.min(reqConfidence, tokenConfidence);
-  const feasible = confidenceScore >= 1.0;
+  let feasible = confidenceScore >= 1.0;
+
+  if (feasible && (coveredTokens < marginedTargetTokens || coveredRequests < marginedTargetRequests)) {
+    warnings.push(`Plan satisfies 100% of base target demand but does not achieve full ${safetyMarginPct}% safety margin headroom.`);
+  }
 
   let gapSuggestion: GapSuggestion | undefined;
   if (!feasible && goal.budgetPref === 'free') {
-    const remainingTokenGap = Math.max(0, targetTokens * marginMultiplier - coveredTokens);
-    const remainingRequestGap = Math.max(0, targetRequests * marginMultiplier - coveredRequests);
+    const remainingTokenGap = Math.max(0, marginedTargetTokens - coveredTokens);
+    const remainingRequestGap = Math.max(0, marginedTargetRequests - coveredRequests);
 
     const paidCandidates = candidates.filter((c) => c.tier !== 'free' && c.taskFitness >= MIN_FITNESS && c.currentHealthState !== 'open');
     if (paidCandidates.length > 0) {
@@ -130,14 +161,29 @@ export function solveGoal(goal: GoalInput, candidates: CandidateSource[]): PoolP
     }
   }
 
+  // 6. Cost Estimation based on Target Volume
+  const primarySteps = selectedSteps.filter((s) => s.role === 'primary');
+  const paidPrimarySteps = primarySteps.filter((s) => s.candidate.tier !== 'free');
+  let estimatedMonthlyCostUsd = 0;
+
+  if (paidPrimarySteps.length > 0) {
+    const monthlyTokensToCover = targetTokens * 30;
+    const stepTokenAllocation = monthlyTokensToCover / paidPrimarySteps.length;
+    estimatedMonthlyCostUsd = paidPrimarySteps.reduce((acc, step) => {
+      return acc + (stepTokenAllocation / 1000) * step.candidate.costPer1kTokensUsd;
+    }, 0);
+  }
+
+  // Evaluate monthly budget cap
+  if (goal.budgetPref === 'capped' && goal.budgetCapUsdMonthly != null) {
+    if (estimatedMonthlyCostUsd > goal.budgetCapUsdMonthly) {
+      warnings.push(`Projected monthly cost ($${estimatedMonthlyCostUsd.toFixed(2)}) exceeds monthly budget cap of $${goal.budgetCapUsdMonthly.toFixed(2)}.`);
+      feasible = false;
+    }
+  }
+
   const policy = selectPolicy(goal);
   decisionTrace.push(`Selected pool routing policy '${policy}' based on goal preferences`);
-
-  const estimatedMonthlyCostUsd = selectedSteps.reduce((acc, step) => {
-    if (step.candidate.tier === 'free') return acc;
-    const tokensPerMonth = (step.candidate.dailyTokenCapacity || 1000000) * 30;
-    return acc + (tokensPerMonth / 1000) * step.candidate.costPer1kTokensUsd;
-  }, 0);
 
   return {
     steps: selectedSteps,
@@ -168,8 +214,8 @@ function calculateCandidateScore(c: CandidateSource, goal: GoalInput): number {
 export function selectPolicy(goal: GoalInput): RoutingPolicyName {
   if (goal.exhaustionPref === 'fill_first') return 'fill_first';
   if (goal.reliabilityPref === 'maximum') return 'auto_score';
+  if (goal.exhaustionPref === 'preserve_backup') return 'balanced';
   if (goal.latencyPref === 'instant') return 'fastest';
   if (goal.budgetPref === 'capped') return 'cheapest';
-  if (goal.exhaustionPref === 'preserve_backup' && goal.reliabilityPref === 'standard') return 'balanced';
   return 'auto_score';
 }

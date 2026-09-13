@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { Key, ShieldCheck, RefreshCw, CheckCircle2, AlertTriangle, Cpu, Lock, Terminal, Activity, Zap, Check, ChevronDown, Plus, X, ExternalLink } from 'lucide-react';
 import { GlossaryTerm } from '../common/GlossaryTerm.js';
 
@@ -110,7 +110,7 @@ const getAdminToken = () =>
   sessionStorage.getItem('goalroute_admin_token') ||
   localStorage.getItem('goalroute_admin_token') ||
   (import.meta as any).env?.VITE_ADMIN_API_TOKEN ||
-  'dev-admin-secret-token';
+  '';
 
 export const CredentialVault: React.FC = () => {
   const [keys, setKeys] = useState<KeyEntry[]>([]);
