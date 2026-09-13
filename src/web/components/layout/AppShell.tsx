@@ -35,10 +35,10 @@ export const AppShell: React.FC = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[var(--bg-obsidian)] text-[var(--text-primary)] font-sans flex flex-col md:flex-row overflow-hidden">
+    <div className="h-screen max-h-screen w-screen overflow-hidden bg-[var(--bg-obsidian)] text-[var(--text-primary)] font-sans flex flex-col md:flex-row">
       
       {/* 1. FIXED 260px LEFT NAVIGATION RAIL */}
-      <aside className="w-full md:w-64 bg-[var(--bg-rail)] border-r border-[var(--border-subtle)] flex flex-col justify-between p-4 shrink-0 z-20 overflow-y-auto custom-scrollbar">
+      <aside className="w-full md:w-64 h-full bg-[var(--bg-rail)] border-r border-[var(--border-subtle)] flex flex-col justify-between p-4 shrink-0 z-20 overflow-y-auto custom-scrollbar">
         <div className="space-y-5">
           
           {/* Logo & Workspace */}
@@ -196,7 +196,7 @@ export const AppShell: React.FC = () => {
       </aside>
 
       {/* 2. FLEXIBLE VIEWPORT CANVAS (MIDDLE CONTENT) */}
-      <main className="flex-1 overflow-y-auto p-6 md:p-8 custom-scrollbar bg-[var(--bg-obsidian)]">
+      <main className="flex-1 h-full overflow-y-auto p-6 md:p-8 custom-scrollbar bg-[var(--bg-obsidian)]">
         {activeTab === 'cockpit' && (
           <CockpitDashboard
             onOpenGoalStudio={() => setIsGoalStudioOpen(true)}
@@ -213,7 +213,7 @@ export const AppShell: React.FC = () => {
       </main>
 
       {/* 3. AGENTIC CHAT INTERFACE (RIGHT RAIL) */}
-      <aside className="w-full md:w-[380px] lg:w-[420px] bg-[var(--bg-rail)] border-l border-[var(--border-subtle)] flex flex-col shrink-0 overflow-hidden z-10 h-screen">
+      <aside className="w-full md:w-[380px] lg:w-[420px] h-full bg-[var(--bg-rail)] border-l border-[var(--border-subtle)] flex flex-col shrink-0 overflow-hidden z-10">
         <AgenticChat />
       </aside>
 
