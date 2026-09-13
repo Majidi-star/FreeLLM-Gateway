@@ -480,7 +480,7 @@ export const AdminTokenSection: React.FC = () => {
   };
 
   const clearTokenValue = async () => {
-    const defaultToken = 'sk-admin-3e4f498ecf31e1e2b87082d6';
+    const defaultToken = 'sk-admin-3e4f498ecf31e1e2b87082d649b8f9db';
     try {
       localStorage.setItem('goalroute_admin_token', defaultToken);
       sessionStorage.setItem('goalroute_admin_token', defaultToken);
