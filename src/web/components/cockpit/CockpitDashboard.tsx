@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { Activity, Zap, Cpu, ArrowUpRight, CheckCircle2, AlertTriangle, Sparkles, Sliders, ChevronRight, ChevronDown, Network } from 'lucide-react';
 import { DecisionTrace } from '../drawers/DecisionInspectorDrawer.js';
 import { GlossaryTerm } from '../common/GlossaryTerm.js';
@@ -374,73 +374,73 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
         </div>
       </div>
 
-      {/* 1-Click Setup Presets Bar */}
+      {/* 1-Click Setup Presets */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <label className="text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">1-Click Setup Presets</label>
+          <label className="text-sm font-bold uppercase tracking-wider text-[var(--text-secondary)]">1-Click Setup Presets</label>
           <button
             onClick={onOpenGoalStudio}
             className="text-xs font-semibold text-[var(--accent-primary)] hover:underline flex items-center gap-1"
           >
-            <Sparkles className="w-3.5 h-3.5" />
+            <Sparkles className="w-4 h-4" />
             <span>Customize Goal Studio Constraints →</span>
           </button>
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {presetError && (
-            <div className="col-span-2 sm:col-span-4 text-[10px] font-mono text-red-400">{presetError}</div>
+            <div className="col-span-2 sm:col-span-4 text-xs font-mono text-red-400">{presetError}</div>
           )}
           <button
             onClick={() => handleSetupPreset('standard')}
             disabled={savingPreset}
-            className={`p-3.5 rounded-2xl border text-left transition-all ${
+            className={`p-4 rounded-2xl border text-left transition-all ${
               activeSetupPreset === 'standard'
                 ? 'bg-[var(--bg-card-active)] border-[var(--accent-primary)] shadow-md shadow-[var(--accent-primary)]/10'
                 : 'bg-[var(--bg-card)] border-[var(--border-subtle)] hover:border-[var(--border-hover)]'
             }`}
           >
-            <div className="font-bold text-xs text-[var(--text-primary)]">Standard Balanced</div>
-            <div className="text-[11px] text-[var(--text-muted)] mt-0.5">Equal speed & accuracy</div>
+            <div className="font-bold text-sm text-[var(--text-primary)]">Standard Balanced</div>
+            <div className="text-xs text-[var(--text-secondary)] mt-1">Equal speed &amp; accuracy</div>
           </button>
 
           <button
             onClick={() => handleSetupPreset('high_perf')}
             disabled={savingPreset}
-            className={`p-3.5 rounded-2xl border text-left transition-all ${
+            className={`p-4 rounded-2xl border text-left transition-all ${
               activeSetupPreset === 'high_perf'
                 ? 'bg-[var(--bg-card-active)] border-[var(--accent-primary)] shadow-md shadow-[var(--accent-primary)]/10'
                 : 'bg-[var(--bg-card)] border-[var(--border-subtle)] hover:border-[var(--border-hover)]'
             }`}
           >
-            <div className="font-bold text-xs text-[var(--text-primary)]">Ultra Low Latency</div>
-            <div className="text-[11px] text-[var(--text-muted)] mt-0.5">Sub-80ms Groq & Cerebras</div>
+            <div className="font-bold text-sm text-[var(--text-primary)]">Ultra Low Latency</div>
+            <div className="text-xs text-[var(--text-secondary)] mt-1">Sub-80ms Groq &amp; Cerebras</div>
           </button>
 
           <button
             onClick={() => handleSetupPreset('cost_saver')}
             disabled={savingPreset}
-            className={`p-3.5 rounded-2xl border text-left transition-all ${
+            className={`p-4 rounded-2xl border text-left transition-all ${
               activeSetupPreset === 'cost_saver'
                 ? 'bg-[var(--bg-card-active)] border-[var(--accent-primary)] shadow-md shadow-[var(--accent-primary)]/10'
                 : 'bg-[var(--bg-card)] border-[var(--border-subtle)] hover:border-[var(--border-hover)]'
             }`}
           >
-            <div className="font-bold text-xs text-[var(--text-primary)]">Maximum Free Quota</div>
-            <div className="text-[11px] text-[var(--text-muted)] mt-0.5">Distributes across all keys</div>
+            <div className="font-bold text-sm text-[var(--text-primary)]">Maximum Free Quota</div>
+            <div className="text-xs text-[var(--text-secondary)] mt-1">Distributes across all keys</div>
           </button>
 
           <button
             onClick={() => handleSetupPreset('reasoning')}
             disabled={savingPreset}
-            className={`p-3.5 rounded-2xl border text-left transition-all ${
+            className={`p-4 rounded-2xl border text-left transition-all ${
               activeSetupPreset === 'reasoning'
                 ? 'bg-[var(--bg-card-active)] border-[var(--accent-primary)] shadow-md shadow-[var(--accent-primary)]/10'
                 : 'bg-[var(--bg-card)] border-[var(--border-subtle)] hover:border-[var(--border-hover)]'
             }`}
           >
-            <div className="font-bold text-xs text-[var(--text-primary)]">Deep Reasoning</div>
-            <div className="text-[11px] text-[var(--text-muted)] mt-0.5">DeepSeek-R1 priority</div>
+            <div className="font-bold text-sm text-[var(--text-primary)]">Deep Reasoning</div>
+            <div className="text-xs text-[var(--text-secondary)] mt-1">DeepSeek-R1 priority</div>
           </button>
         </div>
       </div>
@@ -449,49 +449,49 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <label className="text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">Active Free Routing Team Models</label>
+            <label className="text-sm font-bold uppercase tracking-wider text-[var(--text-secondary)]">Active Free Routing Team Models</label>
           </div>
-          <span className="text-xs text-[var(--text-muted)]">{catalogModels.length} Active Catalog Models</span>
+          <span className="text-xs font-semibold text-[var(--text-secondary)]">{catalogModels.length} Active Catalog Models</span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {catalogModels.length === 0 ? (
-            <div className="col-span-full p-8 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-subtle)] text-center text-xs text-[var(--text-secondary)]">
+            <div className="col-span-full p-8 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-subtle)] text-center text-xs text-[var(--text-secondary)] font-medium">
               No catalog models discovered yet. Connect a provider key in the Credential Vault and run model sync.
             </div>
           ) : (
           catalogModels.slice(0, 8).map((model) => (
             <div
               key={model.id || model.modelName}
-              className="squircle-card p-4 bg-[var(--bg-card)] border border-[var(--border-subtle)] hover:border-[var(--border-hover)] hover:bg-[var(--bg-card-active)] transition-all space-y-3"
+              className="squircle-card p-4.5 bg-[var(--bg-card)] border border-[var(--border-subtle)] hover:border-[var(--border-hover)] hover:bg-[var(--bg-card-active)] transition-all space-y-3"
             >
               <div className="flex items-center justify-between">
-                <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] rounded-md border border-[var(--accent-primary)]/20 truncate max-w-[120px]">
+                <span className="px-2 py-0.5 text-xs font-mono font-bold bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] rounded-md border border-[var(--accent-primary)]/20 truncate max-w-[130px]">
                   {model.providerDisplayName}
                 </span>
-                <span className="text-[10px] font-mono text-[var(--signal-mint)]" dir="ltr">
+                <span className="text-xs font-mono text-[var(--signal-mint)] font-bold" dir="ltr">
                   {model.benchTtftMs ? `${model.benchTtftMs}ms TTFT` : 'Active'}
                 </span>
               </div>
               <div>
-                <h3 className="font-bold text-sm text-[var(--text-primary)] truncate">{model.displayName}</h3>
-                <p className="text-[11px] text-[var(--text-muted)] font-mono truncate" dir="ltr">
+                <h3 className="font-bold text-base text-[var(--text-primary)] truncate">{model.displayName}</h3>
+                <p className="text-xs text-[var(--text-secondary)] font-mono truncate mt-0.5" dir="ltr">
                   {model.modelName}
                 </p>
               </div>
-              <div className="space-y-1 text-xs font-mono" dir="ltr">
-                <div className="flex justify-between text-[11px]">
-                  <span className="text-[var(--text-muted)]">Context Window:</span>
+              <div className="space-y-1.5 text-xs font-mono" dir="ltr">
+                <div className="flex justify-between text-xs">
+                  <span className="text-[var(--text-secondary)]">Context Window:</span>
                   <span className="text-[var(--signal-mint)] font-bold">{formatContextWindow(model.contextWindow)}</span>
                 </div>
-                <div className="flex justify-between text-[11px]">
-                  <span className="text-[var(--text-muted)]">Capabilities:</span>
-                  <span className="text-[var(--text-primary)]">
+                <div className="flex justify-between text-xs">
+                  <span className="text-[var(--text-secondary)]">Capabilities:</span>
+                  <span className="text-[var(--text-primary)] font-semibold">
                     {model.supportsVision ? 'Vision + Tools' : model.supportsTools ? 'Tools' : 'Text'}
                   </span>
                 </div>
-                <div className="flex justify-between text-[11px]">
-                  <span className="text-[var(--text-muted)]">Cost / 1M:</span>
+                <div className="flex justify-between text-xs">
+                  <span className="text-[var(--text-secondary)]">Cost / 1M:</span>
                   <span className="text-[var(--signal-mint)] font-bold">
                     {model.costInputPer1k === 0 ? '$0.00 FREE' : `$${(model.costInputPer1k * 1000).toFixed(2)}`}
                   </span>
@@ -507,16 +507,16 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-sm font-bold text-[var(--text-primary)] uppercase tracking-wider">Live Traffic & Routing Decision Stream</h2>
-            <p className="text-xs text-[var(--text-muted)]">Click "Why? →" on any request log to inspect full decision evaluation steps.</p>
+            <h2 className="text-base font-bold text-[var(--text-primary)] uppercase tracking-wider">Live Traffic &amp; Routing Decision Stream</h2>
+            <p className="text-xs text-[var(--text-secondary)] font-medium mt-0.5">Click "Why? →" on any request log to inspect full decision evaluation steps.</p>
           </div>
           {streamStatus === 'live' && (
-            <span className="text-xs font-mono text-[var(--signal-mint)] bg-[var(--signal-mint)]/10 px-2.5 py-1 rounded-full border border-[var(--signal-mint)]/20">
+            <span className="text-xs font-mono text-[var(--signal-mint)] bg-[var(--signal-mint)]/10 px-3 py-1 rounded-full border border-[var(--signal-mint)]/20 font-bold">
               Live
             </span>
           )}
           {streamStatus === 'connecting' && (
-            <span className="text-xs font-mono text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20">
+            <span className="text-xs font-mono text-amber-400 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20 font-bold">
               Connecting
             </span>
           )}

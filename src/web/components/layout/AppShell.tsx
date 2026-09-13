@@ -16,6 +16,51 @@ export const AppShell: React.FC = () => {
   const [conciergeMsg, setConciergeMsg] = useState('GoalRoute Copilot active. Monitoring your configured enclave keys with 0ms overhead.');
   const [activeKeys, setActiveKeys] = useState<number | null>(null);
 
+  // Left Rail Resize State
+  const [leftPanelWidth, setLeftPanelWidth] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('goalroute_left_panel_width');
+      if (saved) {
+        const parsed = Number(saved);
+        if (parsed >= 200 && parsed <= 500) return parsed;
+      }
+    } catch {}
+    return 260;
+  });
+  const [isResizingLeft, setIsResizingLeft] = useState(false);
+
+  useEffect(() => {
+    if (!isResizingLeft) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const newWidth = e.clientX;
+      const minWidth = 220;
+      const maxWidth = Math.min(480, window.innerWidth * 0.4);
+      const clampedWidth = Math.min(Math.max(newWidth, minWidth), maxWidth);
+
+      setLeftPanelWidth(clampedWidth);
+      try {
+        localStorage.setItem('goalroute_left_panel_width', String(clampedWidth));
+      } catch {}
+    };
+
+    const handleMouseUp = () => {
+      setIsResizingLeft(false);
+    };
+
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+  }, [isResizingLeft]);
+
   // Right Panel Resize State
   const [rightPanelWidth, setRightPanelWidth] = useState<number>(() => {
     try {
@@ -82,8 +127,20 @@ export const AppShell: React.FC = () => {
   return (
     <div className="h-screen max-h-screen w-screen overflow-hidden bg-[var(--bg-obsidian)] text-[var(--text-primary)] font-sans flex flex-col md:flex-row">
       
-      {/* 1. FIXED 260px LEFT NAVIGATION RAIL */}
-      <aside className="w-full md:w-64 h-full bg-[var(--bg-rail)] border-r border-[var(--border-subtle)] flex flex-col justify-between p-4 shrink-0 z-20 overflow-y-auto custom-scrollbar">
+      {/* 1. RESIZABLE LEFT NAVIGATION RAIL */}
+      <aside
+        className="relative w-full h-full bg-[var(--bg-rail)] border-r border-[var(--border-subtle)] flex flex-col justify-between p-4 shrink-0 z-20 overflow-y-auto custom-scrollbar"
+        style={{ width: `${leftPanelWidth}px` }}
+      >
+        {/* Right Edge Drag Handle for Left Rail */}
+        <div
+          onMouseDown={() => setIsResizingLeft(true)}
+          className="absolute top-0 right-0 bottom-0 w-2.5 cursor-col-resize hover:bg-[var(--accent-primary)]/40 active:bg-[var(--accent-primary)] z-30 transition-colors group flex items-center justify-center -mr-1"
+          title="Drag to adjust left rail width"
+        >
+          <div className="w-1 h-8 rounded-full bg-[var(--border-hover)] group-hover:bg-[var(--accent-primary)] transition-colors" />
+        </div>
+
         <div className="space-y-5">
           
           {/* Logo & Workspace */}
