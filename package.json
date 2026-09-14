@@ -3,7 +3,6 @@
   "version": "0.1.0",
   "description": "Multi-provider LLM gateway with goal-based self-healing routing",
   "license": "Apache-2.0",
-  "main": "dist/cli/index.js",
   "type": "module",
   "bin": {
     "goalroute": "./dist/cli/index.js"
@@ -22,6 +21,7 @@
   "dependencies": {
     "@fastify/cors": "^10.0.2",
     "@fastify/rate-limit": "^11.2.0",
+    "@fastify/static": "^10.1.3",
     "@modelcontextprotocol/sdk": "^1.30.0",
     "better-sqlite3": "^11.8.1",
     "commander": "^13.1.0",

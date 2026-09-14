@@ -1,6 +1,7 @@
 import Fastify, { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
+import fastifyStatic from '@fastify/static';
 import { once } from 'events';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
@@ -178,6 +179,24 @@ export async function buildApp() {
       return `ip:${req.ip}`;
     },
   });
+
+  const distWebPath = path.join(path.dirname(fileURLToPath(import.meta.url)), '../../dist-web');
+  if (fs.existsSync(distWebPath)) {
+    await fastify.register(fastifyStatic, {
+      root: distWebPath,
+      prefix: '/',
+      wildcard: false,
+    });
+
+    fastify.setNotFoundHandler((req, reply) => {
+      if (req.url.startsWith('/api/') || req.url.startsWith('/v1/') || req.url.startsWith('/mcp/')) {
+        return reply.status(404).send({
+          error: { message: `Route ${req.method}:${req.url} not found`, code: 'NOT_FOUND', statusCode: 404 },
+        });
+      }
+      return reply.sendFile('index.html');
+    });
+  }
 
   // Global Request Logging & Authentication Middleware
   fastify.addHook('onRequest', async (req, reply) => {

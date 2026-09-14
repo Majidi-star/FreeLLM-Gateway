@@ -30,6 +30,9 @@ By default, FreeLLM-Gateway listens on 4 dedicated protocol ports:
 | **Anthropic Protocol** | `8789` | `http://127.0.0.1:8789/v1/messages` |
 | **MCP Protocol** | `8790` | `http://127.0.0.1:8790/mcp` |
 
+> [!NOTE]
+> **MCP Safe Mode**: The MCP service defaults `isSafeMode` to `true` to block destructive or state-mutating MCP tools (such as pool mutations) until safe mode is explicitly toggled off in the Web UI cockpit or via the MCP settings API.
+
 ---
 
 ## Quick Start 🛠️
