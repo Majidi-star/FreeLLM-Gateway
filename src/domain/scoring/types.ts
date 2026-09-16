@@ -1,5 +1,11 @@
 import { HealthState } from '../../shared/types.js';
 
+export interface ScoringOptions {
+  isStreaming?: boolean;
+  estimatedPromptTokens?: number;
+  estimatedCompletionTokens?: number;
+}
+
 export interface ScoringCandidate {
   connectionId: string;
   providerSlug: string;
@@ -19,6 +25,7 @@ export interface ScoringCandidate {
   benchLongContextScore?: number | null;
   taskFitness: number; // 0..1
   costPer1kUsd: number;
+  inFlightRequests?: number;
 }
 
 export interface FactorWeights {
