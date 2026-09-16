@@ -6,12 +6,7 @@
     "authType": "api_key",
     "protocol": "openai",
     "docsUrl": "https://platform.openai.com/docs",
-    "capabilities": {
-      "vision": true,
-      "tools": true,
-      "streaming": true,
-      "jsonMode": true
-    },
+    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
     "isActive": true
   },
   {
@@ -21,12 +16,7 @@
     "authType": "api_key",
     "protocol": "anthropic",
     "docsUrl": "https://docs.anthropic.com",
-    "capabilities": {
-      "vision": true,
-      "tools": true,
-      "streaming": true,
-      "jsonMode": true
-    },
+    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
     "isActive": true
   },
   {
@@ -36,12 +26,7 @@
     "authType": "api_key",
     "protocol": "gemini",
     "docsUrl": "https://ai.google.dev/gemini-api/docs",
-    "capabilities": {
-      "vision": true,
-      "tools": true,
-      "streaming": true,
-      "jsonMode": true
-    },
+    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
     "isActive": true
   },
   {
@@ -51,12 +36,7 @@
     "authType": "api_key",
     "protocol": "openai",
     "docsUrl": "https://console.groq.com/docs",
-    "capabilities": {
-      "vision": false,
-      "tools": true,
-      "streaming": true,
-      "jsonMode": true
-    },
+    "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
     "isActive": true
   },
   {
@@ -66,12 +46,7 @@
     "authType": "api_key",
     "protocol": "openai",
     "docsUrl": "https://openrouter.ai/docs",
-    "capabilities": {
-      "vision": true,
-      "tools": true,
-      "streaming": true,
-      "jsonMode": true
-    },
+    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
     "isActive": true
   },
   {
@@ -81,12 +56,7 @@
     "authType": "api_key",
     "protocol": "openai",
     "docsUrl": "https://docs.together.ai",
-    "capabilities": {
-      "vision": true,
-      "tools": true,
-      "streaming": true,
-      "jsonMode": true
-    },
+    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
     "isActive": true
   },
   {
@@ -96,12 +66,7 @@
     "authType": "api_key",
     "protocol": "openai",
     "docsUrl": "https://docs.cerebras.ai",
-    "capabilities": {
-      "vision": false,
-      "tools": true,
-      "streaming": true,
-      "jsonMode": true
-    },
+    "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
     "isActive": true
   },
   {
@@ -111,12 +76,7 @@
     "authType": "api_key",
     "protocol": "openai",
     "docsUrl": "https://docs.sambanova.ai",
-    "capabilities": {
-      "vision": false,
-      "tools": true,
-      "streaming": true,
-      "jsonMode": true
-    },
+    "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
     "isActive": true
   },
   {
@@ -126,12 +86,7 @@
     "authType": "api_key",
     "protocol": "openai",
     "docsUrl": "https://api-docs.deepseek.com",
-    "capabilities": {
-      "vision": false,
-      "tools": true,
-      "streaming": true,
-      "jsonMode": true
-    },
+    "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
     "isActive": true
   },
   {
@@ -141,12 +96,7 @@
     "authType": "api_key",
     "protocol": "openai",
     "docsUrl": "https://docs.mistral.ai",
-    "capabilities": {
-      "vision": true,
-      "tools": true,
-      "streaming": true,
-      "jsonMode": true
-    },
+    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
     "isActive": true
   },
   {
@@ -156,12 +106,7 @@
     "authType": "api_key",
     "protocol": "openai",
     "docsUrl": "https://docs.fireworks.ai",
-    "capabilities": {
-      "vision": true,
-      "tools": true,
-      "streaming": true,
-      "jsonMode": true
-    },
+    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
     "isActive": true
   },
   {
@@ -171,12 +116,241 @@
     "authType": "api_key",
     "protocol": "openai",
     "docsUrl": "https://deepinfra.com/docs",
-    "capabilities": {
-      "vision": true,
-      "tools": true,
-      "streaming": true,
-      "jsonMode": true
-    },
+    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
+    "isActive": true
+  },
+  {
+    "slug": "etched",
+    "displayName": "Etched Sohu ASIC",
+    "baseUrl": "https://api.etched.com/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
+    "isActive": false
+  },
+  {
+    "slug": "tenstorrent",
+    "displayName": "Tenstorrent Wormhole",
+    "baseUrl": "https://api.tenstorrent.com/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
+    "isActive": true
+  },
+  {
+    "slug": "replicate",
+    "displayName": "Replicate",
+    "baseUrl": "https://api.replicate.com/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
+    "isActive": true
+  },
+  {
+    "slug": "baseten",
+    "displayName": "Baseten",
+    "baseUrl": "https://model-api.baseten.co/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
+    "isActive": true
+  },
+  {
+    "slug": "modal",
+    "displayName": "Modal Labs",
+    "baseUrl": "https://api.modal.com/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
+    "isActive": true
+  },
+  {
+    "slug": "novita",
+    "displayName": "Novita AI",
+    "baseUrl": "https://api.novita.ai/v3/openai",
+    "authType": "api_key",
+    "protocol": "openai",
+    "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
+    "isActive": true
+  },
+  {
+    "slug": "hyperbolic",
+    "displayName": "Hyperbolic AI",
+    "baseUrl": "https://api.hyperbolic.xyz/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
+    "isActive": true
+  },
+  {
+    "slug": "scaleway",
+    "displayName": "Scaleway Generative APIs",
+    "baseUrl": "https://api.scaleway.com/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
+    "isActive": true
+  },
+  {
+    "slug": "vultr",
+    "displayName": "Vultr Serverless Inference",
+    "baseUrl": "https://api.vultrinference.com/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
+    "isActive": true
+  },
+  {
+    "slug": "friendli",
+    "displayName": "FriendliAI Suite",
+    "baseUrl": "https://inference.friendli.ai/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
+    "isActive": true
+  },
+  {
+    "slug": "cloudflare",
+    "displayName": "Cloudflare Workers AI",
+    "baseUrl": "https://api.cloudflare.com/client/v4/accounts/v1/ai",
+    "authType": "api_key",
+    "protocol": "openai",
+    "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
+    "isActive": true
+  },
+  {
+    "slug": "perplexity",
+    "displayName": "Perplexity Sonar API",
+    "baseUrl": "https://api.perplexity.ai",
+    "authType": "api_key",
+    "protocol": "openai",
+    "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
+    "isActive": true
+  },
+  {
+    "slug": "bedrock",
+    "displayName": "AWS Bedrock",
+    "baseUrl": "https://bedrock-runtime.us-east-1.amazonaws.com",
+    "authType": "api_key",
+    "protocol": "openai",
+    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
+    "isActive": true
+  },
+  {
+    "slug": "azure",
+    "displayName": "Azure OpenAI Service",
+    "baseUrl": "https://azure-openai.azure.com/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
+    "isActive": true
+  },
+  {
+    "slug": "vertex",
+    "displayName": "Google Cloud Vertex AI",
+    "baseUrl": "https://vertexai.googleapis.com/v1",
+    "authType": "api_key",
+    "protocol": "gemini",
+    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
+    "isActive": true
+  },
+  {
+    "slug": "watsonx",
+    "displayName": "IBM watsonx.ai",
+    "baseUrl": "https://us-south.ml.cloud.ibm.com/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
+    "isActive": true
+  },
+  {
+    "slug": "qwen",
+    "displayName": "Alibaba Model Studio",
+    "baseUrl": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
+    "isActive": true
+  },
+  {
+    "slug": "zhipu",
+    "displayName": "Zhipu BigModel Platform",
+    "baseUrl": "https://open.bigmodel.cn/api/paas/v4",
+    "authType": "api_key",
+    "protocol": "openai",
+    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
+    "isActive": true
+  },
+  {
+    "slug": "moonshot",
+    "displayName": "Moonshot Open Platform",
+    "baseUrl": "https://api.moonshot.cn/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
+    "isActive": true
+  },
+  {
+    "slug": "minimax",
+    "displayName": "MiniMax Open Platform",
+    "baseUrl": "https://api.minimax.chat/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
+    "isActive": true
+  },
+  {
+    "slug": "cohere",
+    "displayName": "Cohere API",
+    "baseUrl": "https://api.cohere.com/v2",
+    "authType": "api_key",
+    "protocol": "openai",
+    "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
+    "isActive": true
+  },
+  {
+    "slug": "ai21",
+    "displayName": "AI21 Studio",
+    "baseUrl": "https://api.ai21.com/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
+    "isActive": true
+  },
+  {
+    "slug": "baidu",
+    "displayName": "Baidu Qianfan Platform",
+    "baseUrl": "https://aip.baidubce.com/rpc/2.0/ai_custom/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
+    "isActive": true
+  },
+  {
+    "slug": "tencent",
+    "displayName": "Tencent Cloud Hunyuan",
+    "baseUrl": "https://hunyuan.tencentcloudapi.com/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
+    "isActive": true
+  },
+  {
+    "slug": "yi",
+    "displayName": "01.AI Platform",
+    "baseUrl": "https://api.lingyiwanwu.com/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
+    "isActive": true
+  },
+  {
+    "slug": "upstage",
+    "displayName": "Upstage Console",
+    "baseUrl": "https://api.upstage.ai/v1/solar",
+    "authType": "api_key",
+    "protocol": "openai",
+    "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
     "isActive": true
   }
 ]
