@@ -352,5 +352,355 @@
     "protocol": "openai",
     "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
     "isActive": true
+  },
+  {
+    "slug": "siliconflow",
+    "displayName": "SiliconFlow Cloud",
+    "baseUrl": "https://api.siliconflow.cn/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://docs.siliconflow.cn",
+    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
+    "isActive": true
+  },
+  {
+    "slug": "huggingface",
+    "displayName": "Hugging Face Inference",
+    "baseUrl": "https://api-inference.huggingface.co/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://huggingface.co/docs/api-inference",
+    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
+    "isActive": true
+  },
+  {
+    "slug": "xai",
+    "displayName": "xAI Grok Platform",
+    "baseUrl": "https://api.x.ai/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://docs.x.ai",
+    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
+    "isActive": true
+  },
+  {
+    "slug": "anyscale",
+    "displayName": "Anyscale Endpoints",
+    "baseUrl": "https://api.endpoints.anyscale.com/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://docs.anyscale.com",
+    "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
+    "isActive": true
+  },
+  {
+    "slug": "octoai",
+    "displayName": "OctoAI Inferences",
+    "baseUrl": "https://text.octoai.run/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://docs.octoai.cloud",
+    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
+    "isActive": true
+  },
+  {
+    "slug": "monsterapi",
+    "displayName": "MonsterAPI Platform",
+    "baseUrl": "https://api.monsterapi.ai/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://monsterapi.ai/docs",
+    "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
+    "isActive": true
+  },
+  {
+    "slug": "runpod",
+    "displayName": "RunPod Serverless",
+    "baseUrl": "https://api.runpod.ai/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://docs.runpod.io",
+    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
+    "isActive": true
+  },
+  {
+    "slug": "lambda",
+    "displayName": "Lambda Cloud Inference",
+    "baseUrl": "https://api.lambdalabs.com/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://docs.lambdalabs.com",
+    "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
+    "isActive": true
+  },
+  {
+    "slug": "lepton",
+    "displayName": "Lepton AI Engine",
+    "baseUrl": "https://api.lepton.ai/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://docs.lepton.ai",
+    "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
+    "isActive": true
+  },
+  {
+    "slug": "featherless",
+    "displayName": "Featherless AI",
+    "baseUrl": "https://api.featherless.ai/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://featherless.ai/docs",
+    "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
+    "isActive": true
+  },
+  {
+    "slug": "nebius",
+    "displayName": "Nebius AI Studio",
+    "baseUrl": "https://api.studio.nebius.ai/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://nebius.ai/docs",
+    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
+    "isActive": true
+  },
+  {
+    "slug": "chutes",
+    "displayName": "Chutes AI Network",
+    "baseUrl": "https://chutes.ai/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://chutes.ai/docs",
+    "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
+    "isActive": true
+  },
+  {
+    "slug": "voyage",
+    "displayName": "Voyage AI",
+    "baseUrl": "https://api.voyageai.com/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://docs.voyageai.com",
+    "capabilities": { "vision": false, "tools": false, "streaming": false, "jsonMode": true },
+    "isActive": true
+  },
+  {
+    "slug": "ollama-cloud",
+    "displayName": "Ollama Cloud",
+    "baseUrl": "https://api.ollama.com/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://ollama.com/docs",
+    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
+    "isActive": true
+  },
+  {
+    "slug": "arcee",
+    "displayName": "Arcee AI Trinity",
+    "baseUrl": "https://api.arcee.ai/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://docs.arcee.ai",
+    "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
+    "isActive": true
+  },
+  {
+    "slug": "doubao",
+    "displayName": "ByteDance Doubao VolcEngine",
+    "baseUrl": "https://ark.cn-beijing.volces.com/api/v3",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://www.volcengine.com/docs/82379",
+    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
+    "isActive": true
+  },
+  {
+    "slug": "iflytek",
+    "displayName": "iFlytek Spark Desk",
+    "baseUrl": "https://spark-api.xf-yun.com/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://www.xfyun.cn/doc/spark",
+    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
+    "isActive": true
+  },
+  {
+    "slug": "nara",
+    "displayName": "Nara AI Studio",
+    "baseUrl": "https://api.nara.ai/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://nara.ai/docs",
+    "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
+    "isActive": true
+  },
+  {
+    "slug": "llm7",
+    "displayName": "LLM7 Cloud Router",
+    "baseUrl": "https://api.llm7.io/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://llm7.io/docs",
+    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
+    "isActive": true
+  },
+  {
+    "slug": "bazaarlink",
+    "displayName": "BazaarLink Free Router",
+    "baseUrl": "https://api.bazaarlink.com/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://bazaarlink.com/docs",
+    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
+    "isActive": true
+  },
+  {
+    "slug": "bluesminds",
+    "displayName": "BluesMinds AI Gateway",
+    "baseUrl": "https://api.bluesminds.ai/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://bluesminds.ai/docs",
+    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
+    "isActive": true
+  },
+  {
+    "slug": "api-airforce",
+    "displayName": "API Airforce Free Gateway",
+    "baseUrl": "https://api.airforce/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://api.airforce/docs",
+    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
+    "isActive": true
+  },
+  {
+    "slug": "glm",
+    "displayName": "Zhipu GLM Open Engine",
+    "baseUrl": "https://open.bigmodel.cn/api/paas/v4",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://open.bigmodel.cn/doc",
+    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
+    "isActive": true
+  },
+  {
+    "slug": "kilo",
+    "displayName": "Kilo Gateway Router",
+    "baseUrl": "https://api.kilo.ai/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://kilo.ai/docs",
+    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
+    "isActive": true
+  },
+  {
+    "slug": "requesty",
+    "displayName": "Requesty LLM Router",
+    "baseUrl": "https://router.requesty.ai/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://requesty.ai/docs",
+    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
+    "isActive": true
+  },
+  {
+    "slug": "ovhcloud",
+    "displayName": "OVHcloud AI Endpoints",
+    "baseUrl": "https://api.ovhcloud.com/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://docs.ovh.com/gb/en/publiccloud/ai/",
+    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
+    "isActive": true
+  },
+  {
+    "slug": "publicai",
+    "displayName": "PublicAI Open Network",
+    "baseUrl": "https://api.publicai.io/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://publicai.io/docs",
+    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
+    "isActive": true
+  },
+  {
+    "slug": "liminal",
+    "displayName": "Liminal AI Security Mesh",
+    "baseUrl": "https://api.liminal.ai/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://liminal.ai/docs",
+    "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
+    "isActive": true
+  },
+  {
+    "slug": "agentrouter",
+    "displayName": "AgentRouter Enclave",
+    "baseUrl": "https://api.agentrouter.ai/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://agentrouter.ai/docs",
+    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
+    "isActive": true
+  },
+  {
+    "slug": "mimo",
+    "displayName": "Xiaomi MiMo AI Platform",
+    "baseUrl": "https://api.mimo.xiaomi.com/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://mimo.xiaomi.com/docs",
+    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
+    "isActive": true
+  },
+  {
+    "slug": "baichuan",
+    "displayName": "Baichuan Intelligent AI",
+    "baseUrl": "https://api.baichuan-ai.com/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://platform.baichuan-ai.com/docs",
+    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
+    "isActive": true
+  },
+  {
+    "slug": "nlpcloud",
+    "displayName": "NLP Cloud API",
+    "baseUrl": "https://api.nlpcloud.io/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://docs.nlpcloud.com",
+    "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
+    "isActive": true
+  },
+  {
+    "slug": "coze",
+    "displayName": "ByteDance Coze API",
+    "baseUrl": "https://api.coze.com/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://www.coze.com/open/docs",
+    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
+    "isActive": true
+  },
+  {
+    "slug": "blackbox",
+    "displayName": "Blackbox AI Platform",
+    "baseUrl": "https://api.blackbox.ai/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://docs.blackbox.ai",
+    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
+    "isActive": true
+  },
+  {
+    "slug": "opencode",
+    "displayName": "OpenCode AI Engine",
+    "baseUrl": "https://api.opencode.ai/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://opencode.ai/docs",
+    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
+    "isActive": true
   }
 ]
