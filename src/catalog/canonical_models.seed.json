@@ -12,14 +12,14 @@
       "llama-3.3-70b-versatile",
       "llama-3.3-70b-instruct-fp8"
     ],
-    "contextWindow": 128000,
+    "contextWindow": 131072,
     "benchmarks": {
-      "reasoning": 79.2,
-      "coding": 73.5,
-      "commandExecution": 82.0,
-      "math": 76.5,
+      "reasoning": 68.9,
+      "coding": 88.4,
+      "commandExecution": 77.3,
+      "math": 77.0,
       "vision": 0.0,
-      "longContext": 89.0
+      "longContext": 92.5
     },
     "capabilities": {
       "supportsTools": true,
@@ -38,14 +38,14 @@
       "llama-3.1-8b-instant",
       "meta.llama3-1-8b-instruct-v1:0"
     ],
-    "contextWindow": 128000,
+    "contextWindow": 131072,
     "benchmarks": {
-      "reasoning": 54.2,
-      "coding": 62.1,
-      "commandExecution": 74.0,
-      "math": 51.5,
+      "reasoning": 54.0,
+      "coding": 72.6,
+      "commandExecution": 68.5,
+      "math": 51.9,
       "vision": 0.0,
-      "longContext": 84.0
+      "longContext": 88.0
     },
     "capabilities": {
       "supportsTools": true,
@@ -62,14 +62,14 @@
       "Meta-Llama-3.1-405B-Instruct",
       "meta.llama3-1-405b-instruct-v1:0"
     ],
-    "contextWindow": 128000,
+    "contextWindow": 131072,
     "benchmarks": {
-      "reasoning": 84.4,
-      "coding": 81.2,
-      "commandExecution": 86.5,
-      "math": 83.8,
+      "reasoning": 73.3,
+      "coding": 89.0,
+      "commandExecution": 88.5,
+      "math": 73.8,
       "vision": 0.0,
-      "longContext": 91.0
+      "longContext": 94.0
     },
     "capabilities": {
       "supportsTools": true,
@@ -91,11 +91,11 @@
     "contextWindow": 128000,
     "benchmarks": {
       "reasoning": 72.6,
-      "coding": 78.4,
-      "commandExecution": 84.6,
-      "math": 74.6,
+      "coding": 90.2,
+      "commandExecution": 88.3,
+      "math": 76.6,
       "vision": 69.1,
-      "longContext": 83.5
+      "longContext": 91.0
     },
     "capabilities": {
       "supportsTools": true,
@@ -138,12 +138,12 @@
     ],
     "contextWindow": 200000,
     "benchmarks": {
-      "reasoning": 89.5,
-      "coding": 88.2,
-      "commandExecution": 85.0,
+      "reasoning": 78.0,
+      "coding": 92.4,
+      "commandExecution": 86.4,
       "math": 96.4,
       "vision": 73.3,
-      "longContext": 88.0
+      "longContext": 96.0
     },
     "capabilities": {
       "supportsTools": true,
@@ -164,12 +164,12 @@
     ],
     "contextWindow": 200000,
     "benchmarks": {
-      "reasoning": 78.0,
-      "coding": 89.2,
-      "commandExecution": 83.3,
-      "math": 78.3,
+      "reasoning": 65.0,
+      "coding": 93.7,
+      "commandExecution": 88.0,
+      "math": 82.2,
       "vision": 70.4,
-      "longContext": 93.5
+      "longContext": 97.5
     },
     "capabilities": {
       "supportsTools": true,
@@ -188,16 +188,16 @@
     ],
     "contextWindow": 200000,
     "benchmarks": {
-      "reasoning": 69.2,
-      "coding": 75.8,
-      "commandExecution": 79.1,
+      "reasoning": 65.0,
+      "coding": 88.1,
+      "commandExecution": 78.2,
       "math": 69.4,
-      "vision": 61.2,
-      "longContext": 89.0
+      "vision": 0.0,
+      "longContext": 94.0
     },
     "capabilities": {
       "supportsTools": true,
-      "supportsVision": true,
+      "supportsVision": false,
       "supportsJsonMode": true
     }
   },
@@ -259,12 +259,12 @@
     ],
     "contextWindow": 1048576,
     "benchmarks": {
-      "reasoning": 76.2,
-      "coding": 76.0,
-      "commandExecution": 79.0,
+      "reasoning": 70.5,
+      "coding": 89.2,
+      "commandExecution": 86.2,
       "math": 82.0,
-      "vision": 66.0,
-      "longContext": 92.0
+      "vision": 70.2,
+      "longContext": 98.5
     },
     "capabilities": {
       "supportsTools": true,
@@ -282,14 +282,14 @@
       "DeepSeek-V3",
       "deepseek/deepseek-chat"
     ],
-    "contextWindow": 131072,
+    "contextWindow": 163840,
     "benchmarks": {
       "reasoning": 75.9,
       "coding": 82.6,
-      "commandExecution": 82.5,
+      "commandExecution": 83.1,
       "math": 90.2,
       "vision": 0.0,
-      "longContext": 89.5
+      "longContext": 92.0
     },
     "capabilities": {
       "supportsTools": true,
@@ -310,11 +310,11 @@
     "contextWindow": 163840,
     "benchmarks": {
       "reasoning": 84.0,
-      "coding": 88.5,
-      "commandExecution": 84.0,
+      "coding": 92.5,
+      "commandExecution": 82.3,
       "math": 97.3,
       "vision": 0.0,
-      "longContext": 92.0
+      "longContext": 95.0
     },
     "capabilities": {
       "supportsTools": true,
@@ -333,12 +333,12 @@
     ],
     "contextWindow": 128000,
     "benchmarks": {
-      "reasoning": 71.5,
-      "coding": 81.0,
-      "commandExecution": 80.5,
-      "math": 76.0,
+      "reasoning": 72.8,
+      "coding": 89.2,
+      "commandExecution": 84.6,
+      "math": 76.8,
       "vision": 0.0,
-      "longContext": 86.0
+      "longContext": 92.0
     },
     "capabilities": {
       "supportsTools": true,
@@ -381,12 +381,12 @@
     ],
     "contextWindow": 131072,
     "benchmarks": {
-      "reasoning": 74.5,
-      "coding": 83.2,
-      "commandExecution": 84.2,
-      "math": 83.0,
+      "reasoning": 66.4,
+      "coding": 86.0,
+      "commandExecution": 81.2,
+      "math": 83.1,
       "vision": 0.0,
-      "longContext": 88.0
+      "longContext": 91.0
     },
     "capabilities": {
       "supportsTools": true,
@@ -404,12 +404,12 @@
     ],
     "contextWindow": 131072,
     "benchmarks": {
-      "reasoning": 68.0,
-      "coding": 86.5,
-      "commandExecution": 82.0,
-      "math": 81.0,
+      "reasoning": 64.0,
+      "coding": 92.7,
+      "commandExecution": 82.5,
+      "math": 75.2,
       "vision": 0.0,
-      "longContext": 85.0
+      "longContext": 90.0
     },
     "capabilities": {
       "supportsTools": true,
@@ -652,6 +652,116 @@
     "capabilities": {
       "supportsTools": true,
       "supportsVision": false,
+      "supportsJsonMode": true
+    }
+  },
+  {
+    "canonicalId": "qwen-2.5-vl-72b-instruct",
+    "displayName": "Qwen 2.5 VL 72B Instruct",
+    "developer": "Together",
+    "knownAliases": [
+      "Qwen 2.5 VL 72B Instruct"
+    ],
+    "contextWindow": 131072,
+    "benchmarks": {
+      "reasoning": 68.0,
+      "coding": 84.5,
+      "commandExecution": 79.5,
+      "math": 74.8,
+      "vision": 70.2,
+      "longContext": 92.0
+    },
+    "capabilities": {
+      "supportsTools": true,
+      "supportsVision": true,
+      "supportsJsonMode": true
+    }
+  },
+  {
+    "canonicalId": "phi-4",
+    "displayName": "Microsoft Phi-4",
+    "developer": "Deepinfra",
+    "knownAliases": [
+      "Microsoft Phi-4"
+    ],
+    "contextWindow": 16384,
+    "benchmarks": {
+      "reasoning": 63.8,
+      "coding": 87.2,
+      "commandExecution": 74.0,
+      "math": 80.4,
+      "vision": 0.0,
+      "longContext": 82.0
+    },
+    "capabilities": {
+      "supportsTools": true,
+      "supportsVision": false,
+      "supportsJsonMode": true
+    }
+  },
+  {
+    "canonicalId": "gemini-2.0-pro",
+    "displayName": "Gemini 2.0 Pro",
+    "developer": "Gemini",
+    "knownAliases": [
+      "Gemini 2.0 Pro"
+    ],
+    "contextWindow": 2097152,
+    "benchmarks": {
+      "reasoning": 78.5,
+      "coding": 91.0,
+      "commandExecution": 89.0,
+      "math": 89.5,
+      "vision": 75.2,
+      "longContext": 99.0
+    },
+    "capabilities": {
+      "supportsTools": true,
+      "supportsVision": true,
+      "supportsJsonMode": true
+    }
+  },
+  {
+    "canonicalId": "o3-mini",
+    "displayName": "OpenAI o3-mini",
+    "developer": "Openai",
+    "knownAliases": [
+      "OpenAI o3-mini"
+    ],
+    "contextWindow": 200000,
+    "benchmarks": {
+      "reasoning": 79.7,
+      "coding": 94.1,
+      "commandExecution": 87.1,
+      "math": 97.9,
+      "vision": 0.0,
+      "longContext": 95.0
+    },
+    "capabilities": {
+      "supportsTools": true,
+      "supportsVision": false,
+      "supportsJsonMode": true
+    }
+  },
+  {
+    "canonicalId": "claude-3-7-sonnet",
+    "displayName": "Claude 3.7 Sonnet",
+    "developer": "Anthropic",
+    "knownAliases": [
+      "Claude 3.7 Sonnet"
+    ],
+    "contextWindow": 200000,
+    "benchmarks": {
+      "reasoning": 84.8,
+      "coding": 95.0,
+      "commandExecution": 90.5,
+      "math": 96.2,
+      "vision": 70.4,
+      "longContext": 98.0
+    },
+    "capabilities": {
+      "supportsTools": true,
+      "supportsVision": true,
       "supportsJsonMode": true
     }
   }
