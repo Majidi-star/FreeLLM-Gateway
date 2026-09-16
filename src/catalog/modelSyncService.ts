@@ -106,27 +106,28 @@ export class ModelSyncService {
 
       for (const model of discovered) {
         const canonical = this.resolver.resolveCanonicalModel(model.modelName);
+        const existing = this.modelRepo.findByProviderAndName(provider.id, model.modelName);
 
         this.modelRepo.upsert({
           provider_id: provider.id,
-          canonical_id: canonical?.canonicalId || null,
+          canonical_id: canonical?.canonicalId || existing?.canonical_id || null,
           model_name: model.modelName,
-          display_name: model.displayName || canonical?.displayName || model.modelName,
-          context_window: model.contextWindow || canonical?.contextWindow || DEFAULT_CONTEXT_WINDOW,
-          supports_tools: model.supportsTools ? 1 : (canonical?.capabilities.supportsTools ? 1 : 0),
-          supports_vision: model.supportsVision ? 1 : (canonical?.capabilities.supportsVision ? 1 : 0),
-          cost_input_per_1k: 0,
-          cost_output_per_1k: 0,
-          bench_tps: null,
-          bench_ttft_ms: null,
-          bench_p95_latency_ms: null,
-          bench_reasoning_score: canonical?.benchmarks.reasoning ?? null,
-          bench_coding_score: canonical?.benchmarks.coding ?? null,
-          bench_command_score: canonical?.benchmarks.commandExecution ?? null,
-          bench_math_score: canonical?.benchmarks.math ?? null,
-          bench_vision_score: canonical?.benchmarks.vision ?? null,
-          bench_long_context_score: canonical?.benchmarks.longContext ?? null,
-          task_fitness: '{}',
+          display_name: model.displayName || canonical?.displayName || existing?.display_name || model.modelName,
+          context_window: model.contextWindow || canonical?.contextWindow || existing?.context_window || DEFAULT_CONTEXT_WINDOW,
+          supports_tools: model.supportsTools ? 1 : (canonical?.capabilities.supportsTools ? 1 : (existing?.supports_tools ?? 0)),
+          supports_vision: model.supportsVision ? 1 : (canonical?.capabilities.supportsVision ? 1 : (existing?.supports_vision ?? 0)),
+          cost_input_per_1k: existing?.cost_input_per_1k ?? 0,
+          cost_output_per_1k: existing?.cost_output_per_1k ?? 0,
+          bench_tps: existing?.bench_tps ?? null,
+          bench_ttft_ms: existing?.bench_ttft_ms ?? null,
+          bench_p95_latency_ms: existing?.bench_p95_latency_ms ?? null,
+          bench_reasoning_score: canonical?.benchmarks.reasoning ?? existing?.bench_reasoning_score ?? null,
+          bench_coding_score: canonical?.benchmarks.coding ?? existing?.bench_coding_score ?? null,
+          bench_command_score: canonical?.benchmarks.commandExecution ?? existing?.bench_command_score ?? null,
+          bench_math_score: canonical?.benchmarks.math ?? existing?.bench_math_score ?? null,
+          bench_vision_score: canonical?.benchmarks.vision ?? existing?.bench_vision_score ?? null,
+          bench_long_context_score: canonical?.benchmarks.longContext ?? existing?.bench_long_context_score ?? null,
+          task_fitness: existing?.task_fitness || '{}',
           is_active: 1,
         });
       }

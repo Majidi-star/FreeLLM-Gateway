@@ -5,4 +5,6 @@ data/
 graphify-out/
 coverage/
 *.log
+*.sqlite
+*.db
 PLAN/
