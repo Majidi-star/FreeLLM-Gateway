@@ -35,12 +35,18 @@ export interface SyncResult {
   totalModels: number;
 }
 
+import { CanonicalResolver } from './canonicalResolver.js';
+
 export class ModelSyncService {
+  private resolver: CanonicalResolver;
+
   constructor(
     private providerRepo: ProviderRepository,
     private connectionRepo: ConnectionRepository,
     private modelRepo: ModelRepository
-  ) {}
+  ) {
+    this.resolver = new CanonicalResolver();
+  }
 
   public async syncAllConfiguredProviders(): Promise<SyncResult> {
     const providers = this.providerRepo.listAll(true);
@@ -99,18 +105,27 @@ export class ModelSyncService {
       }
 
       for (const model of discovered) {
+        const canonical = this.resolver.resolveCanonicalModel(model.modelName);
+
         this.modelRepo.upsert({
           provider_id: provider.id,
+          canonical_id: canonical?.canonicalId || null,
           model_name: model.modelName,
-          display_name: model.displayName,
-          context_window: model.contextWindow,
-          supports_tools: model.supportsTools ? 1 : 0,
-          supports_vision: model.supportsVision ? 1 : 0,
+          display_name: model.displayName || canonical?.displayName || model.modelName,
+          context_window: model.contextWindow || canonical?.contextWindow || DEFAULT_CONTEXT_WINDOW,
+          supports_tools: model.supportsTools ? 1 : (canonical?.capabilities.supportsTools ? 1 : 0),
+          supports_vision: model.supportsVision ? 1 : (canonical?.capabilities.supportsVision ? 1 : 0),
           cost_input_per_1k: 0,
           cost_output_per_1k: 0,
           bench_tps: null,
           bench_ttft_ms: null,
           bench_p95_latency_ms: null,
+          bench_reasoning_score: canonical?.benchmarks.reasoning ?? null,
+          bench_coding_score: canonical?.benchmarks.coding ?? null,
+          bench_command_score: canonical?.benchmarks.commandExecution ?? null,
+          bench_math_score: canonical?.benchmarks.math ?? null,
+          bench_vision_score: canonical?.benchmarks.vision ?? null,
+          bench_long_context_score: canonical?.benchmarks.longContext ?? null,
           task_fitness: '{}',
           is_active: 1,
         });

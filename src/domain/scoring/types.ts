@@ -1,14 +1,22 @@
-import { HealthState, TaskType } from '../../shared/types.js';
+import { HealthState } from '../../shared/types.js';
 
 export interface ScoringCandidate {
   connectionId: string;
   providerSlug: string;
   modelId: string;
   modelName: string;
+  canonicalId?: string | null;
   healthState: HealthState;
   quotaRemainingPct: number; // 0..1
-  benchTtftMs?: number;
-  benchP95LatencyMs?: number;
+  benchTps?: number | null;
+  benchTtftMs?: number | null;
+  benchP95LatencyMs?: number | null;
+  benchReasoningScore?: number | null;
+  benchCodingScore?: number | null;
+  benchCommandScore?: number | null;
+  benchMathScore?: number | null;
+  benchVisionScore?: number | null;
+  benchLongContextScore?: number | null;
   taskFitness: number; // 0..1
   costPer1kUsd: number;
 }
@@ -20,6 +28,7 @@ export interface FactorWeights {
   taskFit: number;
   costEfficiency: number;
   stability: number;
+  benchmarkFit: number;
 }
 
 export interface ScoreBreakdown {
@@ -31,5 +40,6 @@ export interface ScoreBreakdown {
     taskFit: number;
     costEfficiency: number;
     stability: number;
+    benchmarkFit: number;
   };
 }
