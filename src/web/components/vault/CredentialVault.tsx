@@ -74,6 +74,7 @@ export interface CatalogOption {
 }
 
 export const CATALOG_OPTIONS: CatalogOption[] = [
+  // Free Tier Providers
   { slug: 'groq', displayName: 'Groq Cloud', keyUrl: 'https://console.groq.com/keys', baseUrl: 'https://api.groq.com/openai/v1', tierCategory: 'free', tierLabel: 'Free Tier' },
   { slug: 'cerebras', displayName: 'Cerebras', keyUrl: 'https://cloud.cerebras.ai/', baseUrl: 'https://api.cerebras.ai/v1', tierCategory: 'free', tierLabel: 'Free Tier' },
   { slug: 'sambanova', displayName: 'SambaNova Cloud', keyUrl: 'https://cloud.sambanova.ai/', baseUrl: 'https://api.sambanova.ai/v1', tierCategory: 'free', tierLabel: 'Free Tier' },
@@ -83,9 +84,35 @@ export const CATALOG_OPTIONS: CatalogOption[] = [
   { slug: 'mistral', displayName: 'Mistral AI', keyUrl: 'https://console.mistral.ai/api-keys/', baseUrl: 'https://api.mistral.ai/v1', tierCategory: 'free', tierLabel: 'Free Tier' },
   { slug: 'fireworks', displayName: 'Fireworks AI', keyUrl: 'https://fireworks.ai/account/api-keys', baseUrl: 'https://api.fireworks.ai/inference/v1', tierCategory: 'free', tierLabel: 'Free Tier' },
   { slug: 'deepinfra', displayName: 'DeepInfra', keyUrl: 'https://deepinfra.com/dash/api_keys', baseUrl: 'https://api.deepinfra.com/v1', tierCategory: 'free', tierLabel: 'Free Tier' },
+  // Paid / Usage-Based Tier Providers
   { slug: 'openai', displayName: 'OpenAI', keyUrl: 'https://platform.openai.com/api-keys', baseUrl: 'https://api.openai.com/v1', tierCategory: 'paid', tierLabel: 'Paid / Usage-Based' },
   { slug: 'anthropic', displayName: 'Anthropic Claude', keyUrl: 'https://console.anthropic.com/', baseUrl: 'https://api.anthropic.com/v1', tierCategory: 'paid', tierLabel: 'Paid / Usage-Based' },
   { slug: 'deepseek', displayName: 'DeepSeek', keyUrl: 'https://platform.deepseek.com/api_keys', baseUrl: 'https://api.deepseek.com/v1', tierCategory: 'paid', tierLabel: 'Paid / Usage-Based' },
+  { slug: 'tenstorrent', displayName: 'Tenstorrent Wormhole', keyUrl: 'https://cloud.tenstorrent.com/', baseUrl: 'https://api.tenstorrent.com/v1', tierCategory: 'paid', tierLabel: 'Paid / Usage-Based' },
+  { slug: 'replicate', displayName: 'Replicate', keyUrl: 'https://replicate.com/account/api-tokens', baseUrl: 'https://api.replicate.com/v1', tierCategory: 'paid', tierLabel: 'Paid / Usage-Based' },
+  { slug: 'baseten', displayName: 'Baseten', keyUrl: 'https://app.baseten.co/settings/api_keys', baseUrl: 'https://model-api.baseten.co/v1', tierCategory: 'paid', tierLabel: 'Paid / Usage-Based' },
+  { slug: 'modal', displayName: 'Modal Labs', keyUrl: 'https://modal.com/settings', baseUrl: 'https://api.modal.com/v1', tierCategory: 'paid', tierLabel: 'Paid / Usage-Based' },
+  { slug: 'novita', displayName: 'Novita AI', keyUrl: 'https://novita.ai/dashboard/key-management', baseUrl: 'https://api.novita.ai/v3/openai', tierCategory: 'paid', tierLabel: 'Paid / Usage-Based' },
+  { slug: 'hyperbolic', displayName: 'Hyperbolic AI', keyUrl: 'https://app.hyperbolic.xyz/settings', baseUrl: 'https://api.hyperbolic.xyz/v1', tierCategory: 'paid', tierLabel: 'Paid / Usage-Based' },
+  { slug: 'scaleway', displayName: 'Scaleway Generative APIs', keyUrl: 'https://console.scaleway.com/iam/api-keys', baseUrl: 'https://api.scaleway.com/v1', tierCategory: 'paid', tierLabel: 'Paid / Usage-Based' },
+  { slug: 'vultr', displayName: 'Vultr Serverless Inference', keyUrl: 'https://my.vultr.com/settings/#settings-api', baseUrl: 'https://api.vultrinference.com/v1', tierCategory: 'paid', tierLabel: 'Paid / Usage-Based' },
+  { slug: 'friendli', displayName: 'FriendliAI Suite', keyUrl: 'https://suite.friendli.ai/', baseUrl: 'https://inference.friendli.ai/v1', tierCategory: 'paid', tierLabel: 'Paid / Usage-Based' },
+  { slug: 'cloudflare', displayName: 'Cloudflare Workers AI', keyUrl: 'https://dash.cloudflare.com/profile/api-tokens', baseUrl: 'https://api.cloudflare.com/client/v4/accounts/v1/ai', tierCategory: 'paid', tierLabel: 'Paid / Usage-Based' },
+  { slug: 'perplexity', displayName: 'Perplexity Sonar API', keyUrl: 'https://www.perplexity.ai/settings/api', baseUrl: 'https://api.perplexity.ai', tierCategory: 'paid', tierLabel: 'Paid / Usage-Based' },
+  { slug: 'bedrock', displayName: 'AWS Bedrock', keyUrl: 'https://console.aws.amazon.com/bedrock/', baseUrl: 'https://bedrock-runtime.us-east-1.amazonaws.com', tierCategory: 'paid', tierLabel: 'Paid / Usage-Based' },
+  { slug: 'azure', displayName: 'Azure OpenAI Service', keyUrl: 'https://portal.azure.com/', baseUrl: 'https://azure-openai.azure.com/v1', tierCategory: 'paid', tierLabel: 'Paid / Usage-Based' },
+  { slug: 'vertex', displayName: 'Google Cloud Vertex AI', keyUrl: 'https://console.cloud.google.com/vertex-ai', baseUrl: 'https://vertexai.googleapis.com/v1', tierCategory: 'paid', tierLabel: 'Paid / Usage-Based' },
+  { slug: 'watsonx', displayName: 'IBM watsonx.ai', keyUrl: 'https://dataplatform.cloud.ibm.com/', baseUrl: 'https://us-south.ml.cloud.ibm.com/v1', tierCategory: 'paid', tierLabel: 'Paid / Usage-Based' },
+  { slug: 'qwen', displayName: 'Alibaba Model Studio', keyUrl: 'https://dashscope.console.aliyun.com/apiKey', baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1', tierCategory: 'paid', tierLabel: 'Paid / Usage-Based' },
+  { slug: 'zhipu', displayName: 'Zhipu BigModel Platform', keyUrl: 'https://open.bigmodel.cn/usercenter/apikeys', baseUrl: 'https://open.bigmodel.cn/api/paas/v4', tierCategory: 'paid', tierLabel: 'Paid / Usage-Based' },
+  { slug: 'moonshot', displayName: 'Moonshot Open Platform', keyUrl: 'https://platform.moonshot.cn/console/api-keys', baseUrl: 'https://api.moonshot.cn/v1', tierCategory: 'paid', tierLabel: 'Paid / Usage-Based' },
+  { slug: 'minimax', displayName: 'MiniMax Open Platform', keyUrl: 'https://platform.minimaxi.com/user-center/basic-information/interface-key', baseUrl: 'https://api.minimax.chat/v1', tierCategory: 'paid', tierLabel: 'Paid / Usage-Based' },
+  { slug: 'cohere', displayName: 'Cohere API', keyUrl: 'https://dashboard.cohere.com/api-keys', baseUrl: 'https://api.cohere.com/v2', tierCategory: 'paid', tierLabel: 'Paid / Usage-Based' },
+  { slug: 'ai21', displayName: 'AI21 Studio', keyUrl: 'https://studio.ai21.com/account/api-key', baseUrl: 'https://api.ai21.com/v1', tierCategory: 'paid', tierLabel: 'Paid / Usage-Based' },
+  { slug: 'baidu', displayName: 'Baidu Qianfan Platform', keyUrl: 'https://console.bce.baidu.com/qianfan/ais/console/onlineService', baseUrl: 'https://aip.baidubce.com/rpc/2.0/ai_custom/v1', tierCategory: 'paid', tierLabel: 'Paid / Usage-Based' },
+  { slug: 'tencent', displayName: 'Tencent Cloud Hunyuan', keyUrl: 'https://console.cloud.tencent.com/hunyuan/start', baseUrl: 'https://hunyuan.tencentcloudapi.com/v1', tierCategory: 'paid', tierLabel: 'Paid / Usage-Based' },
+  { slug: 'yi', displayName: '01.AI Platform', keyUrl: 'https://platform.lingyiwanwu.com/apikeys', baseUrl: 'https://api.lingyiwanwu.com/v1', tierCategory: 'paid', tierLabel: 'Paid / Usage-Based' },
+  { slug: 'upstage', displayName: 'Upstage Console', keyUrl: 'https://console.upstage.ai/api-keys', baseUrl: 'https://api.upstage.ai/v1/solar', tierCategory: 'paid', tierLabel: 'Paid / Usage-Based' },
 ];
 
 export type TierFilter = 'all' | TierCategory;
@@ -131,6 +158,26 @@ export const CredentialVault: React.FC = () => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncFeedback, setSyncFeedback] = useState<{ type: 'success' | 'error' | 'warning'; message: string } | null>(null);
 
+  const allCatalogOptions = React.useMemo(() => {
+    const optionsMap = new Map<string, CatalogOption>();
+    for (const opt of CATALOG_OPTIONS) {
+      optionsMap.set(opt.slug, opt);
+    }
+    for (const k of keys) {
+      if (k.slug && !optionsMap.has(k.slug)) {
+        optionsMap.set(k.slug, {
+          slug: k.slug,
+          displayName: k.provider || k.slug,
+          keyUrl: '#',
+          baseUrl: '',
+          tierCategory: k.tier === 'Pro Enclave' ? 'paid' : 'free',
+          tierLabel: k.tier || 'Free Tier',
+        });
+      }
+    }
+    return Array.from(optionsMap.values());
+  }, [keys]);
+
   const handleSyncModels = async () => {
     setIsSyncing(true);
     setSyncFeedback(null);
@@ -168,13 +215,13 @@ export const CredentialVault: React.FC = () => {
     }
   };
 
-  const currentProvider = CATALOG_OPTIONS.find((p) => p.slug === selectedProviderSlug) || CATALOG_OPTIONS[0];
+  const currentProvider = allCatalogOptions.find((p) => p.slug === selectedProviderSlug) || allCatalogOptions[0];
 
-  const filteredCatalogOptions = filterCatalogOptions(CATALOG_OPTIONS, tierFilter, providerSearchQuery);
+  const filteredCatalogOptions = filterCatalogOptions(allCatalogOptions, tierFilter, providerSearchQuery);
 
   const selectProvider = (slug: string) => {
     setSelectedProviderSlug(slug);
-    const prov = CATALOG_OPTIONS.find((p) => p.slug === slug);
+    const prov = allCatalogOptions.find((p) => p.slug === slug);
     if (prov) setCustomBaseUrl(prov.baseUrl);
     setIsDropdownOpen(false);
   };
