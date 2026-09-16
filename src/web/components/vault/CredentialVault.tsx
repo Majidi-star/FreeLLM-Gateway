@@ -62,7 +62,7 @@ export interface KeyEntry {
   lastError?: string | null;
 }
 
-export type TierCategory = 'free' | 'freemium' | 'paid';
+export type TierCategory = 'free' | 'paid';
 
 export interface CatalogOption {
   slug: string;
@@ -74,15 +74,15 @@ export interface CatalogOption {
 }
 
 export const CATALOG_OPTIONS: CatalogOption[] = [
-  { slug: 'groq', displayName: 'Groq Cloud', keyUrl: 'https://console.groq.com/keys', baseUrl: 'https://api.groq.com/openai/v1', tierCategory: 'free', tierLabel: '100% Free Tier' },
-  { slug: 'cerebras', displayName: 'Cerebras', keyUrl: 'https://cloud.cerebras.ai/', baseUrl: 'https://api.cerebras.ai/v1', tierCategory: 'free', tierLabel: '100% Free Tier' },
-  { slug: 'sambanova', displayName: 'SambaNova Cloud', keyUrl: 'https://cloud.sambanova.ai/', baseUrl: 'https://api.sambanova.ai/v1', tierCategory: 'free', tierLabel: '100% Free Tier' },
-  { slug: 'gemini', displayName: 'Google Gemini', keyUrl: 'https://aistudio.google.com/app/apikey', baseUrl: 'https://generativelanguage.googleapis.com/v1beta', tierCategory: 'freemium', tierLabel: 'Initially Free' },
-  { slug: 'openrouter', displayName: 'OpenRouter', keyUrl: 'https://openrouter.ai/keys', baseUrl: 'https://openrouter.ai/api/v1', tierCategory: 'freemium', tierLabel: 'Initially Free' },
-  { slug: 'together', displayName: 'Together AI', keyUrl: 'https://api.together.ai/settings/api-keys', baseUrl: 'https://api.together.xyz/v1', tierCategory: 'freemium', tierLabel: 'Initially Free' },
-  { slug: 'mistral', displayName: 'Mistral AI', keyUrl: 'https://console.mistral.ai/api-keys/', baseUrl: 'https://api.mistral.ai/v1', tierCategory: 'freemium', tierLabel: 'Initially Free' },
-  { slug: 'fireworks', displayName: 'Fireworks AI', keyUrl: 'https://fireworks.ai/account/api-keys', baseUrl: 'https://api.fireworks.ai/inference/v1', tierCategory: 'freemium', tierLabel: 'Initially Free' },
-  { slug: 'deepinfra', displayName: 'DeepInfra', keyUrl: 'https://deepinfra.com/dash/api_keys', baseUrl: 'https://api.deepinfra.com/v1', tierCategory: 'freemium', tierLabel: 'Initially Free' },
+  { slug: 'groq', displayName: 'Groq Cloud', keyUrl: 'https://console.groq.com/keys', baseUrl: 'https://api.groq.com/openai/v1', tierCategory: 'free', tierLabel: 'Free Tier' },
+  { slug: 'cerebras', displayName: 'Cerebras', keyUrl: 'https://cloud.cerebras.ai/', baseUrl: 'https://api.cerebras.ai/v1', tierCategory: 'free', tierLabel: 'Free Tier' },
+  { slug: 'sambanova', displayName: 'SambaNova Cloud', keyUrl: 'https://cloud.sambanova.ai/', baseUrl: 'https://api.sambanova.ai/v1', tierCategory: 'free', tierLabel: 'Free Tier' },
+  { slug: 'gemini', displayName: 'Google Gemini', keyUrl: 'https://aistudio.google.com/app/apikey', baseUrl: 'https://generativelanguage.googleapis.com/v1beta', tierCategory: 'free', tierLabel: 'Free Tier' },
+  { slug: 'openrouter', displayName: 'OpenRouter', keyUrl: 'https://openrouter.ai/keys', baseUrl: 'https://openrouter.ai/api/v1', tierCategory: 'free', tierLabel: 'Free Tier' },
+  { slug: 'together', displayName: 'Together AI', keyUrl: 'https://api.together.ai/settings/api-keys', baseUrl: 'https://api.together.xyz/v1', tierCategory: 'free', tierLabel: 'Free Tier' },
+  { slug: 'mistral', displayName: 'Mistral AI', keyUrl: 'https://console.mistral.ai/api-keys/', baseUrl: 'https://api.mistral.ai/v1', tierCategory: 'free', tierLabel: 'Free Tier' },
+  { slug: 'fireworks', displayName: 'Fireworks AI', keyUrl: 'https://fireworks.ai/account/api-keys', baseUrl: 'https://api.fireworks.ai/inference/v1', tierCategory: 'free', tierLabel: 'Free Tier' },
+  { slug: 'deepinfra', displayName: 'DeepInfra', keyUrl: 'https://deepinfra.com/dash/api_keys', baseUrl: 'https://api.deepinfra.com/v1', tierCategory: 'free', tierLabel: 'Free Tier' },
   { slug: 'openai', displayName: 'OpenAI', keyUrl: 'https://platform.openai.com/api-keys', baseUrl: 'https://api.openai.com/v1', tierCategory: 'paid', tierLabel: 'Paid / Usage-Based' },
   { slug: 'anthropic', displayName: 'Anthropic Claude', keyUrl: 'https://console.anthropic.com/', baseUrl: 'https://api.anthropic.com/v1', tierCategory: 'paid', tierLabel: 'Paid / Usage-Based' },
   { slug: 'deepseek', displayName: 'DeepSeek', keyUrl: 'https://platform.deepseek.com/api_keys', baseUrl: 'https://api.deepseek.com/v1', tierCategory: 'paid', tierLabel: 'Paid / Usage-Based' },
@@ -696,8 +696,8 @@ export const CredentialVault: React.FC = () => {
                 <label className="font-semibold text-[var(--text-secondary)] text-[11px] uppercase tracking-wider">
                   Filter by Tier
                 </label>
-                <div className="grid grid-cols-4 gap-1.5 p-1 bg-[var(--bg-well)] border border-[var(--border-subtle)] rounded-xl text-xs">
-                  {(['all', 'free', 'freemium', 'paid'] as const).map((t) => (
+                <div className="grid grid-cols-3 gap-1.5 p-1 bg-[var(--bg-well)] border border-[var(--border-subtle)] rounded-xl text-xs">
+                  {(['all', 'free', 'paid'] as const).map((t) => (
                     <button
                       key={t}
                       type="button"
@@ -708,7 +708,7 @@ export const CredentialVault: React.FC = () => {
                           : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-active)]'
                       }`}
                     >
-                      {t === 'all' ? 'All' : t === 'free' ? 'Free Tier' : t === 'freemium' ? 'Initially Free' : 'Paid'}
+                      {t === 'all' ? 'All' : t === 'free' ? 'Free Tier' : 'Paid'}
                     </button>
                   ))}
                 </div>
@@ -770,8 +770,6 @@ export const CredentialVault: React.FC = () => {
                               <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded-full font-bold uppercase ${
                                 opt.tierCategory === 'free'
                                   ? 'bg-[var(--signal-mint)]/15 text-[var(--signal-mint)] border border-[var(--signal-mint)]/30'
-                                  : opt.tierCategory === 'freemium'
-                                  ? 'bg-[var(--signal-amber)]/15 text-[var(--signal-amber)] border border-[var(--signal-amber)]/30'
                                   : 'bg-purple-500/15 text-purple-400 border border-purple-500/30'
                               }`}>
                                 {opt.tierLabel}

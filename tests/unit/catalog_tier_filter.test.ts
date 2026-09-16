@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { CATALOG_OPTIONS, filterCatalogOptions, TierCategory, TierFilter } from '../../src/web/components/vault/CredentialVault';
 
-const VALID_TIERS: readonly TierCategory[] = ['free', 'freemium', 'paid'];
+const VALID_TIERS: readonly TierCategory[] = ['free', 'paid'];
 
 describe('Provider catalog tier categorization', () => {
   it('categorizes every catalog provider with a valid tierCategory', () => {
@@ -50,10 +50,10 @@ describe('filterCatalogOptions tier + search filtering', () => {
   });
 
   it('combines tier and search filters (AND semantics)', () => {
-    const result = filterCatalogOptions(CATALOG_OPTIONS, 'freemium', 'a');
+    const result = filterCatalogOptions(CATALOG_OPTIONS, 'free', 'a');
     expect(result.length).toBeGreaterThan(0);
     for (const opt of result) {
-      expect(opt.tierCategory).toBe('freemium');
+      expect(opt.tierCategory).toBe('free');
       const q = 'a';
       const matches = opt.displayName.toLowerCase().includes(q) || opt.slug.toLowerCase().includes(q);
       expect(matches).toBe(true);
