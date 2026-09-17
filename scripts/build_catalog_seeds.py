@@ -116,9 +116,9 @@ def resolve_canonical(model_name: str) -> str:
         return "anthropic/claude-3-5-sonnet-20241022"
     return "meta-llama/llama-3.1-8b-instruct"
 
-def clean_url(url: str, slug: str) -> str:
-    if not url or not isinstance(url, str) or not url.startswith("http"):
-        return f"https://api.{slug}.com/v1"
+def clean_url(url: str) -> str:
+    if not url or not isinstance(url, str) or not (url.startswith("http://") or url.startswith("https://")):
+        return ""
     return url
 
 def main():
@@ -146,7 +146,8 @@ def main():
         "promptql", "maxai", "hyperagent", "freebuff", "g4f-gemini", "g4f-groq",
         "g4f-nvidia", "g4f-ollama", "g4f-pollinations", "kilocode", "routeway",
         "gitlawb", "gitlawb-gmi", "adobe-firefly", "hailuo-web", "phind", "poe-web",
-        "qwen-web", "v0-vercel-web", "venice-web", "felo-web", "theoldllm", "raycast", "zed"
+        "qwen-web", "v0-vercel-web", "venice-web", "felo-web", "theoldllm", "raycast", "zed",
+        "bedrock", "muse-code"
     }
 
     UNETHICAL_URL_PATTERNS = [
@@ -166,13 +167,15 @@ def main():
 
     for p in raw_providers:
         slug = p.get("slug") or "unknown"
-        base_url = p.get("baseUrl") or ""
+        raw_url = p.get("baseUrl")
+        base_url = clean_url(raw_url)
 
-        is_unethical = (
+        is_unethical_or_no_url = (
             slug in EXPLICIT_BLACKLIST_SLUGS
-            or any(pattern in str(base_url).lower() for pattern in UNETHICAL_URL_PATTERNS)
+            or not base_url
+            or any(pattern in str(raw_url).lower() for pattern in UNETHICAL_URL_PATTERNS)
         )
-        if is_unethical:
+        if is_unethical_or_no_url:
             blacklisted_slugs.add(slug)
             continue
 
@@ -181,7 +184,7 @@ def main():
         seen_slugs.add(slug)
 
         display_name = p.get("displayName") or slug.replace("-", " ").capitalize()
-        base_url = clean_url(p.get("baseUrl"), slug)
+        base_url = clean_url(p.get("baseUrl"))
         auth_type = p.get("authType") or "api_key"
         if auth_type not in ["api_key", "oauth", "keyless"]:
             auth_type = "api_key"

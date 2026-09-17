@@ -330,21 +330,6 @@
     "isActive": true
   },
   {
-    "slug": "bedrock",
-    "displayName": "Bedrock",
-    "baseUrl": "https://api.bedrock.com/v1",
-    "authType": "api_key",
-    "protocol": "openai",
-    "docsUrl": "https://bedrock.com/docs",
-    "capabilities": {
-      "vision": false,
-      "tools": false,
-      "streaming": false,
-      "jsonMode": false
-    },
-    "isActive": true
-  },
-  {
     "slug": "blackbox",
     "displayName": "Blackbox",
     "baseUrl": "https://api.blackbox.ai/v1/chat/completions",
@@ -1761,21 +1746,6 @@
     "authType": "api_key",
     "protocol": "openai",
     "docsUrl": "https://morph.com/docs",
-    "capabilities": {
-      "vision": false,
-      "tools": false,
-      "streaming": false,
-      "jsonMode": false
-    },
-    "isActive": true
-  },
-  {
-    "slug": "muse-code",
-    "displayName": "Muse code",
-    "baseUrl": "https://api.muse-code.com/v1",
-    "authType": "api_key",
-    "protocol": "openai",
-    "docsUrl": "https://muse-code.com/docs",
     "capabilities": {
       "vision": false,
       "tools": false,
