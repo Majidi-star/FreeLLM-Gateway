@@ -133,8 +133,23 @@ def main():
     raw_providers = raw_data.get("providers", [])
     raw_models = raw_data.get("models", [])
 
-    UNETHICAL_SLUGS = {"antigravity", "agy", "blackbox-web", "adapta-web", "auggie"}
-    UNETHICAL_URL_PATTERNS = ["daily-cloudcode-pa", "app.blackbox.ai", "auggie://"]
+    EXPLICIT_BLACKLIST_SLUGS = {
+        "antigravity", "agy", "auggie", "adapta-web", "adobe-firefly", "blackbox-web",
+        "chatgpt-web", "claude-web", "copilot-web", "deepseek-web", "doubao-web",
+        "gemini-business", "gemini-web", "grok-web", "hailuo-web", "huggingchat",
+        "hyperagent", "kimi-web", "lmarena", "muse-spark-web", "notion-web",
+        "perplexity-web", "phind", "poe-web", "promptql", "qwen-web", "t3-web",
+        "tencent-aistudio-web", "tinycms-web", "v0-vercel-web", "venice-web",
+        "chipotle", "cloudflare-playground", "devin-cli", "devin-cli-agentic",
+        "duckduckgo-web", "felo-web", "theoldllm", "veoaifree-web", "trae", "kiro",
+        "raycast", "zed"
+    }
+
+    UNETHICAL_URL_PATTERNS = [
+        "daily-cloudcode-pa", "cloudcode-pa", "app.blackbox.ai", "agent.adapta.one",
+        "amelia.chipotle.com", "playground.ai.cloudflare.com", "duckduckgo.com/duckchat",
+        "theoldllm.vercel.app", "auggie://", "devin://", "backend.raycast.com", "cloud.zed.dev"
+    ]
 
     providers_seed = []
     seen_slugs = set()
@@ -145,8 +160,8 @@ def main():
         base_url = p.get("baseUrl") or ""
 
         is_unethical = (
-            slug in UNETHICAL_SLUGS
-            or any(pattern in str(base_url) for pattern in UNETHICAL_URL_PATTERNS)
+            slug in EXPLICIT_BLACKLIST_SLUGS
+            or any(pattern in str(base_url).lower() for pattern in UNETHICAL_URL_PATTERNS)
         )
         if is_unethical:
             blacklisted_slugs.add(slug)
@@ -194,7 +209,7 @@ def main():
 
     for m in raw_models:
         prov_slug = m.get("providerSlug") or "unknown"
-        if prov_slug in blacklisted_slugs or prov_slug in UNETHICAL_SLUGS:
+        if prov_slug in blacklisted_slugs or prov_slug in EXPLICIT_BLACKLIST_SLUGS:
             continue
         model_name = m.get("modelName") or "default-model"
         key = (prov_slug, model_name)
