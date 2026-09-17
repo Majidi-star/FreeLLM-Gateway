@@ -1,706 +1,4157 @@
 [
   {
-    "slug": "openai",
-    "displayName": "OpenAI",
-    "baseUrl": "https://api.openai.com/v1",
+    "slug": "adapta-web",
+    "displayName": "Adapta web",
+    "baseUrl": "https://agent.adapta.one/api/chat/stream/v1",
     "authType": "api_key",
     "protocol": "openai",
-    "docsUrl": "https://platform.openai.com/docs",
-    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
+    "docsUrl": "https://adapta-web.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "agentrouter",
+    "displayName": "Agentrouter",
+    "baseUrl": "https://agentrouter.org/v1/messages",
+    "authType": "api_key",
+    "protocol": "anthropic",
+    "docsUrl": "https://agentrouter.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "agnes",
+    "displayName": "Agnes",
+    "baseUrl": "https://apihub.agnes-ai.com/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://agnes.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "agnes-cn",
+    "displayName": "Agnes cn",
+    "baseUrl": "https://api.agnes-ai.cn/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://agnes-cn.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "agy",
+    "displayName": "Agy",
+    "baseUrl": "https://daily-cloudcode-pa.googleapis.com",
+    "authType": "oauth",
+    "protocol": "custom",
+    "docsUrl": "https://agy.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "ai21",
+    "displayName": "Ai21",
+    "baseUrl": "https://api.ai21.com/studio/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://ai21.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "aihorde",
+    "displayName": "Aihorde",
+    "baseUrl": "https://oai.aihorde.net/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://aihorde.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "aimlapi",
+    "displayName": "Aimlapi",
+    "baseUrl": "https://api.aimlapi.com/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://aimlapi.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "ainative",
+    "displayName": "Ainative",
+    "baseUrl": "https://api.ainative.studio/api/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://ainative.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "aion",
+    "displayName": "Aion",
+    "baseUrl": "https://api.aionlabs.ai/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://aion.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "alibaba",
+    "displayName": "Alibaba",
+    "baseUrl": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://alibaba.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "alibaba-cn",
+    "displayName": "Alibaba cn",
+    "baseUrl": "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://alibaba-cn.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "ant-ling",
+    "displayName": "Ant ling",
+    "baseUrl": "https://api.ant-ling.com/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://ant-ling.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
     "isActive": true
   },
   {
     "slug": "anthropic",
-    "displayName": "Anthropic Claude",
-    "baseUrl": "https://api.anthropic.com/v1",
+    "displayName": "Anthropic",
+    "baseUrl": "https://api.anthropic.com/v1/messages",
     "authType": "api_key",
     "protocol": "anthropic",
-    "docsUrl": "https://docs.anthropic.com",
-    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
+    "docsUrl": "https://anthropic.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
     "isActive": true
   },
   {
-    "slug": "gemini",
-    "displayName": "Google Gemini",
-    "baseUrl": "https://generativelanguage.googleapis.com/v1beta",
-    "authType": "api_key",
-    "protocol": "gemini",
-    "docsUrl": "https://ai.google.dev/gemini-api/docs",
-    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
+    "slug": "antigravity",
+    "displayName": "Antigravity",
+    "baseUrl": "https://daily-cloudcode-pa.googleapis.com",
+    "authType": "oauth",
+    "protocol": "custom",
+    "docsUrl": "https://antigravity.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
     "isActive": true
   },
   {
-    "slug": "groq",
-    "displayName": "Groq Cloud",
-    "baseUrl": "https://api.groq.com/openai/v1",
+    "slug": "anyapi",
+    "displayName": "Anyapi",
+    "baseUrl": "https://api.anyapi.ai/v1/chat/completions",
     "authType": "api_key",
     "protocol": "openai",
-    "docsUrl": "https://console.groq.com/docs",
-    "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
+    "docsUrl": "https://anyapi.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
     "isActive": true
   },
   {
-    "slug": "openrouter",
-    "displayName": "OpenRouter",
-    "baseUrl": "https://openrouter.ai/api/v1",
+    "slug": "api-airforce",
+    "displayName": "Api airforce",
+    "baseUrl": "https://api.airforce/v1/chat/completions",
     "authType": "api_key",
     "protocol": "openai",
-    "docsUrl": "https://openrouter.ai/docs",
-    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
+    "docsUrl": "https://api-airforce.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
     "isActive": true
   },
   {
-    "slug": "together",
-    "displayName": "Together AI",
-    "baseUrl": "https://api.together.xyz/v1",
+    "slug": "arcee-ai",
+    "displayName": "Arcee ai",
+    "baseUrl": "https://api.arcee.ai/api/v1/chat/completions",
     "authType": "api_key",
     "protocol": "openai",
-    "docsUrl": "https://docs.together.ai",
-    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
+    "docsUrl": "https://arcee-ai.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
     "isActive": true
   },
   {
-    "slug": "cerebras",
-    "displayName": "Cerebras",
-    "baseUrl": "https://api.cerebras.ai/v1",
-    "authType": "api_key",
+    "slug": "auggie",
+    "displayName": "Auggie",
+    "baseUrl": "https://api.auggie.com/v1",
+    "authType": "keyless",
     "protocol": "openai",
-    "docsUrl": "https://docs.cerebras.ai",
-    "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
+    "docsUrl": "https://auggie.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
     "isActive": true
   },
   {
-    "slug": "sambanova",
-    "displayName": "SambaNova Cloud",
-    "baseUrl": "https://api.sambanova.ai/v1",
+    "slug": "auriko",
+    "displayName": "Auriko",
+    "baseUrl": "https://api.auriko.ai/v1/chat/completions",
     "authType": "api_key",
     "protocol": "openai",
-    "docsUrl": "https://docs.sambanova.ai",
-    "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
+    "docsUrl": "https://auriko.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
     "isActive": true
   },
   {
-    "slug": "deepseek",
-    "displayName": "DeepSeek",
-    "baseUrl": "https://api.deepseek.com/v1",
+    "slug": "bai",
+    "displayName": "Bai",
+    "baseUrl": "https://api.b.ai/v1/chat/completions",
     "authType": "api_key",
     "protocol": "openai",
-    "docsUrl": "https://api-docs.deepseek.com",
-    "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
+    "docsUrl": "https://bai.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
     "isActive": true
   },
   {
-    "slug": "mistral",
-    "displayName": "Mistral AI",
-    "baseUrl": "https://api.mistral.ai/v1",
+    "slug": "baichuan",
+    "displayName": "Baichuan",
+    "baseUrl": "https://api.baichuan-ai.com/v1/chat/completions",
     "authType": "api_key",
     "protocol": "openai",
-    "docsUrl": "https://docs.mistral.ai",
-    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
+    "docsUrl": "https://baichuan.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
     "isActive": true
   },
   {
-    "slug": "fireworks",
-    "displayName": "Fireworks AI",
-    "baseUrl": "https://api.fireworks.ai/inference/v1",
+    "slug": "baidu",
+    "displayName": "Baidu",
+    "baseUrl": "https://qianfan.baidubce.com/v2/chat/completions",
     "authType": "api_key",
     "protocol": "openai",
-    "docsUrl": "https://docs.fireworks.ai",
-    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
+    "docsUrl": "https://baidu.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
     "isActive": true
   },
   {
-    "slug": "deepinfra",
-    "displayName": "DeepInfra",
-    "baseUrl": "https://api.deepinfra.com/v1",
+    "slug": "bailian-coding-plan",
+    "displayName": "Bailian coding plan",
+    "baseUrl": "https://token-plan.ap-southeast-1.maas.aliyuncs.com/apps/anthropic/v1",
     "authType": "api_key",
-    "protocol": "openai",
-    "docsUrl": "https://deepinfra.com/docs",
-    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
-    "isActive": true
-  },
-  {
-    "slug": "etched",
-    "displayName": "Etched Sohu ASIC",
-    "baseUrl": "https://api.etched.com/v1",
-    "authType": "api_key",
-    "protocol": "openai",
-    "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
-    "isActive": false
-  },
-  {
-    "slug": "tenstorrent",
-    "displayName": "Tenstorrent Wormhole",
-    "baseUrl": "https://api.tenstorrent.com/v1",
-    "authType": "api_key",
-    "protocol": "openai",
-    "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
-    "isActive": true
-  },
-  {
-    "slug": "replicate",
-    "displayName": "Replicate",
-    "baseUrl": "https://api.replicate.com/v1",
-    "authType": "api_key",
-    "protocol": "openai",
-    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
+    "protocol": "anthropic",
+    "docsUrl": "https://bailian-coding-plan.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
     "isActive": true
   },
   {
     "slug": "baseten",
     "displayName": "Baseten",
-    "baseUrl": "https://model-api.baseten.co/v1",
+    "baseUrl": "https://inference.baseten.co/v1/chat/completions",
     "authType": "api_key",
     "protocol": "openai",
-    "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
-    "isActive": true
-  },
-  {
-    "slug": "modal",
-    "displayName": "Modal Labs",
-    "baseUrl": "https://api.modal.com/v1",
-    "authType": "api_key",
-    "protocol": "openai",
-    "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
-    "isActive": true
-  },
-  {
-    "slug": "novita",
-    "displayName": "Novita AI",
-    "baseUrl": "https://api.novita.ai/v3/openai",
-    "authType": "api_key",
-    "protocol": "openai",
-    "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
-    "isActive": true
-  },
-  {
-    "slug": "hyperbolic",
-    "displayName": "Hyperbolic AI",
-    "baseUrl": "https://api.hyperbolic.xyz/v1",
-    "authType": "api_key",
-    "protocol": "openai",
-    "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
-    "isActive": true
-  },
-  {
-    "slug": "scaleway",
-    "displayName": "Scaleway Generative APIs",
-    "baseUrl": "https://api.scaleway.com/v1",
-    "authType": "api_key",
-    "protocol": "openai",
-    "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
-    "isActive": true
-  },
-  {
-    "slug": "vultr",
-    "displayName": "Vultr Serverless Inference",
-    "baseUrl": "https://api.vultrinference.com/v1",
-    "authType": "api_key",
-    "protocol": "openai",
-    "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
-    "isActive": true
-  },
-  {
-    "slug": "friendli",
-    "displayName": "FriendliAI Suite",
-    "baseUrl": "https://inference.friendli.ai/v1",
-    "authType": "api_key",
-    "protocol": "openai",
-    "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
-    "isActive": true
-  },
-  {
-    "slug": "cloudflare",
-    "displayName": "Cloudflare Workers AI",
-    "baseUrl": "https://api.cloudflare.com/client/v4/accounts/v1/ai",
-    "authType": "api_key",
-    "protocol": "openai",
-    "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
-    "isActive": true
-  },
-  {
-    "slug": "perplexity",
-    "displayName": "Perplexity Sonar API",
-    "baseUrl": "https://api.perplexity.ai",
-    "authType": "api_key",
-    "protocol": "openai",
-    "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
-    "isActive": true
-  },
-  {
-    "slug": "bedrock",
-    "displayName": "AWS Bedrock",
-    "baseUrl": "https://bedrock-runtime.us-east-1.amazonaws.com",
-    "authType": "api_key",
-    "protocol": "openai",
-    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
-    "isActive": true
-  },
-  {
-    "slug": "azure",
-    "displayName": "Azure OpenAI Service",
-    "baseUrl": "https://azure-openai.azure.com/v1",
-    "authType": "api_key",
-    "protocol": "openai",
-    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
-    "isActive": true
-  },
-  {
-    "slug": "vertex",
-    "displayName": "Google Cloud Vertex AI",
-    "baseUrl": "https://vertexai.googleapis.com/v1",
-    "authType": "api_key",
-    "protocol": "gemini",
-    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
-    "isActive": true
-  },
-  {
-    "slug": "watsonx",
-    "displayName": "IBM watsonx.ai",
-    "baseUrl": "https://us-south.ml.cloud.ibm.com/v1",
-    "authType": "api_key",
-    "protocol": "openai",
-    "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
-    "isActive": true
-  },
-  {
-    "slug": "qwen",
-    "displayName": "Alibaba Model Studio",
-    "baseUrl": "https://dashscope.aliyuncs.com/compatible-mode/v1",
-    "authType": "api_key",
-    "protocol": "openai",
-    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
-    "isActive": true
-  },
-  {
-    "slug": "zhipu",
-    "displayName": "Zhipu BigModel Platform",
-    "baseUrl": "https://open.bigmodel.cn/api/paas/v4",
-    "authType": "api_key",
-    "protocol": "openai",
-    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
-    "isActive": true
-  },
-  {
-    "slug": "moonshot",
-    "displayName": "Moonshot Open Platform",
-    "baseUrl": "https://api.moonshot.cn/v1",
-    "authType": "api_key",
-    "protocol": "openai",
-    "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
-    "isActive": true
-  },
-  {
-    "slug": "minimax",
-    "displayName": "MiniMax Open Platform",
-    "baseUrl": "https://api.minimax.chat/v1",
-    "authType": "api_key",
-    "protocol": "openai",
-    "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
-    "isActive": true
-  },
-  {
-    "slug": "cohere",
-    "displayName": "Cohere API",
-    "baseUrl": "https://api.cohere.com/v2",
-    "authType": "api_key",
-    "protocol": "openai",
-    "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
-    "isActive": true
-  },
-  {
-    "slug": "ai21",
-    "displayName": "AI21 Studio",
-    "baseUrl": "https://api.ai21.com/v1",
-    "authType": "api_key",
-    "protocol": "openai",
-    "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
-    "isActive": true
-  },
-  {
-    "slug": "baidu",
-    "displayName": "Baidu Qianfan Platform",
-    "baseUrl": "https://aip.baidubce.com/rpc/2.0/ai_custom/v1",
-    "authType": "api_key",
-    "protocol": "openai",
-    "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
-    "isActive": true
-  },
-  {
-    "slug": "tencent",
-    "displayName": "Tencent Cloud Hunyuan",
-    "baseUrl": "https://hunyuan.tencentcloudapi.com/v1",
-    "authType": "api_key",
-    "protocol": "openai",
-    "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
-    "isActive": true
-  },
-  {
-    "slug": "yi",
-    "displayName": "01.AI Platform",
-    "baseUrl": "https://api.lingyiwanwu.com/v1",
-    "authType": "api_key",
-    "protocol": "openai",
-    "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
-    "isActive": true
-  },
-  {
-    "slug": "upstage",
-    "displayName": "Upstage Console",
-    "baseUrl": "https://api.upstage.ai/v1/solar",
-    "authType": "api_key",
-    "protocol": "openai",
-    "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
-    "isActive": true
-  },
-  {
-    "slug": "siliconflow",
-    "displayName": "SiliconFlow Cloud",
-    "baseUrl": "https://api.siliconflow.cn/v1",
-    "authType": "api_key",
-    "protocol": "openai",
-    "docsUrl": "https://docs.siliconflow.cn",
-    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
-    "isActive": true
-  },
-  {
-    "slug": "huggingface",
-    "displayName": "Hugging Face Inference",
-    "baseUrl": "https://api-inference.huggingface.co/v1",
-    "authType": "api_key",
-    "protocol": "openai",
-    "docsUrl": "https://huggingface.co/docs/api-inference",
-    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
-    "isActive": true
-  },
-  {
-    "slug": "xai",
-    "displayName": "xAI Grok Platform",
-    "baseUrl": "https://api.x.ai/v1",
-    "authType": "api_key",
-    "protocol": "openai",
-    "docsUrl": "https://docs.x.ai",
-    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
-    "isActive": true
-  },
-  {
-    "slug": "anyscale",
-    "displayName": "Anyscale Endpoints",
-    "baseUrl": "https://api.endpoints.anyscale.com/v1",
-    "authType": "api_key",
-    "protocol": "openai",
-    "docsUrl": "https://docs.anyscale.com",
-    "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
-    "isActive": true
-  },
-  {
-    "slug": "octoai",
-    "displayName": "OctoAI Inferences",
-    "baseUrl": "https://text.octoai.run/v1",
-    "authType": "api_key",
-    "protocol": "openai",
-    "docsUrl": "https://docs.octoai.cloud",
-    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
-    "isActive": true
-  },
-  {
-    "slug": "monsterapi",
-    "displayName": "MonsterAPI Platform",
-    "baseUrl": "https://api.monsterapi.ai/v1",
-    "authType": "api_key",
-    "protocol": "openai",
-    "docsUrl": "https://monsterapi.ai/docs",
-    "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
-    "isActive": true
-  },
-  {
-    "slug": "runpod",
-    "displayName": "RunPod Serverless",
-    "baseUrl": "https://api.runpod.ai/v1",
-    "authType": "api_key",
-    "protocol": "openai",
-    "docsUrl": "https://docs.runpod.io",
-    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
-    "isActive": true
-  },
-  {
-    "slug": "lambda",
-    "displayName": "Lambda Cloud Inference",
-    "baseUrl": "https://api.lambdalabs.com/v1",
-    "authType": "api_key",
-    "protocol": "openai",
-    "docsUrl": "https://docs.lambdalabs.com",
-    "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
-    "isActive": true
-  },
-  {
-    "slug": "lepton",
-    "displayName": "Lepton AI Engine",
-    "baseUrl": "https://api.lepton.ai/v1",
-    "authType": "api_key",
-    "protocol": "openai",
-    "docsUrl": "https://docs.lepton.ai",
-    "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
-    "isActive": true
-  },
-  {
-    "slug": "featherless",
-    "displayName": "Featherless AI",
-    "baseUrl": "https://api.featherless.ai/v1",
-    "authType": "api_key",
-    "protocol": "openai",
-    "docsUrl": "https://featherless.ai/docs",
-    "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
-    "isActive": true
-  },
-  {
-    "slug": "nebius",
-    "displayName": "Nebius AI Studio",
-    "baseUrl": "https://api.studio.nebius.ai/v1",
-    "authType": "api_key",
-    "protocol": "openai",
-    "docsUrl": "https://nebius.ai/docs",
-    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
-    "isActive": true
-  },
-  {
-    "slug": "chutes",
-    "displayName": "Chutes AI Network",
-    "baseUrl": "https://chutes.ai/v1",
-    "authType": "api_key",
-    "protocol": "openai",
-    "docsUrl": "https://chutes.ai/docs",
-    "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
-    "isActive": true
-  },
-  {
-    "slug": "voyage",
-    "displayName": "Voyage AI",
-    "baseUrl": "https://api.voyageai.com/v1",
-    "authType": "api_key",
-    "protocol": "openai",
-    "docsUrl": "https://docs.voyageai.com",
-    "capabilities": { "vision": false, "tools": false, "streaming": false, "jsonMode": true },
-    "isActive": true
-  },
-  {
-    "slug": "ollama-cloud",
-    "displayName": "Ollama Cloud",
-    "baseUrl": "https://api.ollama.com/v1",
-    "authType": "api_key",
-    "protocol": "openai",
-    "docsUrl": "https://ollama.com/docs",
-    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
-    "isActive": true
-  },
-  {
-    "slug": "arcee",
-    "displayName": "Arcee AI Trinity",
-    "baseUrl": "https://api.arcee.ai/v1",
-    "authType": "api_key",
-    "protocol": "openai",
-    "docsUrl": "https://docs.arcee.ai",
-    "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
-    "isActive": true
-  },
-  {
-    "slug": "doubao",
-    "displayName": "ByteDance Doubao VolcEngine",
-    "baseUrl": "https://ark.cn-beijing.volces.com/api/v3",
-    "authType": "api_key",
-    "protocol": "openai",
-    "docsUrl": "https://www.volcengine.com/docs/82379",
-    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
-    "isActive": true
-  },
-  {
-    "slug": "iflytek",
-    "displayName": "iFlytek Spark Desk",
-    "baseUrl": "https://spark-api.xf-yun.com/v1",
-    "authType": "api_key",
-    "protocol": "openai",
-    "docsUrl": "https://www.xfyun.cn/doc/spark",
-    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
-    "isActive": true
-  },
-  {
-    "slug": "nara",
-    "displayName": "Nara AI Studio",
-    "baseUrl": "https://api.nara.ai/v1",
-    "authType": "api_key",
-    "protocol": "openai",
-    "docsUrl": "https://nara.ai/docs",
-    "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
-    "isActive": true
-  },
-  {
-    "slug": "llm7",
-    "displayName": "LLM7 Cloud Router",
-    "baseUrl": "https://api.llm7.io/v1",
-    "authType": "api_key",
-    "protocol": "openai",
-    "docsUrl": "https://llm7.io/docs",
-    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
+    "docsUrl": "https://baseten.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
     "isActive": true
   },
   {
     "slug": "bazaarlink",
-    "displayName": "BazaarLink Free Router",
-    "baseUrl": "https://api.bazaarlink.com/v1",
+    "displayName": "Bazaarlink",
+    "baseUrl": "https://bazaarlink.ai/api/v1/chat/completions",
     "authType": "api_key",
     "protocol": "openai",
     "docsUrl": "https://bazaarlink.com/docs",
-    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
     "isActive": true
   },
   {
-    "slug": "bluesminds",
-    "displayName": "BluesMinds AI Gateway",
-    "baseUrl": "https://api.bluesminds.ai/v1",
+    "slug": "bedrock",
+    "displayName": "Bedrock",
+    "baseUrl": "https://api.bedrock.com/v1",
     "authType": "api_key",
     "protocol": "openai",
-    "docsUrl": "https://bluesminds.ai/docs",
-    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
-    "isActive": true
-  },
-  {
-    "slug": "api-airforce",
-    "displayName": "API Airforce Free Gateway",
-    "baseUrl": "https://api.airforce/v1",
-    "authType": "api_key",
-    "protocol": "openai",
-    "docsUrl": "https://api.airforce/docs",
-    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
-    "isActive": true
-  },
-  {
-    "slug": "glm",
-    "displayName": "Zhipu GLM Open Engine",
-    "baseUrl": "https://open.bigmodel.cn/api/paas/v4",
-    "authType": "api_key",
-    "protocol": "openai",
-    "docsUrl": "https://open.bigmodel.cn/doc",
-    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
-    "isActive": true
-  },
-  {
-    "slug": "kilo",
-    "displayName": "Kilo Gateway Router",
-    "baseUrl": "https://api.kilo.ai/v1",
-    "authType": "api_key",
-    "protocol": "openai",
-    "docsUrl": "https://kilo.ai/docs",
-    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
-    "isActive": true
-  },
-  {
-    "slug": "requesty",
-    "displayName": "Requesty LLM Router",
-    "baseUrl": "https://router.requesty.ai/v1",
-    "authType": "api_key",
-    "protocol": "openai",
-    "docsUrl": "https://requesty.ai/docs",
-    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
-    "isActive": true
-  },
-  {
-    "slug": "ovhcloud",
-    "displayName": "OVHcloud AI Endpoints",
-    "baseUrl": "https://api.ovhcloud.com/v1",
-    "authType": "api_key",
-    "protocol": "openai",
-    "docsUrl": "https://docs.ovh.com/gb/en/publiccloud/ai/",
-    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
-    "isActive": true
-  },
-  {
-    "slug": "publicai",
-    "displayName": "PublicAI Open Network",
-    "baseUrl": "https://api.publicai.io/v1",
-    "authType": "api_key",
-    "protocol": "openai",
-    "docsUrl": "https://publicai.io/docs",
-    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
-    "isActive": true
-  },
-  {
-    "slug": "liminal",
-    "displayName": "Liminal AI Security Mesh",
-    "baseUrl": "https://api.liminal.ai/v1",
-    "authType": "api_key",
-    "protocol": "openai",
-    "docsUrl": "https://liminal.ai/docs",
-    "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
-    "isActive": true
-  },
-  {
-    "slug": "agentrouter",
-    "displayName": "AgentRouter Enclave",
-    "baseUrl": "https://api.agentrouter.ai/v1",
-    "authType": "api_key",
-    "protocol": "openai",
-    "docsUrl": "https://agentrouter.ai/docs",
-    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
-    "isActive": true
-  },
-  {
-    "slug": "mimo",
-    "displayName": "Xiaomi MiMo AI Platform",
-    "baseUrl": "https://api.mimo.xiaomi.com/v1",
-    "authType": "api_key",
-    "protocol": "openai",
-    "docsUrl": "https://mimo.xiaomi.com/docs",
-    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
-    "isActive": true
-  },
-  {
-    "slug": "baichuan",
-    "displayName": "Baichuan Intelligent AI",
-    "baseUrl": "https://api.baichuan-ai.com/v1",
-    "authType": "api_key",
-    "protocol": "openai",
-    "docsUrl": "https://platform.baichuan-ai.com/docs",
-    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
-    "isActive": true
-  },
-  {
-    "slug": "nlpcloud",
-    "displayName": "NLP Cloud API",
-    "baseUrl": "https://api.nlpcloud.io/v1",
-    "authType": "api_key",
-    "protocol": "openai",
-    "docsUrl": "https://docs.nlpcloud.com",
-    "capabilities": { "vision": false, "tools": true, "streaming": true, "jsonMode": true },
-    "isActive": true
-  },
-  {
-    "slug": "coze",
-    "displayName": "ByteDance Coze API",
-    "baseUrl": "https://api.coze.com/v1",
-    "authType": "api_key",
-    "protocol": "openai",
-    "docsUrl": "https://www.coze.com/open/docs",
-    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
+    "docsUrl": "https://bedrock.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
     "isActive": true
   },
   {
     "slug": "blackbox",
-    "displayName": "Blackbox AI Platform",
-    "baseUrl": "https://api.blackbox.ai/v1",
+    "displayName": "Blackbox",
+    "baseUrl": "https://api.blackbox.ai/v1/chat/completions",
     "authType": "api_key",
     "protocol": "openai",
-    "docsUrl": "https://docs.blackbox.ai",
-    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
+    "docsUrl": "https://blackbox.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "blackbox-web",
+    "displayName": "Blackbox web",
+    "baseUrl": "https://app.blackbox.ai/api/chat",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://blackbox-web.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "bluesminds",
+    "displayName": "Bluesminds",
+    "baseUrl": "https://api.bluesminds.com/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://bluesminds.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "byteplus",
+    "displayName": "Byteplus",
+    "baseUrl": "https://ark.ap-southeast.bytepluses.com/api/v3/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://byteplus.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "bytez",
+    "displayName": "Bytez",
+    "baseUrl": "https://api.bytez.com/models/v2/openai/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://bytez.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "cerebras",
+    "displayName": "Cerebras",
+    "baseUrl": "https://api.cerebras.ai/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://cerebras.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "charm-hyper",
+    "displayName": "Charm hyper",
+    "baseUrl": "https://hyper.charm.land/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://charm-hyper.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "chat-oripe",
+    "displayName": "Chat oripe",
+    "baseUrl": "https://api.oriper.com/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://chat-oripe.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "chatanywhere",
+    "displayName": "Chatanywhere",
+    "baseUrl": "https://api.chatanywhere.org/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://chatanywhere.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "chatgpt-web",
+    "displayName": "Chatgpt web",
+    "baseUrl": "https://chatgpt.com",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://chatgpt-web.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "chatgpt-web-codex",
+    "displayName": "Chatgpt web codex",
+    "baseUrl": "https://chatgpt.com",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://chatgpt-web-codex.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "cheaperinference",
+    "displayName": "Cheaperinference",
+    "baseUrl": "https://api.cheaperinference.com/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://cheaperinference.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "chenzk",
+    "displayName": "Chenzk",
+    "baseUrl": "https://chenzk.top/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://chenzk.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "chipotle",
+    "displayName": "Chipotle",
+    "baseUrl": "https://amelia.chipotle.com",
+    "authType": "keyless",
+    "protocol": "openai",
+    "docsUrl": "https://chipotle.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "chutes",
+    "displayName": "Chutes",
+    "baseUrl": "https://llm.chutes.ai/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://chutes.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "claude",
+    "displayName": "Claude",
+    "baseUrl": "https://api.anthropic.com/v1/messages",
+    "authType": "oauth",
+    "protocol": "anthropic",
+    "docsUrl": "https://claude.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "claude-web",
+    "displayName": "Claude web",
+    "baseUrl": "https://claude.ai/api/organizations",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://claude-web.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "cline",
+    "displayName": "Cline",
+    "baseUrl": "https://api.cline.bot/api/v1/chat/completions",
+    "authType": "oauth",
+    "protocol": "openai",
+    "docsUrl": "https://cline.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "clinepass",
+    "displayName": "Clinepass",
+    "baseUrl": "https://api.cline.bot/api/v1/chat/completions",
+    "authType": "oauth",
+    "protocol": "openai",
+    "docsUrl": "https://clinepass.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "cloudcode-one",
+    "displayName": "Cloudcode one",
+    "baseUrl": "https://api.cloudcode.one/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://cloudcode-one.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "cloudflare-ai",
+    "displayName": "Cloudflare ai",
+    "baseUrl": "https://api.cloudflare.com/client/v4/accounts",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://cloudflare-ai.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "cloudflare-playground",
+    "displayName": "Cloudflare playground",
+    "baseUrl": "https://playground.ai.cloudflare.com",
+    "authType": "keyless",
+    "protocol": "openai",
+    "docsUrl": "https://cloudflare-playground.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "clova-studio",
+    "displayName": "Clova studio",
+    "baseUrl": "https://clovastudio.stream.ntruss.com/v3/chat-completions",
+    "authType": "api_key",
+    "protocol": "custom",
+    "docsUrl": "https://clova-studio.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "codebuddy-cn",
+    "displayName": "Codebuddy cn",
+    "baseUrl": "https://copilot.tencent.com/v2/chat/completions",
+    "authType": "oauth",
+    "protocol": "openai",
+    "docsUrl": "https://codebuddy-cn.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "codestral",
+    "displayName": "Codestral",
+    "baseUrl": "https://codestral.mistral.ai/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://codestral.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "codex",
+    "displayName": "Codex",
+    "baseUrl": "https://chatgpt.com/backend-api/codex/responses",
+    "authType": "oauth",
+    "protocol": "openai",
+    "docsUrl": "https://codex.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "codex-app-server",
+    "displayName": "Codex app server",
+    "baseUrl": "https://api.codex-app-server.com/v1",
+    "authType": "keyless",
+    "protocol": "openai",
+    "docsUrl": "https://codex-app-server.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "cohere",
+    "displayName": "Cohere",
+    "baseUrl": "https://api.cohere.com/compatibility/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://cohere.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "command-code",
+    "displayName": "Command code",
+    "baseUrl": "https://api.commandcode.ai",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://command-code.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "conol-web",
+    "displayName": "Conol web",
+    "baseUrl": "https://conol.ai/api/sessions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://conol-web.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "copilot-m365-web",
+    "displayName": "Copilot m365 web",
+    "baseUrl": "https://api.copilot-m365-web.com/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://copilot-m365-web.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "copilot-web",
+    "displayName": "Copilot web",
+    "baseUrl": "https://api.copilot-web.com/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://copilot-web.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "coze",
+    "displayName": "Coze",
+    "baseUrl": "https://api.coze.com/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://coze.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "crof",
+    "displayName": "Crof",
+    "baseUrl": "https://crof.ai/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://crof.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "cursor",
+    "displayName": "Cursor",
+    "baseUrl": "https://api2.cursor.sh",
+    "authType": "oauth",
+    "protocol": "custom",
+    "docsUrl": "https://cursor.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "cursor-api",
+    "displayName": "Cursor api",
+    "baseUrl": "https://api2.cursor.sh",
+    "authType": "api_key",
+    "protocol": "custom",
+    "docsUrl": "https://cursor-api.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "dahl",
+    "displayName": "Dahl",
+    "baseUrl": "https://inference.dahl.global/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://dahl.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "databricks",
+    "displayName": "Databricks",
+    "baseUrl": "https://adb-0000000000000000.0.azuredatabricks.net/serving-endpoints",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://databricks.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "deepai",
+    "displayName": "Deepai",
+    "baseUrl": "https://api.deepai.org",
+    "authType": "api_key",
+    "protocol": "custom",
+    "docsUrl": "https://deepai.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "deepinfra",
+    "displayName": "Deepinfra",
+    "baseUrl": "https://api.deepinfra.com/v1/openai/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://deepinfra.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "deepseek",
+    "displayName": "Deepseek",
+    "baseUrl": "https://api.deepseek.com/responses",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://deepseek.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "deepseek-web",
+    "displayName": "Deepseek web",
+    "baseUrl": "https://chat.deepseek.com/api/v0/chat/completion",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://deepseek-web.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "devin-cli",
+    "displayName": "Devin cli",
+    "baseUrl": "https://api.devin-cli.com/v1",
+    "authType": "oauth",
+    "protocol": "openai",
+    "docsUrl": "https://devin-cli.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "devin-cli-agentic",
+    "displayName": "Devin cli agentic",
+    "baseUrl": "https://api.devin-cli-agentic.com/v1",
+    "authType": "keyless",
+    "protocol": "anthropic",
+    "docsUrl": "https://devin-cli-agentic.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "devin-desktop",
+    "displayName": "Devin desktop",
+    "baseUrl": "https://server.codeium.com",
+    "authType": "oauth",
+    "protocol": "openai",
+    "docsUrl": "https://devin-desktop.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "dgrid",
+    "displayName": "Dgrid",
+    "baseUrl": "https://api.dgrid.ai/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://dgrid.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "dify",
+    "displayName": "Dify",
+    "baseUrl": "https://api.dify.ai",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://dify.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "digitalocean",
+    "displayName": "Digitalocean",
+    "baseUrl": "https://inference.do-ai.run/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://digitalocean.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "dit",
+    "displayName": "Dit",
+    "baseUrl": "https://api.dit.ai/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://dit.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "doubao",
+    "displayName": "Doubao",
+    "baseUrl": "https://ark.cn-beijing.volces.com/api/v3/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://doubao.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "doubao-web",
+    "displayName": "Doubao web",
+    "baseUrl": "https://www.dola.com/chat/completion",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://doubao-web.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "duckduckgo-web",
+    "displayName": "Duckduckgo web",
+    "baseUrl": "https://duck.ai/duckchat/v1/chat",
+    "authType": "keyless",
+    "protocol": "openai",
+    "docsUrl": "https://duckduckgo-web.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "dxnt",
+    "displayName": "Dxnt",
+    "baseUrl": "https://www.dxnt.com/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://dxnt.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "electronhub",
+    "displayName": "Electronhub",
+    "baseUrl": "https://api.electronhub.ai/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://electronhub.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "eurouter",
+    "displayName": "Eurouter",
+    "baseUrl": "https://api.eurouter.ai/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://eurouter.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "factory",
+    "displayName": "Factory",
+    "baseUrl": "https://api.factory.ai/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://factory.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "fastrouter",
+    "displayName": "Fastrouter",
+    "baseUrl": "https://api.fastrouter.ai/api/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://fastrouter.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "featherless-ai",
+    "displayName": "Featherless ai",
+    "baseUrl": "https://api.featherless.ai/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://featherless-ai.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "fireworks",
+    "displayName": "Fireworks",
+    "baseUrl": "https://api.fireworks.ai/inference/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://fireworks.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "free-ai",
+    "displayName": "Free ai",
+    "baseUrl": "https://api.free.ai/v1/chat/",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://free-ai.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "freeaiapikey",
+    "displayName": "Freeaiapikey",
+    "baseUrl": "https://api.freeaiapikey.com/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://freeaiapikey.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "freebuff",
+    "displayName": "Freebuff",
+    "baseUrl": "https://www.codebuff.com/api/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://freebuff.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "freeinference",
+    "displayName": "Freeinference",
+    "baseUrl": "https://freeinference.org/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://freeinference.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "freemodel-dev",
+    "displayName": "Freemodel dev",
+    "baseUrl": "https://api.freemodel.dev/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://freemodel-dev.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "freetheai",
+    "displayName": "Freetheai",
+    "baseUrl": "https://api.freetheai.xyz/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://freetheai.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "friendliai",
+    "displayName": "Friendliai",
+    "baseUrl": "https://api.friendli.ai/serverless/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://friendliai.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "g4f-gemini",
+    "displayName": "G4f gemini",
+    "baseUrl": "https://g4f.space/api/gemini/v1/chat/completions",
+    "authType": "keyless",
+    "protocol": "openai",
+    "docsUrl": "https://g4f-gemini.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "g4f-groq",
+    "displayName": "G4f groq",
+    "baseUrl": "https://g4f.space/api/groq/v1/chat/completions",
+    "authType": "keyless",
+    "protocol": "openai",
+    "docsUrl": "https://g4f-groq.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "g4f-nvidia",
+    "displayName": "G4f nvidia",
+    "baseUrl": "https://g4f.space/api/nvidia/v1/chat/completions",
+    "authType": "keyless",
+    "protocol": "openai",
+    "docsUrl": "https://g4f-nvidia.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "g4f-ollama",
+    "displayName": "G4f ollama",
+    "baseUrl": "https://g4f.space/api/ollama/v1/chat/completions",
+    "authType": "keyless",
+    "protocol": "openai",
+    "docsUrl": "https://g4f-ollama.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "g4f-pollinations",
+    "displayName": "G4f pollinations",
+    "baseUrl": "https://g4f.space/api/pollinations/v1/chat/completions",
+    "authType": "keyless",
+    "protocol": "openai",
+    "docsUrl": "https://g4f-pollinations.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "galadriel",
+    "displayName": "Galadriel",
+    "baseUrl": "https://api.galadriel.ai/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://galadriel.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "gemini",
+    "displayName": "Gemini",
+    "baseUrl": "https://generativelanguage.googleapis.com/v1beta/models",
+    "authType": "api_key",
+    "protocol": "gemini",
+    "docsUrl": "https://gemini.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "gemini-business",
+    "displayName": "Gemini business",
+    "baseUrl": "https://business.gemini.google/home",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://gemini-business.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "gemini-web",
+    "displayName": "Gemini web",
+    "baseUrl": "https://gemini.google.com/app",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://gemini-web.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "ghe-copilot",
+    "displayName": "Ghe copilot",
+    "baseUrl": "https://api.githubcopilot.com/chat/completions",
+    "authType": "oauth",
+    "protocol": "openai",
+    "docsUrl": "https://ghe-copilot.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "gigachat",
+    "displayName": "Gigachat",
+    "baseUrl": "https://gigachat.devices.sberbank.ru/api/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://gigachat.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "github",
+    "displayName": "Github",
+    "baseUrl": "https://api.githubcopilot.com/chat/completions",
+    "authType": "oauth",
+    "protocol": "openai",
+    "docsUrl": "https://github.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "gitlab-duo",
+    "displayName": "Gitlab duo",
+    "baseUrl": "https://gitlab.com/api/v4/code_suggestions/completions",
+    "authType": "oauth",
+    "protocol": "openai",
+    "docsUrl": "https://gitlab-duo.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "gitlawb",
+    "displayName": "Gitlawb",
+    "baseUrl": "https://opengateway.gitlawb.com/v1/xiaomi-mimo",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://gitlawb.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "gitlawb-gmi",
+    "displayName": "Gitlawb gmi",
+    "baseUrl": "https://opengateway.gitlawb.com/v1/gmi-cloud",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://gitlawb-gmi.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "glm",
+    "displayName": "Glm",
+    "baseUrl": "https://api.z.ai/api/coding/paas/v4/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://glm.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "glm-cn",
+    "displayName": "Glm cn",
+    "baseUrl": "https://open.bigmodel.cn/api/coding/paas/v4/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://glm-cn.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "glmt",
+    "displayName": "Glmt",
+    "baseUrl": "https://api.z.ai/api/coding/paas/v4/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://glmt.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "greenpt",
+    "displayName": "Greenpt",
+    "baseUrl": "https://api.greenpt.ai/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://greenpt.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "grok-cli",
+    "displayName": "Grok cli",
+    "baseUrl": "https://cli-chat-proxy.grok.com/v1/chat/completions",
+    "authType": "oauth",
+    "protocol": "openai",
+    "docsUrl": "https://grok-cli.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "grok-web",
+    "displayName": "Grok web",
+    "baseUrl": "https://grok.com/rest/app-chat/conversations/new",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://grok-web.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "groq",
+    "displayName": "Groq",
+    "baseUrl": "https://api.groq.com/openai/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://groq.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "haiper",
+    "displayName": "Haiper",
+    "baseUrl": "https://api.haiper.ai/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://haiper.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "hcnsec",
+    "displayName": "Hcnsec",
+    "baseUrl": "https://api.hcnsec.cn/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://hcnsec.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "helixmind",
+    "displayName": "Helixmind",
+    "baseUrl": "https://helixmind.online/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://helixmind.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "helyxai",
+    "displayName": "Helyxai",
+    "baseUrl": "https://helyxai.space/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://helyxai.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "heroku",
+    "displayName": "Heroku",
+    "baseUrl": "https://us.inference.heroku.com/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://heroku.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "huggingchat",
+    "displayName": "Huggingchat",
+    "baseUrl": "https://huggingface.co/chat/conversation",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://huggingchat.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "huggingface",
+    "displayName": "Huggingface",
+    "baseUrl": "https://router.huggingface.co/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://huggingface.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "hyperagent",
+    "displayName": "Hyperagent",
+    "baseUrl": "https://hyperagent.com/api/threads",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://hyperagent.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "hyperbolic",
+    "displayName": "Hyperbolic",
+    "baseUrl": "https://api.hyperbolic.xyz/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://hyperbolic.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "ideogram",
+    "displayName": "Ideogram",
+    "baseUrl": "https://api.ideogram.ai",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://ideogram.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "iflytek",
+    "displayName": "Iflytek",
+    "baseUrl": "https://spark-api-open.xf-yun.com/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://iflytek.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "inception",
+    "displayName": "Inception",
+    "baseUrl": "https://api.inceptionlabs.ai/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://inception.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "inference-net",
+    "displayName": "Inference net",
+    "baseUrl": "https://api.inference.net/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://inference-net.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "inner-ai",
+    "displayName": "Inner ai",
+    "baseUrl": "https://chatapi.innerai.com/chat",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://inner-ai.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "internlm",
+    "displayName": "Internlm",
+    "baseUrl": "https://chat.intern-ai.org.cn/api/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://internlm.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "kenari",
+    "displayName": "Kenari",
+    "baseUrl": "https://kenari.id/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://kenari.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "kie",
+    "displayName": "Kie",
+    "baseUrl": "https://api.kie.ai/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://kie.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "kilo-gateway",
+    "displayName": "Kilo gateway",
+    "baseUrl": "https://api.kilo.ai/api/gateway/chat/completions",
+    "authType": "keyless",
+    "protocol": "openai",
+    "docsUrl": "https://kilo-gateway.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "kilocode",
+    "displayName": "Kilocode",
+    "baseUrl": "https://api.kilo.ai/api/openrouter/chat/completions",
+    "authType": "oauth",
+    "protocol": "openai",
+    "docsUrl": "https://kilocode.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "kimi",
+    "displayName": "Kimi",
+    "baseUrl": "https://api.moonshot.ai/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://kimi.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "kimi-coding",
+    "displayName": "Kimi coding",
+    "baseUrl": "https://api.kimi.com/coding/v1/messages?beta=true",
+    "authType": "oauth",
+    "protocol": "anthropic",
+    "docsUrl": "https://kimi-coding.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "kimi-coding-apikey",
+    "displayName": "Kimi coding apikey",
+    "baseUrl": "https://api.kimi.com/coding/v1/messages?beta=true",
+    "authType": "api_key",
+    "protocol": "anthropic",
+    "docsUrl": "https://kimi-coding-apikey.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "kimi-web",
+    "displayName": "Kimi web",
+    "baseUrl": "https://www.kimi.ai",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://kimi-web.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "kiro",
+    "displayName": "Kiro",
+    "baseUrl": "https://codewhisperer.us-east-1.amazonaws.com/generateAssistantResponse",
+    "authType": "oauth",
+    "protocol": "custom",
+    "docsUrl": "https://kiro.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "lambda-ai",
+    "displayName": "Lambda ai",
+    "baseUrl": "https://api.lambda.ai/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://lambda-ai.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "leonardo",
+    "displayName": "Leonardo",
+    "baseUrl": "https://cloud.leonardo.ai/api/rest/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://leonardo.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "liquid",
+    "displayName": "Liquid",
+    "baseUrl": "https://inference.liquid.ai/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://liquid.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "literouter",
+    "displayName": "Literouter",
+    "baseUrl": "https://api.literouter.com/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://literouter.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "llamagate",
+    "displayName": "Llamagate",
+    "baseUrl": "https://llamagate.ai/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://llamagate.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "llm-kiwi",
+    "displayName": "Llm kiwi",
+    "baseUrl": "https://api.llm.kiwi/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://llm-kiwi.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "llm7",
+    "displayName": "Llm7",
+    "baseUrl": "https://api.llm7.io/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://llm7.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "llmgateway",
+    "displayName": "Llmgateway",
+    "baseUrl": "https://api.llmgateway.io/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://llmgateway.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "lmarena",
+    "displayName": "Lmarena",
+    "baseUrl": "https://arena.ai/nextjs-api/stream/create-evaluation",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://lmarena.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "logfare",
+    "displayName": "Logfare",
+    "baseUrl": "https://logfare.ai/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://logfare.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "longcat",
+    "displayName": "Longcat",
+    "baseUrl": "https://api.longcat.chat/openai/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://longcat.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "maritalk",
+    "displayName": "Maritalk",
+    "baseUrl": "https://chat.maritaca.ai/api",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://maritalk.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "maxai",
+    "displayName": "Maxai",
+    "baseUrl": "https://api.maxai.me",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://maxai.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "meganova-ai",
+    "displayName": "Meganova ai",
+    "baseUrl": "https://api.meganova.ai/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://meganova-ai.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "meta-llama",
+    "displayName": "Meta llama",
+    "baseUrl": "https://api.llama.com/compat/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://meta-llama.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "minimax",
+    "displayName": "Minimax",
+    "baseUrl": "https://api.minimax.io/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://minimax.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "minimax-cn",
+    "displayName": "Minimax cn",
+    "baseUrl": "https://api.minimaxi.com/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://minimax-cn.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "mistral",
+    "displayName": "Mistral",
+    "baseUrl": "https://api.mistral.ai/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://mistral.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "mixlayer",
+    "displayName": "Mixlayer",
+    "baseUrl": "https://models.mixlayer.ai/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://mixlayer.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "mlx-gemma",
+    "displayName": "Mlx gemma",
+    "baseUrl": "http://localhost:11435/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://mlx-gemma.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "mlx-qwen",
+    "displayName": "Mlx qwen",
+    "baseUrl": "http://localhost:11436/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://mlx-qwen.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "mnn-ai",
+    "displayName": "Mnn ai",
+    "baseUrl": "https://api.mnnai.ru/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://mnn-ai.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "modal",
+    "displayName": "Modal",
+    "baseUrl": "https://api.modal.ai/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://modal.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "modelscope",
+    "displayName": "Modelscope",
+    "baseUrl": "https://api-inference.modelscope.cn/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://modelscope.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "monsterapi",
+    "displayName": "Monsterapi",
+    "baseUrl": "https://api.monsterapi.ai/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://monsterapi.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "moonshot",
+    "displayName": "Moonshot",
+    "baseUrl": "https://api.moonshot.ai/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://moonshot.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "morph",
+    "displayName": "Morph",
+    "baseUrl": "https://api.morphllm.com/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://morph.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "muse-code",
+    "displayName": "Muse code",
+    "baseUrl": "https://api.muse-code.com/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://muse-code.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "muse-spark-web",
+    "displayName": "Muse spark web",
+    "baseUrl": "https://www.meta.ai/api/graphql",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://muse-spark-web.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "naga-ac",
+    "displayName": "Naga ac",
+    "baseUrl": "https://api.naga.ac/v1/chat/completions",
+    "authType": "keyless",
+    "protocol": "openai",
+    "docsUrl": "https://naga-ac.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "naga-ai",
+    "displayName": "Naga ai",
+    "baseUrl": "https://api.naga.ac/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://naga-ai.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "nanogpt",
+    "displayName": "Nanogpt",
+    "baseUrl": "https://nano-gpt.com/api/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://nanogpt.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "nara",
+    "displayName": "Nara",
+    "baseUrl": "https://router.bynara.id/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://nara.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "navy",
+    "displayName": "Navy",
+    "baseUrl": "https://api.navy/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://navy.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "nebius",
+    "displayName": "Nebius",
+    "baseUrl": "https://api.tokenfactory.nebius.com/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://nebius.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "nlpcloud",
+    "displayName": "Nlpcloud",
+    "baseUrl": "https://api.nlpcloud.io/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://nlpcloud.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "notion-web",
+    "displayName": "Notion web",
+    "baseUrl": "https://app.notion.com/api/v3/runInferenceTranscript",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://notion-web.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "nous-research",
+    "displayName": "Nous research",
+    "baseUrl": "https://inference-api.nousresearch.com/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://nous-research.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "novita",
+    "displayName": "Novita",
+    "baseUrl": "https://api.novita.ai/openai/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://novita.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "nscale",
+    "displayName": "Nscale",
+    "baseUrl": "https://inference.api.nscale.com/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://nscale.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "nube",
+    "displayName": "Nube",
+    "baseUrl": "https://ai.nube.sh/api/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://nube.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "nvidia",
+    "displayName": "Nvidia",
+    "baseUrl": "https://integrate.api.nvidia.com/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://nvidia.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "ofoxai",
+    "displayName": "Ofoxai",
+    "baseUrl": "https://api.ofox.ai/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://ofoxai.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "ollama-cloud",
+    "displayName": "Ollama cloud",
+    "baseUrl": "https://ollama.com/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://ollama-cloud.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "oneminai",
+    "displayName": "Oneminai",
+    "baseUrl": "https://api.1min.ai/api/chat-with-ai",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://oneminai.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "openadapter",
+    "displayName": "Openadapter",
+    "baseUrl": "https://api.openadapter.in/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://openadapter.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "openai",
+    "displayName": "Openai",
+    "baseUrl": "https://api.openai.com/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://openai.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
     "isActive": true
   },
   {
     "slug": "opencode",
-    "displayName": "OpenCode AI Engine",
-    "baseUrl": "https://api.opencode.ai/v1",
+    "displayName": "Opencode",
+    "baseUrl": "https://opencode.ai/zen/v1",
     "authType": "api_key",
     "protocol": "openai",
-    "docsUrl": "https://opencode.ai/docs",
-    "capabilities": { "vision": true, "tools": true, "streaming": true, "jsonMode": true },
+    "docsUrl": "https://opencode.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "opencode-go",
+    "displayName": "Opencode go",
+    "baseUrl": "https://opencode.ai/zen/go/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://opencode-go.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "opencode-zen",
+    "displayName": "Opencode zen",
+    "baseUrl": "https://opencode.ai/zen/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://opencode-zen.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "openference",
+    "displayName": "Openference",
+    "baseUrl": "https://api.openference.com/v1/chat/completions",
+    "authType": "oauth",
+    "protocol": "openai",
+    "docsUrl": "https://openference.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "openference-api",
+    "displayName": "Openference api",
+    "baseUrl": "https://api.openference.com/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://openference-api.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "openrouter",
+    "displayName": "Openrouter",
+    "baseUrl": "https://openrouter.ai/api/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://openrouter.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "openvecta",
+    "displayName": "Openvecta",
+    "baseUrl": "https://api.openvecta.com/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://openvecta.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "opper",
+    "displayName": "Opper",
+    "baseUrl": "https://api.opper.ai/v3/compat/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://opper.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "orcarouter",
+    "displayName": "Orcarouter",
+    "baseUrl": "https://api.orcarouter.ai/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://orcarouter.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "ovhcloud",
+    "displayName": "Ovhcloud",
+    "baseUrl": "https://oai.endpoints.kepler.ai.cloud.ovh.net/v1/chat/completions",
+    "authType": "keyless",
+    "protocol": "openai",
+    "docsUrl": "https://ovhcloud.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "perplexity",
+    "displayName": "Perplexity",
+    "baseUrl": "https://api.perplexity.ai/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://perplexity.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "perplexity-agent",
+    "displayName": "Perplexity agent",
+    "baseUrl": "https://api.perplexity.ai/v1/responses",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://perplexity-agent.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "perplexity-web",
+    "displayName": "Perplexity web",
+    "baseUrl": "https://www.perplexity.ai/rest/sse/perplexity_ask",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://perplexity-web.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "pioneer",
+    "displayName": "Pioneer",
+    "baseUrl": "https://api.pioneer.ai/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://pioneer.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "plamo",
+    "displayName": "Plamo",
+    "baseUrl": "https://api.platform.preferredai.jp/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://plamo.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "poe",
+    "displayName": "Poe",
+    "baseUrl": "https://api.poe.com/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://poe.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "poixe-ai",
+    "displayName": "Poixe ai",
+    "baseUrl": "https://api.poixe.com/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://poixe-ai.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "pollinations",
+    "displayName": "Pollinations",
+    "baseUrl": "https://gen.pollinations.ai/v1/chat/completions",
+    "authType": "keyless",
+    "protocol": "openai",
+    "docsUrl": "https://pollinations.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "poolside",
+    "displayName": "Poolside",
+    "baseUrl": "https://inference.poolside.ai/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://poolside.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "predibase",
+    "displayName": "Predibase",
+    "baseUrl": "https://serving.app.predibase.com/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://predibase.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "promptql",
+    "displayName": "Promptql",
+    "baseUrl": "https://data.prompt.ql.app/promptql/playground-v2-hge/v1/graphql",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://promptql.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "publicai",
+    "displayName": "Publicai",
+    "baseUrl": "https://api.publicai.co/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://publicai.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "qianfan",
+    "displayName": "Qianfan",
+    "baseUrl": "https://qianfan.baidubce.com/v2/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://qianfan.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "qiniu",
+    "displayName": "Qiniu",
+    "baseUrl": "https://api.qnaigc.com/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://qiniu.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "qoder",
+    "displayName": "Qoder",
+    "baseUrl": "https://api.qoder.com/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://qoder.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "qwen-cloud",
+    "displayName": "Qwen cloud",
+    "baseUrl": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://qwen-cloud.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "qwen-cloud-token-plan",
+    "displayName": "Qwen cloud token plan",
+    "baseUrl": "https://token-plan.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://qwen-cloud-token-plan.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "regolo",
+    "displayName": "Regolo",
+    "baseUrl": "https://api.regolo.ai",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://regolo.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "reka",
+    "displayName": "Reka",
+    "baseUrl": "https://api.reka.ai/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://reka.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "requesty",
+    "displayName": "Requesty",
+    "baseUrl": "https://router.requesty.ai/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://requesty.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "routeway",
+    "displayName": "Routeway",
+    "baseUrl": "https://api.routeway.ai/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://routeway.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "sambanova",
+    "displayName": "Sambanova",
+    "baseUrl": "https://api.sambanova.ai/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://sambanova.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "sarvam",
+    "displayName": "Sarvam",
+    "baseUrl": "https://api.sarvam.ai/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://sarvam.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "scaleway",
+    "displayName": "Scaleway",
+    "baseUrl": "https://api.scaleway.ai/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://scaleway.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "sealion",
+    "displayName": "Sealion",
+    "baseUrl": "https://api.sea-lion.ai/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://sealion.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "seekai",
+    "displayName": "Seekai",
+    "baseUrl": "https://seekai.cc/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://seekai.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "sensenova",
+    "displayName": "Sensenova",
+    "baseUrl": "https://token.sensenova.cn/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://sensenova.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "siliconflow",
+    "displayName": "Siliconflow",
+    "baseUrl": "https://api.siliconflow.com/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://siliconflow.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "snowflake",
+    "displayName": "Snowflake",
+    "baseUrl": "https://{account}.snowflakecomputing.com/api/v2",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://snowflake.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "sparkdesk",
+    "displayName": "Sparkdesk",
+    "baseUrl": "https://spark-api-open.xf-yun.com/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://sparkdesk.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "speka",
+    "displayName": "Speka",
+    "baseUrl": "https://speka.me/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://speka.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "stepfun",
+    "displayName": "Stepfun",
+    "baseUrl": "https://api.stepfun.com/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://stepfun.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "sumopod",
+    "displayName": "Sumopod",
+    "baseUrl": "https://ai.sumopod.com/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://sumopod.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "suno",
+    "displayName": "Suno",
+    "baseUrl": "https://studio-api.suno.ai/api/generate/v2/",
+    "authType": "keyless",
+    "protocol": "openai",
+    "docsUrl": "https://suno.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "synthetic",
+    "displayName": "Synthetic",
+    "baseUrl": "https://api.synthetic.new/openai/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://synthetic.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "t3-web",
+    "displayName": "T3 web",
+    "baseUrl": "https://t3.chat/api/chat",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://t3-web.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "tabitoken",
+    "displayName": "Tabitoken",
+    "baseUrl": "https://tabitoken.com/v1/messages",
+    "authType": "api_key",
+    "protocol": "anthropic",
+    "docsUrl": "https://tabitoken.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "tencent",
+    "displayName": "Tencent",
+    "baseUrl": "https://api.hunyuan.cloud.tencent.com/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://tencent.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "tencent-aistudio-web",
+    "displayName": "Tencent aistudio web",
+    "baseUrl": "https://aistudio.tencent.ai/api/chat",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://tencent-aistudio-web.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "tinycms-web",
+    "displayName": "Tinycms web",
+    "baseUrl": "https://gov.freegpt.win/api/openai/oneapi/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://tinycms-web.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "together",
+    "displayName": "Together",
+    "baseUrl": "https://api.together.xyz/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://together.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "token-kiosk",
+    "displayName": "Token kiosk",
+    "baseUrl": "https://agent-router.gaib.ai/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://token-kiosk.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "tokenreply",
+    "displayName": "Tokenreply",
+    "baseUrl": "https://api.tokenreply.com/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://tokenreply.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "tokenrouter",
+    "displayName": "Tokenrouter",
+    "baseUrl": "https://api.tokenrouter.com/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://tokenrouter.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "trae",
+    "displayName": "Trae",
+    "baseUrl": "https://core-normal.trae.ai/api/remote/v1",
+    "authType": "oauth",
+    "protocol": "openai",
+    "docsUrl": "https://trae.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "typhoon",
+    "displayName": "Typhoon",
+    "baseUrl": "https://api.opentyphoon.ai/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://typhoon.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "uc",
+    "displayName": "Uc",
+    "baseUrl": "https://internal-6.pubyar.com",
+    "authType": "keyless",
+    "protocol": "openai",
+    "docsUrl": "https://uc.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "uc-direct",
+    "displayName": "Uc direct",
+    "baseUrl": "https://api.uncensored.com/api/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://uc-direct.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "udio",
+    "displayName": "Udio",
+    "baseUrl": "https://www.udio.com/api/generate-proxy",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://udio.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "uncloseai",
+    "displayName": "Uncloseai",
+    "baseUrl": "https://hermes.ai.unturf.com/v1/chat/completions",
+    "authType": "keyless",
+    "protocol": "openai",
+    "docsUrl": "https://uncloseai.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "unorouter",
+    "displayName": "Unorouter",
+    "baseUrl": "https://api.unorouter.com/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://unorouter.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "upstage",
+    "displayName": "Upstage",
+    "baseUrl": "https://api.upstage.ai/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://upstage.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "v0-vercel",
+    "displayName": "V0 vercel",
+    "baseUrl": "https://api.v0.dev/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://v0-vercel.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "venice",
+    "displayName": "Venice",
+    "baseUrl": "https://api.venice.ai/api/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://venice.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "veoaifree-web",
+    "displayName": "Veoaifree web",
+    "baseUrl": "https://veoaifree.com/wp-admin/admin-ajax.php",
+    "authType": "keyless",
+    "protocol": "openai",
+    "docsUrl": "https://veoaifree-web.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "vercel-ai-gateway",
+    "displayName": "Vercel ai gateway",
+    "baseUrl": "https://ai-gateway.vercel.sh/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://vercel-ai-gateway.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "vertex",
+    "displayName": "Vertex",
+    "baseUrl": "https://us-central1-aiplatform.googleapis.com/v1/projects",
+    "authType": "api_key",
+    "protocol": "gemini",
+    "docsUrl": "https://vertex.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "vertex-partner",
+    "displayName": "Vertex partner",
+    "baseUrl": "https://us-central1-aiplatform.googleapis.com/v1/projects",
+    "authType": "api_key",
+    "protocol": "gemini",
+    "docsUrl": "https://vertex-partner.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "void-ai",
+    "displayName": "Void ai",
+    "baseUrl": "https://api.voidai.app/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://void-ai.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "volcengine",
+    "displayName": "Volcengine",
+    "baseUrl": "https://ark.cn-beijing.volces.com/api/v3/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://volcengine.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "volcengine-agent-plan",
+    "displayName": "Volcengine agent plan",
+    "baseUrl": "https://ark.cn-beijing.volces.com/api/plan/v3/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://volcengine-agent-plan.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "volcengine-coding-plan",
+    "displayName": "Volcengine coding plan",
+    "baseUrl": "https://ark.cn-beijing.volces.com/api/coding/v3/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://volcengine-coding-plan.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "wafer",
+    "displayName": "Wafer",
+    "baseUrl": "https://pass.wafer.ai/v1/messages",
+    "authType": "api_key",
+    "protocol": "anthropic",
+    "docsUrl": "https://wafer.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "wandb",
+    "displayName": "Wandb",
+    "baseUrl": "https://api.inference.wandb.ai/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://wandb.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "writer",
+    "displayName": "Writer",
+    "baseUrl": "https://api.writer.com/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://writer.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "x5lab",
+    "displayName": "X5lab",
+    "baseUrl": "https://api.x5lab.dev/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://x5lab.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "xai",
+    "displayName": "Xai",
+    "baseUrl": "https://api.x.ai/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://xai.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "xai-oauth",
+    "displayName": "Xai oauth",
+    "baseUrl": "https://api.x.ai/v1/chat/completions",
+    "authType": "oauth",
+    "protocol": "openai",
+    "docsUrl": "https://xai-oauth.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "xiaomi-mimo",
+    "displayName": "Xiaomi mimo",
+    "baseUrl": "https://api.xiaomimimo.com/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://xiaomi-mimo.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "xiaomi-mimo-token-plan",
+    "displayName": "Xiaomi mimo token plan",
+    "baseUrl": "https://token-plan-sgp.xiaomimimo.com/v1",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://xiaomi-mimo-token-plan.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "yi",
+    "displayName": "Yi",
+    "baseUrl": "https://api.lingyiwanwu.com/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://yi.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "yolo-auto",
+    "displayName": "Yolo auto",
+    "baseUrl": "https://yolo-auto.com/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://yolo-auto.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "yuanbao-web",
+    "displayName": "Yuanbao web",
+    "baseUrl": "https://yuanbao.tencent.com/api/chat",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://yuanbao-web.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "zai",
+    "displayName": "Zai",
+    "baseUrl": "https://api.z.ai/api/anthropic/v1/messages",
+    "authType": "api_key",
+    "protocol": "anthropic",
+    "docsUrl": "https://zai.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "zai-web",
+    "displayName": "Zai web",
+    "baseUrl": "https://chat.z.ai",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://zai-web.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "zcode",
+    "displayName": "Zcode",
+    "baseUrl": "https://api.zcode.com/v1",
+    "authType": "keyless",
+    "protocol": "openai",
+    "docsUrl": "https://zcode.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "zed-hosted",
+    "displayName": "Zed hosted",
+    "baseUrl": "https://cloud.zed.dev/completions",
+    "authType": "oauth",
+    "protocol": "openai",
+    "docsUrl": "https://zed-hosted.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "zenmux",
+    "displayName": "Zenmux",
+    "baseUrl": "https://zenmux.ai/api/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://zenmux.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "zenmux-free",
+    "displayName": "Zenmux free",
+    "baseUrl": "https://zenmux.ai/api/anthropic/v1/messages",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://zenmux-free.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "zerolimitai",
+    "displayName": "Zerolimitai",
+    "baseUrl": "https://www.zerolimitai.com/api/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://zerolimitai.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
+    "isActive": true
+  },
+  {
+    "slug": "zylo-api",
+    "displayName": "Zylo api",
+    "baseUrl": "https://api.zyloai.net/v1/chat/completions",
+    "authType": "api_key",
+    "protocol": "openai",
+    "docsUrl": "https://zylo-api.com/docs",
+    "capabilities": {
+      "vision": false,
+      "tools": false,
+      "streaming": false,
+      "jsonMode": false
+    },
     "isActive": true
   }
 ]
