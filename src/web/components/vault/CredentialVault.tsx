@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Key, ShieldCheck, RefreshCw, CheckCircle2, AlertTriangle, Cpu, Lock, Terminal, Activity, Zap, Check, ChevronDown, Plus, X, ExternalLink } from 'lucide-react';
+import { Key, ShieldCheck, RefreshCw, CheckCircle2, AlertTriangle, Cpu, Lock, Terminal, Activity, Zap, Check, ChevronDown, Plus, X, ExternalLink, Search, SlidersHorizontal, ArrowUpDown, Filter, RotateCcw } from 'lucide-react';
 import { GlossaryTerm } from '../common/GlossaryTerm.js';
 
 export function formatCleanError(rawErr: string | null | undefined): string {
@@ -192,6 +192,95 @@ export const CredentialVault: React.FC = () => {
   const [customBaseUrl, setCustomBaseUrl] = useState('https://api.openai.com/v1');
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncFeedback, setSyncFeedback] = useState<{ type: 'success' | 'error' | 'warning'; message: string } | null>(null);
+
+  // Gallery Controls & Filters State
+  const [gallerySearchQuery, setGallerySearchQuery] = useState('');
+  const [galleryConfiguredFilter, setGalleryConfiguredFilter] = useState<'all' | 'configured' | 'unconfigured'>('all');
+  const [galleryTierFilter, setGalleryTierFilter] = useState<'all' | 'free' | 'paid'>('all');
+  const [galleryProtocolFilter, setGalleryProtocolFilter] = useState<'all' | 'openai' | 'anthropic' | 'gemini' | 'custom'>('all');
+  const [gallerySortBy, setGallerySortBy] = useState<'configured_first' | 'name_asc' | 'name_desc' | 'latency_asc' | 'quota_desc' | 'tier'>('configured_first');
+
+  const configuredCount = React.useMemo(() => keys.filter((k) => k.hasKey || k.status !== 'unconfigured').length, [keys]);
+  const unconfiguredCount = React.useMemo(() => keys.length - configuredCount, [keys, configuredCount]);
+
+  const filteredAndSortedKeys = React.useMemo(() => {
+    let result = [...keys];
+
+    // 1. Search Query
+    if (gallerySearchQuery.trim()) {
+      const q = gallerySearchQuery.trim().toLowerCase();
+      result = result.filter(
+        (k) =>
+          k.provider.toLowerCase().includes(q) ||
+          (k.slug && k.slug.toLowerCase().includes(q)) ||
+          ((k as any).protocol && String((k as any).protocol).toLowerCase().includes(q))
+      );
+    }
+
+    // 2. Configured Filter
+    if (galleryConfiguredFilter === 'configured') {
+      result = result.filter((k) => k.hasKey || k.status !== 'unconfigured');
+    } else if (galleryConfiguredFilter === 'unconfigured') {
+      result = result.filter((k) => !k.hasKey && k.status === 'unconfigured');
+    }
+
+    // 3. Tier Filter
+    if (galleryTierFilter === 'free') {
+      result = result.filter((k) => k.tier === 'Free Tier' || (k as any).tierCategory === 'free');
+    } else if (galleryTierFilter === 'paid') {
+      result = result.filter((k) => k.tier === 'Pro Enclave' || k.tier === 'Paid / Usage-Based' || (k as any).tierCategory === 'paid');
+    }
+
+    // 4. Protocol Filter
+    if (galleryProtocolFilter !== 'all') {
+      result = result.filter((k) => (k as any).protocol === galleryProtocolFilter);
+    }
+
+    // 5. Sorting
+    result.sort((a, b) => {
+      switch (gallerySortBy) {
+        case 'name_asc':
+          return a.provider.localeCompare(b.provider);
+        case 'name_desc':
+          return b.provider.localeCompare(a.provider);
+        case 'configured_first': {
+          const aConf = (a.hasKey || a.status !== 'unconfigured') ? 1 : 0;
+          const bConf = (b.hasKey || b.status !== 'unconfigured') ? 1 : 0;
+          if (aConf !== bConf) return bConf - aConf;
+          return a.provider.localeCompare(b.provider);
+        }
+        case 'latency_asc': {
+          const aPing = a.lastPingMs > 0 ? a.lastPingMs : 999999;
+          const bPing = b.lastPingMs > 0 ? b.lastPingMs : 999999;
+          if (aPing !== bPing) return aPing - bPing;
+          return a.provider.localeCompare(b.provider);
+        }
+        case 'quota_desc':
+          return b.dailyQuotaUsedPct - a.dailyQuotaUsedPct;
+        case 'tier':
+          return (a.tier || '').localeCompare(b.tier || '');
+        default:
+          return 0;
+      }
+    });
+
+    return result;
+  }, [keys, gallerySearchQuery, galleryConfiguredFilter, galleryTierFilter, galleryProtocolFilter, gallerySortBy]);
+
+  const hasActiveGalleryFilters =
+    gallerySearchQuery !== '' ||
+    galleryConfiguredFilter !== 'all' ||
+    galleryTierFilter !== 'all' ||
+    galleryProtocolFilter !== 'all' ||
+    gallerySortBy !== 'configured_first';
+
+  const resetGalleryFilters = () => {
+    setGallerySearchQuery('');
+    setGalleryConfiguredFilter('all');
+    setGalleryTierFilter('all');
+    setGalleryProtocolFilter('all');
+    setGallerySortBy('configured_first');
+  };
 
   const allCatalogOptions = React.useMemo(() => {
     const optionsMap = new Map<string, CatalogOption>();
@@ -593,12 +682,17 @@ export const CredentialVault: React.FC = () => {
         </div>
       </div>
 
-            {/* 2x2 Squircle Key Cards Gallery Grid */}
+      {/* Provider Enclaves Gallery Header & Multi-Metric Search/Filter Bar */}
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
           <div>
-            <h2 className="text-base font-bold text-[var(--text-primary)]">Configured Key Enclaves</h2>
-            <p className="text-xs text-[var(--text-muted)]">Active provider credentials available for low-latency solver routing</p>
+            <h2 className="text-base font-bold text-[var(--text-primary)] flex items-center gap-2">
+              <span>Provider Enclave Gallery</span>
+              <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] border border-[var(--accent-primary)]/20 font-mono">
+                {filteredAndSortedKeys.length} of {keys.length}
+              </span>
+            </h2>
+            <p className="text-xs text-[var(--text-muted)]">Active provider credentials & routing endpoints available for low-latency solver execution</p>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -612,14 +706,128 @@ export const CredentialVault: React.FC = () => {
             </button>
           </div>
         </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {keys.length === 0 && (
-            <div className="col-span-full p-8 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-subtle)] text-center text-xs text-[var(--text-secondary)]">
-              No provider keys connected yet. Click "Connect Provider Key" to add your first credential.
+
+        {/* Multi-Metric Search, Filter & Sort Controls */}
+        <div className="p-3.5 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-subtle)] space-y-3 shadow-md">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-2.5 items-center">
+            
+            {/* Search Input */}
+            <div className="lg:col-span-4 relative">
+              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+              <input
+                type="text"
+                placeholder="Search by provider name, slug, protocol..."
+                value={gallerySearchQuery}
+                onChange={(e) => setGallerySearchQuery(e.target.value)}
+                className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-[var(--bg-well)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent-primary)] transition-all"
+              />
+              {gallerySearchQuery && (
+                <button
+                  onClick={() => setGallerySearchQuery('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+
+            {/* Configured Status Filter */}
+            <div className="lg:col-span-2 relative">
+              <select
+                value={galleryConfiguredFilter}
+                onChange={(e) => setGalleryConfiguredFilter(e.target.value as any)}
+                className="w-full pl-3 pr-7 py-1.5 rounded-xl bg-[var(--bg-well)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-primary)] appearance-none cursor-pointer"
+              >
+                <option value="all">Status: All ({keys.length})</option>
+                <option value="configured">Configured ({configuredCount})</option>
+                <option value="unconfigured">Unconfigured ({unconfiguredCount})</option>
+              </select>
+              <Filter className="w-3 h-3 absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] pointer-events-none" />
+            </div>
+
+            {/* Tier Filter */}
+            <div className="lg:col-span-2 relative">
+              <select
+                value={galleryTierFilter}
+                onChange={(e) => setGalleryTierFilter(e.target.value as any)}
+                className="w-full pl-3 pr-7 py-1.5 rounded-xl bg-[var(--bg-well)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-primary)] appearance-none cursor-pointer"
+              >
+                <option value="all">Tier: All</option>
+                <option value="free">Free Tier</option>
+                <option value="paid">Pro / Paid</option>
+              </select>
+              <SlidersHorizontal className="w-3 h-3 absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] pointer-events-none" />
+            </div>
+
+            {/* Protocol Filter */}
+            <div className="lg:col-span-2 relative">
+              <select
+                value={galleryProtocolFilter}
+                onChange={(e) => setGalleryProtocolFilter(e.target.value as any)}
+                className="w-full pl-3 pr-7 py-1.5 rounded-xl bg-[var(--bg-well)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-primary)] appearance-none cursor-pointer"
+              >
+                <option value="all">Protocol: All</option>
+                <option value="openai">OpenAI Compatible</option>
+                <option value="anthropic">Anthropic Messages</option>
+                <option value="gemini">Google Gemini</option>
+                <option value="custom">Custom Native</option>
+              </select>
+              <Filter className="w-3 h-3 absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] pointer-events-none" />
+            </div>
+
+            {/* Sort By Selector */}
+            <div className="lg:col-span-2 relative">
+              <select
+                value={gallerySortBy}
+                onChange={(e) => setGallerySortBy(e.target.value as any)}
+                className="w-full pl-3 pr-7 py-1.5 rounded-xl bg-[var(--bg-well)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-primary)] appearance-none cursor-pointer font-medium"
+              >
+                <option value="configured_first">Sort: Configured First</option>
+                <option value="name_asc">Sort: Name (A-Z)</option>
+                <option value="name_desc">Sort: Name (Z-A)</option>
+                <option value="latency_asc">Sort: Lowest Latency</option>
+                <option value="quota_desc">Sort: Highest Quota</option>
+                <option value="tier">Sort: Tier Group</option>
+              </select>
+              <ArrowUpDown className="w-3 h-3 absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] pointer-events-none" />
+            </div>
+
+          </div>
+
+          {/* Reset Filters & Active Filter Pill Summary */}
+          {hasActiveGalleryFilters && (
+            <div className="flex items-center justify-between pt-1 text-[11px] border-t border-[var(--border-subtle)] text-[var(--text-muted)]">
+              <div className="flex items-center gap-2">
+                <span>Active Filters applied.</span>
+                <span className="text-[var(--text-primary)] font-semibold">Showing {filteredAndSortedKeys.length} matching providers.</span>
+              </div>
+              <button
+                onClick={resetGalleryFilters}
+                className="px-2.5 py-1 rounded-lg bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] hover:bg-[var(--accent-primary)]/20 font-medium flex items-center gap-1 transition-all"
+              >
+                <RotateCcw className="w-3 h-3" />
+                <span>Reset Filters</span>
+              </button>
             </div>
           )}
-          {keys.map((key) => {
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {filteredAndSortedKeys.length === 0 && (
+            <div className="col-span-full p-8 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-subtle)] text-center text-xs space-y-3">
+              <div className="text-[var(--text-secondary)]">No providers match the current search & filter criteria.</div>
+              {hasActiveGalleryFilters && (
+                <button
+                  onClick={resetGalleryFilters}
+                  className="px-3 py-1.5 rounded-xl bg-[var(--accent-primary)] text-slate-950 font-bold text-xs inline-flex items-center gap-1.5 shadow-md"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Clear Filters</span>
+                </button>
+              )}
+            </div>
+          )}
+          {filteredAndSortedKeys.map((key) => {
             return (
               <div
                 key={key.id}
