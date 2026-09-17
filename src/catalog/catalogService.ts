@@ -45,6 +45,17 @@ export class CatalogService {
       let providersCount = 0;
       let modelsCount = 0;
 
+      // Prune stale / decommissioned providers and models no longer in seed registries
+      const validSlugs = new Set(providers.map((p) => p.slug));
+      const existingProviders = this.providerRepo.listAll(false);
+      for (const ep of existingProviders) {
+        if (!validSlugs.has(ep.slug)) {
+          this.db.prepare('DELETE FROM models WHERE provider_id = ?').run(ep.id);
+          this.db.prepare('DELETE FROM provider_connections WHERE provider_id = ?').run(ep.id);
+          this.db.prepare('DELETE FROM providers WHERE id = ?').run(ep.id);
+        }
+      }
+
       for (const prov of providers) {
         const pRecord = this.providerRepo.upsert({
           slug: prov.slug,
