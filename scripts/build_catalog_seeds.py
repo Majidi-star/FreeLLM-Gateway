@@ -134,21 +134,30 @@ def main():
     raw_models = raw_data.get("models", [])
 
     EXPLICIT_BLACKLIST_SLUGS = {
-        "antigravity", "agy", "auggie", "adapta-web", "adobe-firefly", "blackbox-web",
-        "chatgpt-web", "claude-web", "copilot-web", "deepseek-web", "doubao-web",
-        "gemini-business", "gemini-web", "grok-web", "hailuo-web", "huggingchat",
-        "hyperagent", "kimi-web", "lmarena", "muse-spark-web", "notion-web",
-        "perplexity-web", "phind", "poe-web", "promptql", "qwen-web", "t3-web",
-        "tencent-aistudio-web", "tinycms-web", "v0-vercel-web", "venice-web",
-        "chipotle", "cloudflare-playground", "devin-cli", "devin-cli-agentic",
-        "duckduckgo-web", "felo-web", "theoldllm", "veoaifree-web", "trae", "kiro",
-        "raycast", "zed"
+        "suno", "cursor", "cursor-api", "antigravity", "agy", "kiro", "trae", "qoder",
+        "codebuddy-cn", "zed-hosted", "devin-cli", "devin-cli-agentic", "devin-desktop",
+        "github", "ghe-copilot", "gitlab-duo", "auggie", "zcode", "codex", "codex-app-server",
+        "chatgpt-web", "chatgpt-web-codex", "claude-web", "gemini-web", "gemini-business",
+        "grok-web", "grok-cli", "perplexity-web", "t3-web", "duckduckgo-web", "blackbox-web",
+        "deepseek-web", "doubao-web", "kimi-web", "kimi-coding", "zai-web", "muse-spark-web",
+        "notion-web", "adapta-web", "conol-web", "tencent-aistudio-web", "yuanbao-web",
+        "tinycms-web", "veoaifree-web", "copilot-web", "copilot-m365-web", "huggingchat",
+        "lmarena", "inner-ai", "xai-oauth", "uc", "chipotle", "cloudflare-playground",
+        "promptql", "maxai", "hyperagent", "freebuff", "g4f-gemini", "g4f-groq",
+        "g4f-nvidia", "g4f-ollama", "g4f-pollinations", "kilocode", "routeway",
+        "gitlawb", "gitlawb-gmi", "adobe-firefly", "hailuo-web", "phind", "poe-web",
+        "qwen-web", "v0-vercel-web", "venice-web", "felo-web", "theoldllm", "raycast", "zed"
     }
 
     UNETHICAL_URL_PATTERNS = [
         "daily-cloudcode-pa", "cloudcode-pa", "app.blackbox.ai", "agent.adapta.one",
         "amelia.chipotle.com", "playground.ai.cloudflare.com", "duckduckgo.com/duckchat",
-        "theoldllm.vercel.app", "auggie://", "devin://", "backend.raycast.com", "cloud.zed.dev"
+        "theoldllm.vercel.app", "auggie://", "devin://", "backend.raycast.com", "cloud.zed.dev",
+        "studio-api.suno.ai", "cursor.sh", "core-normal.trae.ai", "qoder.com", "copilot.tencent.com",
+        "api.githubcopilot.com", "gitlab.com/api/v4/code_suggestions", "zcode://", "codex-app-server://",
+        "cli-chat-proxy.grok.com", "chat.z.ai", "conol.ai", "yuanbao.tencent.com", "freegpt.win",
+        "veoaifree.com", "m365copilot", "innerai.com", "pubyar.com", "maxai.me", "codebuff.com",
+        "g4f.space", "routeway.ai", "gitlawb.com"
     ]
 
     providers_seed = []
