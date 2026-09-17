@@ -133,11 +133,25 @@ def main():
     raw_providers = raw_data.get("providers", [])
     raw_models = raw_data.get("models", [])
 
+    UNETHICAL_SLUGS = {"antigravity", "agy", "blackbox-web", "adapta-web", "auggie"}
+    UNETHICAL_URL_PATTERNS = ["daily-cloudcode-pa", "app.blackbox.ai", "auggie://"]
+
     providers_seed = []
     seen_slugs = set()
+    blacklisted_slugs = set()
 
     for p in raw_providers:
         slug = p.get("slug") or "unknown"
+        base_url = p.get("baseUrl") or ""
+
+        is_unethical = (
+            slug in UNETHICAL_SLUGS
+            or any(pattern in str(base_url) for pattern in UNETHICAL_URL_PATTERNS)
+        )
+        if is_unethical:
+            blacklisted_slugs.add(slug)
+            continue
+
         if slug in seen_slugs:
             continue
         seen_slugs.add(slug)
@@ -180,6 +194,8 @@ def main():
 
     for m in raw_models:
         prov_slug = m.get("providerSlug") or "unknown"
+        if prov_slug in blacklisted_slugs or prov_slug in UNETHICAL_SLUGS:
+            continue
         model_name = m.get("modelName") or "default-model"
         key = (prov_slug, model_name)
         if key in seen_model_keys:

@@ -1,20 +1,5 @@
 [
   {
-    "slug": "adapta-web",
-    "displayName": "Adapta web",
-    "baseUrl": "https://agent.adapta.one/api/chat/stream/v1",
-    "authType": "api_key",
-    "protocol": "openai",
-    "docsUrl": "https://adapta-web.com/docs",
-    "capabilities": {
-      "vision": false,
-      "tools": false,
-      "streaming": false,
-      "jsonMode": false
-    },
-    "isActive": true
-  },
-  {
     "slug": "agentrouter",
     "displayName": "Agentrouter",
     "baseUrl": "https://agentrouter.org/v1/messages",
@@ -51,21 +36,6 @@
     "authType": "api_key",
     "protocol": "openai",
     "docsUrl": "https://agnes-cn.com/docs",
-    "capabilities": {
-      "vision": false,
-      "tools": false,
-      "streaming": false,
-      "jsonMode": false
-    },
-    "isActive": true
-  },
-  {
-    "slug": "agy",
-    "displayName": "Agy",
-    "baseUrl": "https://daily-cloudcode-pa.googleapis.com",
-    "authType": "oauth",
-    "protocol": "custom",
-    "docsUrl": "https://agy.com/docs",
     "capabilities": {
       "vision": false,
       "tools": false,
@@ -210,21 +180,6 @@
     "isActive": true
   },
   {
-    "slug": "antigravity",
-    "displayName": "Antigravity",
-    "baseUrl": "https://daily-cloudcode-pa.googleapis.com",
-    "authType": "oauth",
-    "protocol": "custom",
-    "docsUrl": "https://antigravity.com/docs",
-    "capabilities": {
-      "vision": false,
-      "tools": false,
-      "streaming": false,
-      "jsonMode": false
-    },
-    "isActive": true
-  },
-  {
     "slug": "anyapi",
     "displayName": "Anyapi",
     "baseUrl": "https://api.anyapi.ai/v1/chat/completions",
@@ -261,21 +216,6 @@
     "authType": "api_key",
     "protocol": "openai",
     "docsUrl": "https://arcee-ai.com/docs",
-    "capabilities": {
-      "vision": false,
-      "tools": false,
-      "streaming": false,
-      "jsonMode": false
-    },
-    "isActive": true
-  },
-  {
-    "slug": "auggie",
-    "displayName": "Auggie",
-    "baseUrl": "https://api.auggie.com/v1",
-    "authType": "keyless",
-    "protocol": "openai",
-    "docsUrl": "https://auggie.com/docs",
     "capabilities": {
       "vision": false,
       "tools": false,
@@ -411,21 +351,6 @@
     "authType": "api_key",
     "protocol": "openai",
     "docsUrl": "https://blackbox.com/docs",
-    "capabilities": {
-      "vision": false,
-      "tools": false,
-      "streaming": false,
-      "jsonMode": false
-    },
-    "isActive": true
-  },
-  {
-    "slug": "blackbox-web",
-    "displayName": "Blackbox web",
-    "baseUrl": "https://app.blackbox.ai/api/chat",
-    "authType": "api_key",
-    "protocol": "openai",
-    "docsUrl": "https://blackbox-web.com/docs",
     "capabilities": {
       "vision": false,
       "tools": false,
