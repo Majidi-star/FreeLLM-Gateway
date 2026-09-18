@@ -1,6 +1,6 @@
 [
   {
-    "canonicalId": "llama-3.3-70b-instruct",
+    "canonicalId": "meta-llama/llama-3.3-70b-instruct",
     "displayName": "Meta Llama 3.3 70B Instruct",
     "developer": "Meta",
     "knownAliases": [
@@ -8,18 +8,17 @@
       "meta-llama/Llama-3.3-70B-Instruct-Turbo",
       "meta-llama/llama-3.3-70b-instruct",
       "meta/llama-3.3-70b",
-      "meta.llama3-3-70b-instruct-v1:0",
       "llama-3.3-70b-versatile",
-      "llama-3.3-70b-instruct-fp8"
+      "llama-3.3-70b"
     ],
     "contextWindow": 131072,
     "benchmarks": {
       "reasoning": 68.9,
       "coding": 88.4,
-      "commandExecution": 77.3,
+      "commandExecution": 77.0,
       "math": 77.0,
       "vision": 0.0,
-      "longContext": 92.5
+      "longContext": 88.5
     },
     "capabilities": {
       "supportsTools": true,
@@ -28,15 +27,158 @@
     }
   },
   {
-    "canonicalId": "llama-3.1-8b-instruct",
+    "canonicalId": "deepseek/deepseek-r1",
+    "displayName": "DeepSeek R1",
+    "developer": "DeepSeek",
+    "knownAliases": [
+      "deepseek-reasoner",
+      "deepseek-ai/DeepSeek-R1",
+      "deepseek-r1",
+      "deepseek/deepseek-r1-distill-llama-70b"
+    ],
+    "contextWindow": 131072,
+    "benchmarks": {
+      "reasoning": 84.0,
+      "coding": 88.5,
+      "commandExecution": 89.0,
+      "math": 97.3,
+      "vision": 0.0,
+      "longContext": 84.0
+    },
+    "capabilities": {
+      "supportsTools": true,
+      "supportsVision": false,
+      "supportsJsonMode": true
+    }
+  },
+  {
+    "canonicalId": "anthropic/claude-3-5-sonnet-20241022",
+    "displayName": "Claude 3.5 Sonnet (20241022)",
+    "developer": "Anthropic",
+    "knownAliases": [
+      "claude-3-5-sonnet-20241022",
+      "claude-3-5-sonnet-latest",
+      "anthropic/claude-3.5-sonnet"
+    ],
+    "contextWindow": 200000,
+    "benchmarks": {
+      "reasoning": 78.0,
+      "coding": 92.0,
+      "commandExecution": 91.5,
+      "math": 78.3,
+      "vision": 70.4,
+      "longContext": 95.0
+    },
+    "capabilities": {
+      "supportsTools": true,
+      "supportsVision": true,
+      "supportsJsonMode": true
+    }
+  },
+  {
+    "canonicalId": "openai/gpt-4o",
+    "displayName": "GPT-4o",
+    "developer": "OpenAI",
+    "knownAliases": [
+      "gpt-4o",
+      "gpt-4o-2024-11-20",
+      "gpt-4o-2024-08-06",
+      "gpt-4o-2024-05-13"
+    ],
+    "contextWindow": 128000,
+    "benchmarks": {
+      "reasoning": 74.5,
+      "coding": 91.0,
+      "commandExecution": 90.0,
+      "math": 76.6,
+      "vision": 69.1,
+      "longContext": 92.0
+    },
+    "capabilities": {
+      "supportsTools": true,
+      "supportsVision": true,
+      "supportsJsonMode": true
+    }
+  },
+  {
+    "canonicalId": "openai/gpt-4o-mini",
+    "displayName": "GPT-4o Mini",
+    "developer": "OpenAI",
+    "knownAliases": [
+      "gpt-4o-mini",
+      "gpt-4o-mini-2024-07-18"
+    ],
+    "contextWindow": 128000,
+    "benchmarks": {
+      "reasoning": 64.0,
+      "coding": 87.2,
+      "commandExecution": 84.0,
+      "math": 70.2,
+      "vision": 65.3,
+      "longContext": 91.0
+    },
+    "capabilities": {
+      "supportsTools": true,
+      "supportsVision": true,
+      "supportsJsonMode": true
+    }
+  },
+  {
+    "canonicalId": "google/gemini-2.0-flash-001",
+    "displayName": "Gemini 2.0 Flash 001",
+    "developer": "Google",
+    "knownAliases": [
+      "gemini-2.0-flash-001",
+      "gemini-2.0-flash",
+      "google/gemini-2.0-flash-exp"
+    ],
+    "contextWindow": 1048576,
+    "benchmarks": {
+      "reasoning": 76.2,
+      "coding": 85.0,
+      "commandExecution": 86.0,
+      "math": 82.0,
+      "vision": 75.0,
+      "longContext": 98.0
+    },
+    "capabilities": {
+      "supportsTools": true,
+      "supportsVision": true,
+      "supportsJsonMode": true
+    }
+  },
+  {
+    "canonicalId": "qwen/qwen-2.5-72b-instruct",
+    "displayName": "Qwen 2.5 72B Instruct",
+    "developer": "Alibaba Qwen",
+    "knownAliases": [
+      "Qwen/Qwen2.5-72B-Instruct",
+      "Qwen/Qwen2.5-72B-Instruct-Turbo",
+      "qwen2.5-72b-instruct"
+    ],
+    "contextWindow": 131072,
+    "benchmarks": {
+      "reasoning": 71.0,
+      "coding": 86.4,
+      "commandExecution": 85.0,
+      "math": 80.0,
+      "vision": 0.0,
+      "longContext": 86.0
+    },
+    "capabilities": {
+      "supportsTools": true,
+      "supportsVision": false,
+      "supportsJsonMode": true
+    }
+  },
+  {
+    "canonicalId": "meta-llama/llama-3.1-8b-instruct",
     "displayName": "Meta Llama 3.1 8B Instruct",
     "developer": "Meta",
     "knownAliases": [
       "meta-llama/Meta-Llama-3.1-8B-Instruct",
-      "meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo",
-      "llama3.1-8b",
       "llama-3.1-8b-instant",
-      "meta.llama3-1-8b-instruct-v1:0"
+      "llama3.1-8b"
     ],
     "contextWindow": 131072,
     "benchmarks": {
@@ -50,718 +192,6 @@
     "capabilities": {
       "supportsTools": true,
       "supportsVision": false,
-      "supportsJsonMode": true
-    }
-  },
-  {
-    "canonicalId": "llama-3.1-405b-instruct",
-    "displayName": "Meta Llama 3.1 405B Instruct",
-    "developer": "Meta",
-    "knownAliases": [
-      "meta-llama/Meta-Llama-3.1-405B-Instruct",
-      "Meta-Llama-3.1-405B-Instruct",
-      "meta.llama3-1-405b-instruct-v1:0"
-    ],
-    "contextWindow": 131072,
-    "benchmarks": {
-      "reasoning": 73.3,
-      "coding": 89.0,
-      "commandExecution": 88.5,
-      "math": 73.8,
-      "vision": 0.0,
-      "longContext": 94.0
-    },
-    "capabilities": {
-      "supportsTools": true,
-      "supportsVision": false,
-      "supportsJsonMode": true
-    }
-  },
-  {
-    "canonicalId": "gpt-4o",
-    "displayName": "OpenAI GPT-4o",
-    "developer": "OpenAI",
-    "knownAliases": [
-      "gpt-4o",
-      "gpt-4o-2024-11-20",
-      "gpt-4o-2024-08-06",
-      "gpt-4o-2024-05-13",
-      "openai/gpt-4o"
-    ],
-    "contextWindow": 128000,
-    "benchmarks": {
-      "reasoning": 72.6,
-      "coding": 90.2,
-      "commandExecution": 88.3,
-      "math": 76.6,
-      "vision": 69.1,
-      "longContext": 91.0
-    },
-    "capabilities": {
-      "supportsTools": true,
-      "supportsVision": true,
-      "supportsJsonMode": true
-    }
-  },
-  {
-    "canonicalId": "gpt-4o-mini",
-    "displayName": "OpenAI GPT-4o Mini",
-    "developer": "OpenAI",
-    "knownAliases": [
-      "gpt-4o-mini",
-      "gpt-4o-mini-2024-07-18",
-      "openai/gpt-4o-mini"
-    ],
-    "contextWindow": 128000,
-    "benchmarks": {
-      "reasoning": 58.0,
-      "coding": 70.2,
-      "commandExecution": 78.5,
-      "math": 70.2,
-      "vision": 59.4,
-      "longContext": 82.0
-    },
-    "capabilities": {
-      "supportsTools": true,
-      "supportsVision": true,
-      "supportsJsonMode": true
-    }
-  },
-  {
-    "canonicalId": "o1",
-    "displayName": "OpenAI o1 Reasoning Model",
-    "developer": "OpenAI",
-    "knownAliases": [
-      "o1",
-      "o1-2024-12-17",
-      "openai/o1"
-    ],
-    "contextWindow": 200000,
-    "benchmarks": {
-      "reasoning": 78.0,
-      "coding": 92.4,
-      "commandExecution": 86.4,
-      "math": 96.4,
-      "vision": 73.3,
-      "longContext": 96.0
-    },
-    "capabilities": {
-      "supportsTools": true,
-      "supportsVision": true,
-      "supportsJsonMode": true
-    }
-  },
-  {
-    "canonicalId": "claude-3-5-sonnet",
-    "displayName": "Anthropic Claude 3.5 Sonnet",
-    "developer": "Anthropic",
-    "knownAliases": [
-      "claude-3-5-sonnet-20241022",
-      "claude-3-5-sonnet-latest",
-      "anthropic.claude-3-5-sonnet-20241022-v2:0",
-      "claude-3-5-sonnet-v2@20241022",
-      "anthropic/claude-3.5-sonnet"
-    ],
-    "contextWindow": 200000,
-    "benchmarks": {
-      "reasoning": 65.0,
-      "coding": 93.7,
-      "commandExecution": 88.0,
-      "math": 82.2,
-      "vision": 70.4,
-      "longContext": 97.5
-    },
-    "capabilities": {
-      "supportsTools": true,
-      "supportsVision": true,
-      "supportsJsonMode": true
-    }
-  },
-  {
-    "canonicalId": "claude-3-5-haiku",
-    "displayName": "Anthropic Claude 3.5 Haiku",
-    "developer": "Anthropic",
-    "knownAliases": [
-      "claude-3-5-haiku-20241022",
-      "claude-3-5-haiku-latest",
-      "anthropic.claude-3-5-haiku-20241022-v1:0"
-    ],
-    "contextWindow": 200000,
-    "benchmarks": {
-      "reasoning": 65.0,
-      "coding": 88.1,
-      "commandExecution": 78.2,
-      "math": 69.4,
-      "vision": 0.0,
-      "longContext": 94.0
-    },
-    "capabilities": {
-      "supportsTools": true,
-      "supportsVision": false,
-      "supportsJsonMode": true
-    }
-  },
-  {
-    "canonicalId": "claude-3-opus",
-    "displayName": "Anthropic Claude 3 Opus",
-    "developer": "Anthropic",
-    "knownAliases": [
-      "claude-3-opus-20240229",
-      "anthropic.claude-3-opus-20240229-v1:0"
-    ],
-    "contextWindow": 200000,
-    "benchmarks": {
-      "reasoning": 72.5,
-      "coding": 84.0,
-      "commandExecution": 80.5,
-      "math": 60.1,
-      "vision": 59.4,
-      "longContext": 86.0
-    },
-    "capabilities": {
-      "supportsTools": true,
-      "supportsVision": true,
-      "supportsJsonMode": true
-    }
-  },
-  {
-    "canonicalId": "gemini-1.5-pro",
-    "displayName": "Google Gemini 1.5 Pro",
-    "developer": "Google",
-    "knownAliases": [
-      "gemini-1.5-pro",
-      "gemini-1.5-pro-002",
-      "gemini-1.5-pro-latest"
-    ],
-    "contextWindow": 2097152,
-    "benchmarks": {
-      "reasoning": 74.0,
-      "coding": 74.5,
-      "commandExecution": 80.5,
-      "math": 67.7,
-      "vision": 62.3,
-      "longContext": 95.5
-    },
-    "capabilities": {
-      "supportsTools": true,
-      "supportsVision": true,
-      "supportsJsonMode": true
-    }
-  },
-  {
-    "canonicalId": "gemini-2.0-flash",
-    "displayName": "Google Gemini 2.0 Flash",
-    "developer": "Google",
-    "knownAliases": [
-      "gemini-2.0-flash",
-      "gemini-2.0-flash-001",
-      "gemini-2.0-flash-exp"
-    ],
-    "contextWindow": 1048576,
-    "benchmarks": {
-      "reasoning": 70.5,
-      "coding": 89.2,
-      "commandExecution": 86.2,
-      "math": 82.0,
-      "vision": 70.2,
-      "longContext": 98.5
-    },
-    "capabilities": {
-      "supportsTools": true,
-      "supportsVision": true,
-      "supportsJsonMode": true
-    }
-  },
-  {
-    "canonicalId": "deepseek-v3",
-    "displayName": "DeepSeek V3 671B MoE",
-    "developer": "DeepSeek",
-    "knownAliases": [
-      "deepseek-chat",
-      "deepseek-ai/DeepSeek-V3",
-      "DeepSeek-V3",
-      "deepseek/deepseek-chat"
-    ],
-    "contextWindow": 163840,
-    "benchmarks": {
-      "reasoning": 75.9,
-      "coding": 82.6,
-      "commandExecution": 83.1,
-      "math": 90.2,
-      "vision": 0.0,
-      "longContext": 92.0
-    },
-    "capabilities": {
-      "supportsTools": true,
-      "supportsVision": false,
-      "supportsJsonMode": true
-    }
-  },
-  {
-    "canonicalId": "deepseek-r1",
-    "displayName": "DeepSeek R1 Reasoning MoE",
-    "developer": "DeepSeek",
-    "knownAliases": [
-      "deepseek-reasoner",
-      "deepseek-ai/DeepSeek-R1",
-      "DeepSeek-R1",
-      "deepseek/deepseek-r1"
-    ],
-    "contextWindow": 163840,
-    "benchmarks": {
-      "reasoning": 84.0,
-      "coding": 92.5,
-      "commandExecution": 82.3,
-      "math": 97.3,
-      "vision": 0.0,
-      "longContext": 95.0
-    },
-    "capabilities": {
-      "supportsTools": true,
-      "supportsVision": false,
-      "supportsJsonMode": true
-    }
-  },
-  {
-    "canonicalId": "mistral-large-2",
-    "displayName": "Mistral Large 2 (2407)",
-    "developer": "Mistral AI",
-    "knownAliases": [
-      "mistral-large-latest",
-      "mistral-large-2407",
-      "mistral/mistral-large"
-    ],
-    "contextWindow": 128000,
-    "benchmarks": {
-      "reasoning": 72.8,
-      "coding": 89.2,
-      "commandExecution": 84.6,
-      "math": 76.8,
-      "vision": 0.0,
-      "longContext": 92.0
-    },
-    "capabilities": {
-      "supportsTools": true,
-      "supportsVision": false,
-      "supportsJsonMode": true
-    }
-  },
-  {
-    "canonicalId": "mistral-nemo",
-    "displayName": "Mistral NeMo 12B",
-    "developer": "Mistral AI",
-    "knownAliases": [
-      "open-mistral-nemo",
-      "open-mistral-nemo-2407",
-      "mistralai/Mistral-Nemo-Instruct-2407"
-    ],
-    "contextWindow": 128000,
-    "benchmarks": {
-      "reasoning": 54.0,
-      "coding": 58.5,
-      "commandExecution": 71.0,
-      "math": 48.0,
-      "vision": 0.0,
-      "longContext": 81.0
-    },
-    "capabilities": {
-      "supportsTools": true,
-      "supportsVision": false,
-      "supportsJsonMode": true
-    }
-  },
-  {
-    "canonicalId": "qwen-2.5-72b-instruct",
-    "displayName": "Alibaba Qwen 2.5 72B Instruct",
-    "developer": "Alibaba Cloud",
-    "knownAliases": [
-      "Qwen/Qwen2.5-72B-Instruct",
-      "qwen2.5-72b-instruct",
-      "qwen-plus"
-    ],
-    "contextWindow": 131072,
-    "benchmarks": {
-      "reasoning": 66.4,
-      "coding": 86.0,
-      "commandExecution": 81.2,
-      "math": 83.1,
-      "vision": 0.0,
-      "longContext": 91.0
-    },
-    "capabilities": {
-      "supportsTools": true,
-      "supportsVision": false,
-      "supportsJsonMode": true
-    }
-  },
-  {
-    "canonicalId": "qwen-2.5-coder-32b-instruct",
-    "displayName": "Alibaba Qwen 2.5 Coder 32B Instruct",
-    "developer": "Alibaba Cloud",
-    "knownAliases": [
-      "Qwen/Qwen2.5-Coder-32B-Instruct",
-      "qwen2.5-coder-32b-instruct"
-    ],
-    "contextWindow": 131072,
-    "benchmarks": {
-      "reasoning": 64.0,
-      "coding": 92.7,
-      "commandExecution": 82.5,
-      "math": 75.2,
-      "vision": 0.0,
-      "longContext": 90.0
-    },
-    "capabilities": {
-      "supportsTools": true,
-      "supportsVision": false,
-      "supportsJsonMode": true
-    }
-  },
-  {
-    "canonicalId": "glm-4-plus",
-    "displayName": "Zhipu AI GLM-4-Plus",
-    "developer": "Zhipu AI",
-    "knownAliases": [
-      "glm-4-plus",
-      "z-ai/glm-4-plus",
-      "GLM-4-Plus"
-    ],
-    "contextWindow": 128000,
-    "benchmarks": {
-      "reasoning": 72.0,
-      "coding": 74.0,
-      "commandExecution": 81.0,
-      "math": 79.0,
-      "vision": 0.0,
-      "longContext": 88.0
-    },
-    "capabilities": {
-      "supportsTools": true,
-      "supportsVision": false,
-      "supportsJsonMode": true
-    }
-  },
-  {
-    "canonicalId": "kimi-k2",
-    "displayName": "Moonshot AI Kimi K2",
-    "developer": "Moonshot AI",
-    "knownAliases": [
-      "kimi-k2",
-      "kimi-k2.6",
-      "moonshot-v1-8k"
-    ],
-    "contextWindow": 128000,
-    "benchmarks": {
-      "reasoning": 71.0,
-      "coding": 75.0,
-      "commandExecution": 87.8,
-      "math": 82.0,
-      "vision": 0.0,
-      "longContext": 94.0
-    },
-    "capabilities": {
-      "supportsTools": true,
-      "supportsVision": false,
-      "supportsJsonMode": true
-    }
-  },
-  {
-    "canonicalId": "minimax-text-01",
-    "displayName": "MiniMax Text-01",
-    "developer": "MiniMax AI",
-    "knownAliases": [
-      "minimax-text-01",
-      "minimax/minimax-text-01",
-      "minimax-m2.5"
-    ],
-    "contextWindow": 1000000,
-    "benchmarks": {
-      "reasoning": 68.0,
-      "coding": 71.5,
-      "commandExecution": 78.0,
-      "math": 74.0,
-      "vision": 0.0,
-      "longContext": 91.0
-    },
-    "capabilities": {
-      "supportsTools": true,
-      "supportsVision": false,
-      "supportsJsonMode": true
-    }
-  },
-  {
-    "canonicalId": "command-r-plus",
-    "displayName": "Cohere Command R+",
-    "developer": "Cohere",
-    "knownAliases": [
-      "command-r-plus",
-      "command-r-plus-08-2024",
-      "cohere.command-r-plus-v1:0"
-    ],
-    "contextWindow": 128000,
-    "benchmarks": {
-      "reasoning": 65.0,
-      "coding": 68.0,
-      "commandExecution": 83.0,
-      "math": 64.0,
-      "vision": 0.0,
-      "longContext": 91.0
-    },
-    "capabilities": {
-      "supportsTools": true,
-      "supportsVision": false,
-      "supportsJsonMode": true
-    }
-  },
-  {
-    "canonicalId": "jamba-1.5-large",
-    "displayName": "AI21 Labs Jamba 1.5 Large",
-    "developer": "AI21 Labs",
-    "knownAliases": [
-      "jamba-1.5-large",
-      "ai21/jamba-1-5-large",
-      "ai21.jamba-1-5-large-v1:0"
-    ],
-    "contextWindow": 256000,
-    "benchmarks": {
-      "reasoning": 66.0,
-      "coding": 67.5,
-      "commandExecution": 79.0,
-      "math": 62.0,
-      "vision": 0.0,
-      "longContext": 89.0
-    },
-    "capabilities": {
-      "supportsTools": true,
-      "supportsVision": false,
-      "supportsJsonMode": true
-    }
-  },
-  {
-    "canonicalId": "ernie-4.0-turbo",
-    "displayName": "Baidu ERNIE 4.0 Turbo",
-    "developer": "Baidu",
-    "knownAliases": [
-      "ernie-4.0-turbo-8k",
-      "ernie-4.0-turbo-128k",
-      "ernie-4.0"
-    ],
-    "contextWindow": 128000,
-    "benchmarks": {
-      "reasoning": 70.0,
-      "coding": 69.0,
-      "commandExecution": 77.0,
-      "math": 73.0,
-      "vision": 0.0,
-      "longContext": 85.0
-    },
-    "capabilities": {
-      "supportsTools": true,
-      "supportsVision": false,
-      "supportsJsonMode": true
-    }
-  },
-  {
-    "canonicalId": "hunyuan-turbo-s",
-    "displayName": "Tencent Hunyuan Turbo S",
-    "developer": "Tencent",
-    "knownAliases": [
-      "hunyuan-turbo-s",
-      "hunyuan-turbo",
-      "tencent/hunyuan-turbo"
-    ],
-    "contextWindow": 128000,
-    "benchmarks": {
-      "reasoning": 75.0,
-      "coding": 76.5,
-      "commandExecution": 82.0,
-      "math": 86.0,
-      "vision": 0.0,
-      "longContext": 88.0
-    },
-    "capabilities": {
-      "supportsTools": true,
-      "supportsVision": false,
-      "supportsJsonMode": true
-    }
-  },
-  {
-    "canonicalId": "yi-lightning",
-    "displayName": "01.AI Yi-Lightning",
-    "developer": "01.AI",
-    "knownAliases": [
-      "yi-lightning",
-      "01-ai/yi-lightning"
-    ],
-    "contextWindow": 131072,
-    "benchmarks": {
-      "reasoning": 76.0,
-      "coding": 78.0,
-      "commandExecution": 80.0,
-      "math": 84.0,
-      "vision": 0.0,
-      "longContext": 87.0
-    },
-    "capabilities": {
-      "supportsTools": true,
-      "supportsVision": false,
-      "supportsJsonMode": true
-    }
-  },
-  {
-    "canonicalId": "olmo-2-13b-instruct",
-    "displayName": "Allen Institute OLMo 2 13B Instruct",
-    "developer": "Allen Institute",
-    "knownAliases": [
-      "allenai/OLMo-2-1124-13B-Instruct",
-      "olmo-2-13b-instruct"
-    ],
-    "contextWindow": 8192,
-    "benchmarks": {
-      "reasoning": 54.0,
-      "coding": 56.0,
-      "commandExecution": 68.0,
-      "math": 52.0,
-      "vision": 0.0,
-      "longContext": 78.0
-    },
-    "capabilities": {
-      "supportsTools": true,
-      "supportsVision": false,
-      "supportsJsonMode": true
-    }
-  },
-  {
-    "canonicalId": "solar-pro",
-    "displayName": "Upstage Solar Pro",
-    "developer": "Upstage",
-    "knownAliases": [
-      "solar-pro",
-      "upstage/solar-pro-preview-instruct",
-      "solar-pro-preview"
-    ],
-    "contextWindow": 32768,
-    "benchmarks": {
-      "reasoning": 52.1,
-      "coding": 55.0,
-      "commandExecution": 72.0,
-      "math": 58.0,
-      "vision": 0.0,
-      "longContext": 80.0
-    },
-    "capabilities": {
-      "supportsTools": true,
-      "supportsVision": false,
-      "supportsJsonMode": true
-    }
-  },
-  {
-    "canonicalId": "qwen-2.5-vl-72b-instruct",
-    "displayName": "Qwen 2.5 VL 72B Instruct",
-    "developer": "Together",
-    "knownAliases": [
-      "Qwen 2.5 VL 72B Instruct"
-    ],
-    "contextWindow": 131072,
-    "benchmarks": {
-      "reasoning": 68.0,
-      "coding": 84.5,
-      "commandExecution": 79.5,
-      "math": 74.8,
-      "vision": 70.2,
-      "longContext": 92.0
-    },
-    "capabilities": {
-      "supportsTools": true,
-      "supportsVision": true,
-      "supportsJsonMode": true
-    }
-  },
-  {
-    "canonicalId": "phi-4",
-    "displayName": "Microsoft Phi-4",
-    "developer": "Deepinfra",
-    "knownAliases": [
-      "Microsoft Phi-4"
-    ],
-    "contextWindow": 16384,
-    "benchmarks": {
-      "reasoning": 63.8,
-      "coding": 87.2,
-      "commandExecution": 74.0,
-      "math": 80.4,
-      "vision": 0.0,
-      "longContext": 82.0
-    },
-    "capabilities": {
-      "supportsTools": true,
-      "supportsVision": false,
-      "supportsJsonMode": true
-    }
-  },
-  {
-    "canonicalId": "gemini-2.0-pro",
-    "displayName": "Gemini 2.0 Pro",
-    "developer": "Gemini",
-    "knownAliases": [
-      "Gemini 2.0 Pro"
-    ],
-    "contextWindow": 2097152,
-    "benchmarks": {
-      "reasoning": 78.5,
-      "coding": 91.0,
-      "commandExecution": 89.0,
-      "math": 89.5,
-      "vision": 75.2,
-      "longContext": 99.0
-    },
-    "capabilities": {
-      "supportsTools": true,
-      "supportsVision": true,
-      "supportsJsonMode": true
-    }
-  },
-  {
-    "canonicalId": "o3-mini",
-    "displayName": "OpenAI o3-mini",
-    "developer": "Openai",
-    "knownAliases": [
-      "OpenAI o3-mini"
-    ],
-    "contextWindow": 200000,
-    "benchmarks": {
-      "reasoning": 79.7,
-      "coding": 94.1,
-      "commandExecution": 87.1,
-      "math": 97.9,
-      "vision": 0.0,
-      "longContext": 95.0
-    },
-    "capabilities": {
-      "supportsTools": true,
-      "supportsVision": false,
-      "supportsJsonMode": true
-    }
-  },
-  {
-    "canonicalId": "claude-3-7-sonnet",
-    "displayName": "Claude 3.7 Sonnet",
-    "developer": "Anthropic",
-    "knownAliases": [
-      "Claude 3.7 Sonnet"
-    ],
-    "contextWindow": 200000,
-    "benchmarks": {
-      "reasoning": 84.8,
-      "coding": 95.0,
-      "commandExecution": 90.5,
-      "math": 96.2,
-      "vision": 70.4,
-      "longContext": 98.0
-    },
-    "capabilities": {
-      "supportsTools": true,
-      "supportsVision": true,
       "supportsJsonMode": true
     }
   }
