@@ -1,6 +1,6 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { ModelDetail } from './ModelCompareModal.js';
-import { Sliders, Maximize2, ZoomIn, ZoomOut, RotateCcw, Move, Tag, Eye } from 'lucide-react';
+import { Sliders, Maximize2, ZoomIn, ZoomOut, RotateCcw, Move, Tag, Layers } from 'lucide-react';
 
 export type MetricKey =
   | 'benchReasoningScore'
@@ -56,6 +56,17 @@ const getProviderColor = (providerSlug: string): string => {
   return '#6366f1';
 };
 
+interface PlottedPoint {
+  model: ModelDetail;
+  xVal: number;
+  yVal: number;
+  cx: number;
+  cy: number;
+  color: string;
+  clusterIndex: number;
+  clusterTotal: number;
+}
+
 interface BenchmarkMatrixChartProps {
   models: ModelDetail[];
   selectedModelIds: string[];
@@ -71,16 +82,26 @@ export const BenchmarkMatrixChart: React.FC<BenchmarkMatrixChartProps> = ({
 }) => {
   const [xAxisKey, setXAxisKey] = useState<MetricKey>('benchReasoningScore');
   const [yAxisKey, setYAxisKey] = useState<MetricKey>('benchCodingScore');
-  const [hoveredModel, setHoveredModel] = useState<ModelDetail | null>(null);
   const [filterProvider, setFilterProvider] = useState<string>('all');
-  const [labelMode, setLabelMode] = useState<'hover' | 'all'>('hover'); // Clean text decluttering
+  const [showOnlyBenchmarked, setShowOnlyBenchmarked] = useState<boolean>(false);
+  const [labelMode, setLabelMode] = useState<'hover' | 'all'>('hover');
 
   // Zoom & Pan State
-  const [zoomLevel, setZoomLevel] = useState<number>(1.0); // 1.0x to 4.0x
+  const [zoomLevel, setZoomLevel] = useState<number>(1.0);
   const [pan, setPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const [dragStart, setDragStart] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
+  // Hovered Cluster Stack State
+  const [hoveredCluster, setHoveredCluster] = useState<{
+    models: ModelDetail[];
+    xVal: number;
+    yVal: number;
+    screenX: number;
+    screenY: number;
+  } | null>(null);
+
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const chartContainerRef = useRef<HTMLDivElement>(null);
 
   const xMetric = useMemo(() => METRIC_OPTIONS.find((m) => m.key === xAxisKey) || METRIC_OPTIONS[0], [xAxisKey]);
@@ -93,9 +114,15 @@ export const BenchmarkMatrixChart: React.FC<BenchmarkMatrixChartProps> = ({
   }, [models]);
 
   const filteredModels = useMemo(() => {
-    if (filterProvider === 'all') return models;
-    return models.filter((m) => m.providerSlug === filterProvider);
-  }, [models, filterProvider]);
+    let list = models;
+    if (filterProvider !== 'all') {
+      list = list.filter((m) => m.providerSlug === filterProvider);
+    }
+    if (showOnlyBenchmarked) {
+      list = list.filter((m) => (m[xAxisKey] ?? 0) > 0 || (m[yAxisKey] ?? 0) > 0);
+    }
+    return list;
+  }, [models, filterProvider, showOnlyBenchmarked, xAxisKey, yAxisKey]);
 
   const getValue = (model: ModelDetail, key: MetricKey): number => {
     const val = model[key];
@@ -103,7 +130,7 @@ export const BenchmarkMatrixChart: React.FC<BenchmarkMatrixChartProps> = ({
     return typeof val === 'number' ? val : 0;
   };
 
-  // SVG dimensions
+  // Dimensions
   const width = 800;
   const height = 480;
   const padding = { top: 40, right: 40, bottom: 60, left: 65 };
@@ -112,7 +139,7 @@ export const BenchmarkMatrixChart: React.FC<BenchmarkMatrixChartProps> = ({
   const centerX = padding.left + innerWidth / 2;
   const centerY = padding.top + innerHeight / 2;
 
-  // Compute dynamic domain min/max
+  // Domain Min/Max
   const xDomain = useMemo(() => {
     const vals = filteredModels.map((m) => getValue(m, xAxisKey));
     const maxVal = Math.max(...vals, xMetric.max * 0.5, 1);
@@ -125,30 +152,188 @@ export const BenchmarkMatrixChart: React.FC<BenchmarkMatrixChartProps> = ({
     return { min: 0, max: Math.max(maxVal, 100) };
   }, [filteredModels, yAxisKey, yMetric]);
 
-  const getSvgCoords = (model: ModelDetail) => {
-    const xVal = getValue(model, xAxisKey);
-    const yVal = getValue(model, yAxisKey);
+  // Compute Plotted Points with Deterministic Golden Spiral Jittering for Stacked Models
+  const plottedPoints = useMemo<PlottedPoint[]>(() => {
+    // 1. Group models by exact (xVal, yVal) key
+    const clusters = new Map<string, ModelDetail[]>();
+    filteredModels.forEach((m) => {
+      const xVal = getValue(m, xAxisKey);
+      const yVal = getValue(m, yAxisKey);
+      const key = `${xVal.toFixed(2)}_${yVal.toFixed(2)}`;
+      if (!clusters.has(key)) clusters.set(key, []);
+      clusters.get(key)!.push(m);
+    });
 
-    let xPct = (xVal - xDomain.min) / (xDomain.max - xDomain.min || 1);
-    let yPct = (yVal - yDomain.min) / (yDomain.max - yDomain.min || 1);
+    const points: PlottedPoint[] = [];
 
-    if (xMetric.invertAxis) xPct = 1 - xPct;
-    if (yMetric.invertAxis) yPct = 1 - yPct;
+    // Golden ratio angle (~137.5 deg in radians)
+    const GOLDEN_ANGLE = 2.39996;
 
-    xPct = Math.min(1, Math.max(0, xPct));
-    yPct = Math.min(1, Math.max(0, yPct));
+    clusters.forEach((clusterModels, key) => {
+      const totalInCluster = clusterModels.length;
 
-    const cx = padding.left + xPct * innerWidth;
-    const cy = padding.top + (1 - yPct) * innerHeight;
+      clusterModels.forEach((model, idx) => {
+        const xVal = getValue(model, xAxisKey);
+        const yVal = getValue(model, yAxisKey);
 
-    return { cx, cy, xVal, yVal };
-  };
+        let xPct = (xVal - xDomain.min) / (xDomain.max - xDomain.min || 1);
+        let yPct = (yVal - yDomain.min) / (yDomain.max - yDomain.min || 1);
 
-  // Zoom Handler Functions
-  const handleZoomIn = () => {
-    setZoomLevel((prev) => Math.min(4.0, Number((prev + 0.25).toFixed(2))));
-  };
+        if (xMetric.invertAxis) xPct = 1 - xPct;
+        if (yMetric.invertAxis) yPct = 1 - yPct;
 
+        xPct = Math.min(1, Math.max(0, xPct));
+        yPct = Math.min(1, Math.max(0, yPct));
+
+        let baseX = padding.left + xPct * innerWidth;
+        let baseY = padding.top + (1 - yPct) * innerHeight;
+
+        // Apply Golden Spiral Jitter if multiple models share the exact same score coordinate
+        let cx = baseX;
+        let cy = baseY;
+
+        if (totalInCluster > 1 && idx > 0) {
+          const radius = Math.min(22, 4 + Math.sqrt(idx) * 3.5);
+          const angle = idx * GOLDEN_ANGLE;
+          cx += Math.cos(angle) * radius;
+          cy += Math.sin(angle) * radius;
+        }
+
+        points.push({
+          model,
+          xVal,
+          yVal,
+          cx,
+          cy,
+          color: getProviderColor(model.providerSlug),
+          clusterIndex: idx,
+          clusterTotal: totalInCluster,
+        });
+      });
+    });
+
+    return points;
+  }, [filteredModels, xAxisKey, yAxisKey, xDomain, yDomain, xMetric, yMetric, innerWidth, innerHeight]);
+
+  // High Performance Canvas 2D Drawing Effect
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+    ctx.scale(dpr, dpr);
+
+    ctx.clearRect(0, 0, width, height);
+
+    // Save Context for Zoom/Pan Transform
+    ctx.save();
+
+    // Set Plot Clip Path
+    ctx.beginPath();
+    ctx.rect(padding.left, padding.top, innerWidth, innerHeight);
+    ctx.clip();
+
+    // Apply Zoom & Pan Matrix
+    ctx.translate(centerX + pan.x, centerY + pan.y);
+    ctx.scale(zoomLevel, zoomLevel);
+    ctx.translate(-centerX, -centerY);
+
+    // Draw Grid Pattern
+    ctx.strokeStyle = '#334155';
+    ctx.lineWidth = 0.5 / zoomLevel;
+    ctx.globalAlpha = 0.4;
+
+    const gridSize = 40;
+    for (let x = padding.left; x <= padding.left + innerWidth; x += gridSize) {
+      ctx.beginPath();
+      ctx.moveTo(x, padding.top);
+      ctx.lineTo(x, padding.top + innerHeight);
+      ctx.stroke();
+    }
+    for (let y = padding.top; y <= padding.top + innerHeight; y += gridSize) {
+      ctx.beginPath();
+      ctx.moveTo(padding.left, y);
+      ctx.lineTo(padding.left + innerWidth, y);
+      ctx.stroke();
+    }
+
+    // Draw Quadrant Divider Lines
+    ctx.strokeStyle = '#475569';
+    ctx.lineWidth = 1.5 / zoomLevel;
+    ctx.setLineDash([4 / zoomLevel, 4 / zoomLevel]);
+    ctx.globalAlpha = 0.7;
+
+    ctx.beginPath();
+    ctx.moveTo(padding.left + innerWidth / 2, padding.top);
+    ctx.lineTo(padding.left + innerWidth / 2, padding.top + innerHeight);
+    ctx.moveTo(padding.left, padding.top + innerHeight / 2);
+    ctx.lineTo(padding.left + innerWidth, padding.top + innerHeight / 2);
+    ctx.stroke();
+    ctx.setLineDash([]); // Reset line dash
+
+    // Draw Quadrant Labels
+    ctx.font = `bold ${Math.max(9, 10 / zoomLevel)}px monospace`;
+    ctx.fillStyle = '#10b981';
+    ctx.textAlign = 'right';
+    ctx.globalAlpha = 0.75;
+    ctx.fillText('✦ S-Tier Frontier Leader', padding.left + innerWidth - 10, padding.top + 20);
+
+    ctx.fillStyle = '#6366f1';
+    ctx.textAlign = 'start';
+    ctx.fillText(`High ${yMetric.label}`, padding.left + 10, padding.top + 20);
+
+    ctx.fillStyle = '#94a3b8';
+    ctx.textAlign = 'right';
+    ctx.fillText(`High ${xMetric.label}`, padding.left + innerWidth - 10, padding.top + innerHeight - 15);
+
+    // Draw Plotted Model Points
+    plottedPoints.forEach((pt) => {
+      const isSelected = selectedModelIds.includes(pt.model.id);
+      const isHovered = hoveredCluster?.models.some((m) => m.id === pt.model.id);
+
+      ctx.globalAlpha = isHovered ? 1.0 : isSelected ? 0.95 : 0.85;
+
+      // Draw Selection Pulse Outer Ring
+      if (isSelected) {
+        ctx.beginPath();
+        ctx.arc(pt.cx, pt.cy, 12 / Math.sqrt(zoomLevel), 0, Math.PI * 2);
+        ctx.strokeStyle = '#10b981';
+        ctx.lineWidth = 2.5 / Math.sqrt(zoomLevel);
+        ctx.stroke();
+      }
+
+      // Draw Main Node Circle
+      const baseRadius = isHovered ? 7.5 : isSelected ? 6.5 : 4.5;
+      const r = Math.max(2.5, baseRadius / Math.sqrt(zoomLevel));
+
+      ctx.beginPath();
+      ctx.arc(pt.cx, pt.cy, r, 0, Math.PI * 2);
+      ctx.fillStyle = pt.color;
+      ctx.fill();
+      ctx.strokeStyle = '#020617';
+      ctx.lineWidth = 1.2 / Math.sqrt(zoomLevel);
+      ctx.stroke();
+
+      // Draw Model Text Badge when Show All mode is active
+      if (labelMode === 'all' || isHovered || isSelected) {
+        ctx.font = `${isHovered || isSelected ? 'bold' : 'normal'} ${Math.max(8, 10 / Math.sqrt(zoomLevel))}px sans-serif`;
+        ctx.fillStyle = isHovered || isSelected ? '#f8fafc' : '#cbd5e1';
+        ctx.textAlign = 'left';
+        ctx.globalAlpha = 0.95;
+        ctx.fillText(pt.model.displayName, pt.cx + 7 / Math.sqrt(zoomLevel), pt.cy + 3 / Math.sqrt(zoomLevel));
+      }
+    });
+
+    ctx.restore();
+  }, [plottedPoints, selectedModelIds, hoveredCluster, zoomLevel, pan, width, height, innerWidth, innerHeight, labelMode, xMetric, yMetric]);
+
+  // Zoom Handlers
+  const handleZoomIn = () => setZoomLevel((prev) => Math.min(4.0, Number((prev + 0.25).toFixed(2))));
   const handleZoomOut = () => {
     setZoomLevel((prev) => {
       const next = Math.max(1.0, Number((prev - 0.25).toFixed(2)));
@@ -156,13 +341,12 @@ export const BenchmarkMatrixChart: React.FC<BenchmarkMatrixChartProps> = ({
       return next;
     });
   };
-
   const handleResetZoom = () => {
     setZoomLevel(1.0);
     setPan({ x: 0, y: 0 });
   };
 
-  // Non-passive wheel event listener to prevent page scroll without browser errors
+  // Non-passive wheel event listener
   useEffect(() => {
     const el = chartContainerRef.current;
     if (!el) return;
@@ -181,12 +365,10 @@ export const BenchmarkMatrixChart: React.FC<BenchmarkMatrixChartProps> = ({
     };
 
     el.addEventListener('wheel', onWheelNonPassive, { passive: false });
-    return () => {
-      el.removeEventListener('wheel', onWheelNonPassive);
-    };
+    return () => el.removeEventListener('wheel', onWheelNonPassive);
   }, []);
 
-  // Click & Drag Pan Handlers
+  // Hover & Drag Events on Canvas
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     if (zoomLevel <= 1.0) return;
     setIsDragging(true);
@@ -194,28 +376,64 @@ export const BenchmarkMatrixChart: React.FC<BenchmarkMatrixChartProps> = ({
   };
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!isDragging || zoomLevel <= 1.0) return;
-    const maxPan = (zoomLevel - 1) * (innerWidth / 2);
-    const newX = e.clientX - dragStart.x;
-    const newY = e.clientY - dragStart.y;
+    if (isDragging && zoomLevel > 1.0) {
+      const maxPan = (zoomLevel - 1) * (innerWidth / 2);
+      const newX = e.clientX - dragStart.x;
+      const newY = e.clientY - dragStart.y;
+      setPan({
+        x: Math.min(maxPan, Math.max(-maxPan, newX)),
+        y: Math.min(maxPan, Math.max(-maxPan, newY)),
+      });
+      return;
+    }
 
-    const clampedX = Math.min(maxPan, Math.max(-maxPan, newX));
-    const clampedY = Math.min(maxPan, Math.max(-maxPan, newY));
+    // Spatial Hit Test for Tooltip Detection
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect) return;
 
-    setPan({ x: clampedX, y: clampedY });
+    const mouseX = (e.clientX - rect.left) * (width / rect.width);
+    const mouseY = (e.clientY - rect.top) * (height / rect.height);
+
+    // Transform mouse into canvas plot coordinates
+    const transformedX = (mouseX - centerX - pan.x) / zoomLevel + centerX;
+    const transformedY = (mouseY - centerY - pan.y) / zoomLevel + centerY;
+
+    const hitThreshold = 14 / zoomLevel;
+    const hits = plottedPoints.filter((pt) => {
+      const dx = pt.cx - transformedX;
+      const dy = pt.cy - transformedY;
+      return Math.sqrt(dx * dx + dy * dy) <= hitThreshold;
+    });
+
+    if (hits.length > 0) {
+      const hitModels = hits.map((h) => h.model);
+      setHoveredCluster({
+        models: hitModels,
+        xVal: hits[0].xVal,
+        yVal: hits[0].yVal,
+        screenX: e.clientX - rect.left,
+        screenY: e.clientY - rect.top,
+      });
+    } else {
+      setHoveredCluster(null);
+    }
   };
 
-  const handleMouseUp = () => {
-    setIsDragging(false);
+  const handleMouseUp = () => setIsDragging(false);
+
+  const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (hoveredCluster && hoveredCluster.models.length > 0) {
+      onToggleSelectModel(hoveredCluster.models[0].id);
+    }
   };
 
   return (
     <div className="space-y-4">
       
-      {/* Chart Control Bar */}
+      {/* Control Bar */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 p-4 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-subtle)] shadow-sm">
         
-        {/* Metric Axes & Provider Selectors */}
+        {/* Metric Axes & Provider Filter */}
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center space-x-2 text-xs font-bold text-[var(--text-primary)] font-mono">
             <Sliders className="w-4 h-4 text-[var(--accent-primary)]" />
@@ -223,7 +441,7 @@ export const BenchmarkMatrixChart: React.FC<BenchmarkMatrixChartProps> = ({
             <select
               value={xAxisKey}
               onChange={(e) => setXAxisKey(e.target.value as MetricKey)}
-              className="bg-[var(--bg-well)] text-[var(--text-primary)] border border-[var(--border-hover)] rounded-lg px-2.5 py-1.5 text-xs font-medium focus:outline-none focus:border-[var(--accent-primary)] cursor-pointer"
+              className="bg-[var(--bg-well)] text-[var(--text-primary)] border border-[var(--border-hover)] rounded-lg px-2.5 py-1.5 text-xs font-medium focus:outline-none cursor-pointer"
             >
               {METRIC_OPTIONS.map((m) => (
                 <option key={m.key} value={m.key}>
@@ -238,7 +456,7 @@ export const BenchmarkMatrixChart: React.FC<BenchmarkMatrixChartProps> = ({
             <select
               value={yAxisKey}
               onChange={(e) => setYAxisKey(e.target.value as MetricKey)}
-              className="bg-[var(--bg-well)] text-[var(--text-primary)] border border-[var(--border-hover)] rounded-lg px-2.5 py-1.5 text-xs font-medium focus:outline-none focus:border-[var(--accent-primary)] cursor-pointer"
+              className="bg-[var(--bg-well)] text-[var(--text-primary)] border border-[var(--border-hover)] rounded-lg px-2.5 py-1.5 text-xs font-medium focus:outline-none cursor-pointer"
             >
               {METRIC_OPTIONS.map((m) => (
                 <option key={m.key} value={m.key}>
@@ -253,7 +471,7 @@ export const BenchmarkMatrixChart: React.FC<BenchmarkMatrixChartProps> = ({
             <select
               value={filterProvider}
               onChange={(e) => setFilterProvider(e.target.value)}
-              className="bg-[var(--bg-well)] text-[var(--text-primary)] border border-[var(--border-hover)] rounded-lg px-2.5 py-1.5 text-xs font-medium focus:outline-none focus:border-[var(--accent-primary)] cursor-pointer"
+              className="bg-[var(--bg-well)] text-[var(--text-primary)] border border-[var(--border-hover)] rounded-lg px-2.5 py-1.5 text-xs font-medium focus:outline-none cursor-pointer"
             >
               <option value="all">All Providers ({models.length})</option>
               {providers.map(([slug, name]) => (
@@ -263,12 +481,22 @@ export const BenchmarkMatrixChart: React.FC<BenchmarkMatrixChartProps> = ({
               ))}
             </select>
           </div>
+
+          <button
+            onClick={() => setShowOnlyBenchmarked(!showOnlyBenchmarked)}
+            className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all border cursor-pointer ${
+              showOnlyBenchmarked
+                ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                : 'bg-[var(--bg-well)] text-[var(--text-secondary)] border-[var(--border-subtle)]'
+            }`}
+          >
+            <span>Benchmarked Only ({filteredModels.length})</span>
+          </button>
         </div>
 
-        {/* Controls: Labels, Zoom, Compare */}
+        {/* Labels, Zoom & Compare Action */}
         <div className="flex flex-wrap items-center gap-3">
           
-          {/* Label Display Mode Toggle */}
           <button
             onClick={() => setLabelMode((prev) => (prev === 'hover' ? 'all' : 'hover'))}
             className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all border cursor-pointer ${
@@ -276,18 +504,17 @@ export const BenchmarkMatrixChart: React.FC<BenchmarkMatrixChartProps> = ({
                 ? 'bg-[var(--bg-well)] text-[var(--accent-primary)] border-[var(--accent-primary)]/30'
                 : 'bg-[var(--accent-primary)]/10 text-[var(--signal-mint)] border-[var(--signal-mint)]/30'
             }`}
-            title="Toggle text labels declutter mode"
           >
             <Tag className="w-3.5 h-3.5" />
             <span>Labels: {labelMode === 'hover' ? 'Hover / Focus' : 'Show All'}</span>
           </button>
 
-          {/* Zoom Controls Group */}
+          {/* Zoom Controls */}
           <div className="flex items-center bg-[var(--bg-well)] p-1 rounded-xl border border-[var(--border-subtle)] space-x-1">
             <button
               onClick={handleZoomOut}
               disabled={zoomLevel <= 1.0}
-              className="p-1.5 rounded-lg hover:bg-[var(--bg-card)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg hover:bg-[var(--bg-card)] text-[var(--text-secondary)] disabled:opacity-40 cursor-pointer"
               title="Zoom Out (-)"
             >
               <ZoomOut className="w-3.5 h-3.5" />
@@ -300,7 +527,7 @@ export const BenchmarkMatrixChart: React.FC<BenchmarkMatrixChartProps> = ({
             <button
               onClick={handleZoomIn}
               disabled={zoomLevel >= 4.0}
-              className="p-1.5 rounded-lg hover:bg-[var(--bg-card)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg hover:bg-[var(--bg-card)] text-[var(--text-secondary)] disabled:opacity-40 cursor-pointer"
               title="Zoom In (+)"
             >
               <ZoomIn className="w-3.5 h-3.5" />
@@ -309,15 +536,14 @@ export const BenchmarkMatrixChart: React.FC<BenchmarkMatrixChartProps> = ({
             {(zoomLevel > 1.0 || pan.x !== 0 || pan.y !== 0) && (
               <button
                 onClick={handleResetZoom}
-                className="p-1.5 rounded-lg hover:bg-[var(--bg-card)] text-[var(--signal-mint)] transition-colors cursor-pointer ml-1"
-                title="Reset Zoom & Pan (100%)"
+                className="p-1.5 rounded-lg hover:bg-[var(--bg-card)] text-[var(--signal-mint)] cursor-pointer ml-1"
+                title="Reset Zoom & Pan"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
               </button>
             )}
           </div>
 
-          {/* Compare Button */}
           <button
             onClick={onOpenCompareModal}
             disabled={selectedModelIds.length === 0}
@@ -334,7 +560,7 @@ export const BenchmarkMatrixChart: React.FC<BenchmarkMatrixChartProps> = ({
 
       </div>
 
-      {/* Main Interactive Chart Container */}
+      {/* Main Plot Container */}
       <div
         ref={chartContainerRef}
         onMouseDown={handleMouseDown}
@@ -345,50 +571,34 @@ export const BenchmarkMatrixChart: React.FC<BenchmarkMatrixChartProps> = ({
           zoomLevel > 1.0 ? (isDragging ? 'cursor-grabbing' : 'cursor-grab') : 'cursor-default'
         }`}
       >
-        {/* Zoom Hint Banner */}
         <div className="flex items-center justify-between text-[11px] font-mono text-[var(--text-muted)] mb-2 px-2">
           <span className="flex items-center gap-1.5">
             <Move className="w-3.5 h-3.5 text-[var(--accent-primary)]" />
             <span>
               {zoomLevel > 1.0
                 ? 'Zoomed view active • Click & drag to pan • Scroll wheel to adjust'
-                : 'Scroll wheel inside chart to zoom • Hover node for model details'}
+                : 'Scroll wheel inside chart to zoom • Hover points to inspect model clusters'}
             </span>
           </span>
-          <span className="text-[var(--text-secondary)] font-bold">
-            Showing {filteredModels.length} models
+          <span className="text-[var(--signal-mint)] font-bold">
+            Displaying {plottedPoints.length} model points across {providers.length} providers
           </span>
         </div>
 
-        {/* SVG Scatter Chart Canvas */}
+        {/* High Performance Canvas 2D Surface */}
         <div className="relative w-full aspect-[16/9] max-h-[500px]">
+          <canvas
+            ref={canvasRef}
+            onClick={handleCanvasClick}
+            className="w-full h-full block cursor-pointer"
+          />
+
+          {/* SVG Overlay for Axis Tick Labels & Axis Headers */}
           <svg
             viewBox={`0 0 ${width} ${height}`}
-            className="w-full h-full overflow-visible select-none"
+            className="absolute inset-0 w-full h-full pointer-events-none"
           >
-            <defs>
-              <pattern id="matrixGrid" width="40" height="40" patternUnits="userSpaceOnUse">
-                <path d="M 40 0 L 0 0 0 40" fill="none" stroke="var(--border-subtle)" strokeWidth="0.5" opacity="0.6" />
-              </pattern>
-
-              {/* Clip path for zoom inner plot area */}
-              <clipPath id="chartInnerClip">
-                <rect x={padding.left} y={padding.top} width={innerWidth} height={innerHeight} />
-              </clipPath>
-            </defs>
-
-            {/* Static Outer Plot Area Border */}
-            <rect
-              x={padding.left}
-              y={padding.top}
-              width={innerWidth}
-              height={innerHeight}
-              fill="none"
-              stroke="var(--border-hover)"
-              strokeWidth="1"
-            />
-
-            {/* Static X-Axis Ticks & Labels */}
+            {/* X-Axis Ticks */}
             {[0, 0.25, 0.5, 0.75, 1].map((step, idx) => {
               const xPos = padding.left + step * innerWidth;
               const val = xDomain.min + step * (xDomain.max - xDomain.min);
@@ -416,7 +626,7 @@ export const BenchmarkMatrixChart: React.FC<BenchmarkMatrixChartProps> = ({
               );
             })}
 
-            {/* Static Y-Axis Ticks & Labels */}
+            {/* Y-Axis Ticks */}
             {[0, 0.25, 0.5, 0.75, 1].map((step, idx) => {
               const yPos = padding.top + (1 - step) * innerHeight;
               const val = yDomain.min + step * (yDomain.max - yDomain.min);
@@ -444,7 +654,7 @@ export const BenchmarkMatrixChart: React.FC<BenchmarkMatrixChartProps> = ({
               );
             })}
 
-            {/* Static X-Axis Title */}
+            {/* X-Axis Title */}
             <text
               x={padding.left + innerWidth / 2}
               y={height - 12}
@@ -457,7 +667,7 @@ export const BenchmarkMatrixChart: React.FC<BenchmarkMatrixChartProps> = ({
               {xMetric.label} ({xMetric.unit}) {xMetric.invertAxis ? '← Lower is better' : '→ Higher is better'}
             </text>
 
-            {/* Static Y-Axis Title */}
+            {/* Y-Axis Title */}
             <text
               x={20}
               y={padding.top + innerHeight / 2}
@@ -470,189 +680,49 @@ export const BenchmarkMatrixChart: React.FC<BenchmarkMatrixChartProps> = ({
             >
               {yMetric.label} ({yMetric.unit}) {yMetric.invertAxis ? '← Lower is better' : '↑ Higher is better'}
             </text>
-
-            {/* ZOOMABLE & PANNING PLOT INNER CONTAINER */}
-            <g clipPath="url(#chartInnerClip)">
-              <g
-                transform={`translate(${pan.x}, ${pan.y}) scale(${zoomLevel})`}
-                style={{
-                  transformOrigin: `${centerX}px ${centerY}px`,
-                  transition: isDragging ? 'none' : 'transform 0.15s ease-out',
-                }}
-              >
-                {/* Background Grid Pattern */}
-                <rect
-                  x={padding.left}
-                  y={padding.top}
-                  width={innerWidth}
-                  height={innerHeight}
-                  fill="url(#matrixGrid)"
-                />
-
-                {/* Quadrant Divider Axis Lines */}
-                <line
-                  x1={padding.left + innerWidth / 2}
-                  y1={padding.top}
-                  x2={padding.left + innerWidth / 2}
-                  y2={padding.top + innerHeight}
-                  stroke="var(--border-hover)"
-                  strokeDasharray="4 4"
-                  strokeWidth="1.5"
-                />
-                <line
-                  x1={padding.left}
-                  y1={padding.top + innerHeight / 2}
-                  x2={padding.left + innerWidth}
-                  y2={padding.top + innerHeight / 2}
-                  stroke="var(--border-hover)"
-                  strokeDasharray="4 4"
-                  strokeWidth="1.5"
-                />
-
-                {/* Quadrant Labels */}
-                <text
-                  x={padding.left + innerWidth - 10}
-                  y={padding.top + 20}
-                  textAnchor="end"
-                  fill="var(--signal-mint)"
-                  fontSize="10"
-                  fontWeight="bold"
-                  fontFamily="monospace"
-                  className="opacity-70"
-                >
-                  ✦ S-Tier Frontier Leader
-                </text>
-                <text
-                  x={padding.left + 10}
-                  y={padding.top + 20}
-                  textAnchor="start"
-                  fill="var(--accent-primary)"
-                  fontSize="10"
-                  fontWeight="bold"
-                  fontFamily="monospace"
-                  className="opacity-70"
-                >
-                  High {yMetric.label}
-                </text>
-                <text
-                  x={padding.left + innerWidth - 10}
-                  y={padding.top + innerHeight - 15}
-                  textAnchor="end"
-                  fill="var(--text-muted)"
-                  fontSize="10"
-                  fontWeight="bold"
-                  fontFamily="monospace"
-                  className="opacity-70"
-                >
-                  High {xMetric.label}
-                </text>
-
-                {/* Model Scatter Point Nodes */}
-                {filteredModels.map((model) => {
-                  const { cx, cy } = getSvgCoords(model);
-                  const isSelected = selectedModelIds.includes(model.id);
-                  const isHovered = hoveredModel?.id === model.id;
-                  const color = getProviderColor(model.providerSlug);
-                  const shouldShowLabel = labelMode === 'all' || isHovered || isSelected;
-
-                  return (
-                    <g
-                      key={model.id}
-                      className="cursor-pointer transition-transform duration-150"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onToggleSelectModel(model.id);
-                      }}
-                      onMouseEnter={() => setHoveredModel(model)}
-                      onMouseLeave={() => setHoveredModel(null)}
-                    >
-                      {/* Selection Pulsing Ring */}
-                      {isSelected && (
-                        <circle
-                          cx={cx}
-                          cy={cy}
-                          r={14 / Math.sqrt(zoomLevel)}
-                          fill="none"
-                          stroke="var(--signal-mint)"
-                          strokeWidth={2.5 / Math.sqrt(zoomLevel)}
-                          strokeDasharray="3 3"
-                        />
-                      )}
-
-                      {/* Node Point Circle */}
-                      <circle
-                        cx={cx}
-                        cy={cy}
-                        r={(isHovered ? 8 : isSelected ? 7 : 5) / Math.sqrt(zoomLevel)}
-                        fill={color}
-                        stroke="var(--bg-obsidian)"
-                        strokeWidth={1.5 / Math.sqrt(zoomLevel)}
-                        className="transition-all duration-150 shadow-md"
-                      />
-
-                      {/* Model Label Badge (rendered cleanly when hovered, selected, or when Show All is enabled) */}
-                      {shouldShowLabel && (
-                        <text
-                          x={cx + (8 / Math.sqrt(zoomLevel))}
-                          y={cy + (4 / Math.sqrt(zoomLevel))}
-                          fill={isHovered || isSelected ? 'var(--text-primary)' : 'var(--text-secondary)'}
-                          fontSize={Math.max(8, 10 / Math.sqrt(zoomLevel))}
-                          fontWeight={isHovered || isSelected ? 'bold' : 'normal'}
-                          fontFamily="sans-serif"
-                          className="pointer-events-none drop-shadow"
-                        >
-                          {model.displayName}
-                        </text>
-                      )}
-                    </g>
-                  );
-                })}
-              </g>
-            </g>
           </svg>
         </div>
 
-        {/* Hover Tooltip Overlay Card */}
-        {hoveredModel && (
-          <div className="absolute top-10 right-6 p-4 rounded-xl bg-[var(--bg-rail)] border border-[var(--border-hover)] shadow-2xl z-20 max-w-xs animate-fadeIn space-y-2 pointer-events-none">
+        {/* Hover Cluster Stack Tooltip */}
+        {hoveredCluster && (
+          <div
+            className="absolute p-4 rounded-2xl bg-[var(--bg-rail)] border border-[var(--border-hover)] shadow-2xl z-30 max-w-sm animate-fadeIn space-y-2 pointer-events-none"
+            style={{
+              left: `${Math.min(hoveredCluster.screenX + 15, width - 250)}px`,
+              top: `${Math.min(hoveredCluster.screenY + 15, height - 200)}px`,
+            }}
+          >
             <div className="flex items-center justify-between gap-2 border-b border-[var(--border-subtle)] pb-2">
               <div>
-                <div className="font-bold text-sm text-[var(--text-primary)]">
-                  {hoveredModel.displayName}
+                <div className="font-bold text-xs text-[var(--text-primary)]">
+                  {hoveredCluster.models.length > 1
+                    ? `${hoveredCluster.models.length} Models at this Benchmark Coordinate`
+                    : hoveredCluster.models[0].displayName}
                 </div>
-                <div className="text-xs text-[var(--accent-primary)] font-mono">
-                  {hoveredModel.providerDisplayName}
+                <div className="text-[10px] text-[var(--accent-primary)] font-mono">
+                  {xMetric.label}: {hoveredCluster.xVal} | {yMetric.label}: {hoveredCluster.yVal}
                 </div>
-              </div>
-              <span
-                className="w-3 h-3 rounded-full"
-                style={{ backgroundColor: getProviderColor(hoveredModel.providerSlug) }}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-2 text-xs font-mono">
-              <div>
-                <span className="text-[var(--text-muted)] block text-[10px]">{xMetric.label}:</span>
-                <span className="font-bold text-[var(--text-primary)]">
-                  {getValue(hoveredModel, xAxisKey)} {xMetric.unit}
-                </span>
-              </div>
-              <div>
-                <span className="text-[var(--text-muted)] block text-[10px]">{yMetric.label}:</span>
-                <span className="font-bold text-[var(--text-primary)]">
-                  {getValue(hoveredModel, yAxisKey)} {yMetric.unit}
-                </span>
-              </div>
-              <div>
-                <span className="text-[var(--text-muted)] block text-[10px]">Context:</span>
-                <span className="text-[var(--text-secondary)]">{(hoveredModel.contextWindow / 1024).toFixed(0)}K</span>
-              </div>
-              <div>
-                <span className="text-[var(--text-muted)] block text-[10px]">Input Pricing:</span>
-                <span className="text-[var(--text-secondary)]">
-                  {hoveredModel.costInputPer1k === 0 ? 'FREE' : `$${hoveredModel.costInputPer1k}/1K`}
-                </span>
               </div>
             </div>
+
+            <div className="max-h-48 overflow-y-auto space-y-1.5 custom-scrollbar">
+              {hoveredCluster.models.slice(0, 6).map((m) => (
+                <div key={m.id} className="flex items-center justify-between text-xs font-mono p-1 rounded bg-[var(--bg-well)]">
+                  <span className="font-bold text-[var(--text-primary)] truncate max-w-[170px]">
+                    {m.displayName}
+                  </span>
+                  <span className="text-[10px] text-[var(--accent-primary)] font-semibold">
+                    {m.providerDisplayName}
+                  </span>
+                </div>
+              ))}
+              {hoveredCluster.models.length > 6 && (
+                <div className="text-[10px] text-[var(--text-muted)] font-mono text-center">
+                  + {hoveredCluster.models.length - 6} more models at this score
+                </div>
+              )}
+            </div>
+
             <div className="text-[10px] text-[var(--signal-mint)] font-mono pt-1 text-right">
               Click node to toggle comparison selection
             </div>
