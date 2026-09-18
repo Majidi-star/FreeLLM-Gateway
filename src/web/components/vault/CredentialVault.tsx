@@ -226,9 +226,9 @@ export const CredentialVault: React.FC = () => {
 
     // 3. Tier Filter
     if (galleryTierFilter === 'free') {
-      result = result.filter((k) => k.tier === 'Free Tier' || (k as any).tierCategory === 'free');
+      result = result.filter((k) => (k.tier as string) === 'free' || (k.tier as string) === 'Free Tier' || (k as any).tierCategory === 'free');
     } else if (galleryTierFilter === 'paid') {
-      result = result.filter((k) => k.tier === 'Pro Enclave' || k.tier === 'Paid / Usage-Based' || (k as any).tierCategory === 'paid');
+      result = result.filter((k) => (k.tier as string) === 'pro' || (k.tier as string) === 'Pro Enclave' || (k.tier as string) === 'Paid / Usage-Based' || (k as any).tierCategory === 'paid');
     }
 
     // 4. Protocol Filter
