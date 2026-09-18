@@ -1,6 +1,6 @@
-import React, { useState, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { ModelDetail } from './ModelCompareModal.js';
-import { Sliders, Maximize2, ZoomIn, ZoomOut, RotateCcw, Move, Sparkles } from 'lucide-react';
+import { Sliders, Maximize2, ZoomIn, ZoomOut, RotateCcw, Move, Tag, Eye } from 'lucide-react';
 
 export type MetricKey =
   | 'benchReasoningScore'
@@ -73,6 +73,7 @@ export const BenchmarkMatrixChart: React.FC<BenchmarkMatrixChartProps> = ({
   const [yAxisKey, setYAxisKey] = useState<MetricKey>('benchCodingScore');
   const [hoveredModel, setHoveredModel] = useState<ModelDetail | null>(null);
   const [filterProvider, setFilterProvider] = useState<string>('all');
+  const [labelMode, setLabelMode] = useState<'hover' | 'all'>('hover'); // Clean text decluttering
 
   // Zoom & Pan State
   const [zoomLevel, setZoomLevel] = useState<number>(1.0); // 1.0x to 4.0x
@@ -151,7 +152,7 @@ export const BenchmarkMatrixChart: React.FC<BenchmarkMatrixChartProps> = ({
   const handleZoomOut = () => {
     setZoomLevel((prev) => {
       const next = Math.max(1.0, Number((prev - 0.25).toFixed(2)));
-      if (next === 1.0) setPan({ x: 0, y: 0 }); // reset pan when back to 100%
+      if (next === 1.0) setPan({ x: 0, y: 0 });
       return next;
     });
   };
@@ -161,15 +162,29 @@ export const BenchmarkMatrixChart: React.FC<BenchmarkMatrixChartProps> = ({
     setPan({ x: 0, y: 0 });
   };
 
-  // Mouse Wheel Zoom Event
-  const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    if (e.deltaY < 0) {
-      handleZoomIn();
-    } else {
-      handleZoomOut();
-    }
-  };
+  // Non-passive wheel event listener to prevent page scroll without browser errors
+  useEffect(() => {
+    const el = chartContainerRef.current;
+    if (!el) return;
+
+    const onWheelNonPassive = (e: WheelEvent) => {
+      e.preventDefault();
+      if (e.deltaY < 0) {
+        setZoomLevel((prev) => Math.min(4.0, Number((prev + 0.25).toFixed(2))));
+      } else {
+        setZoomLevel((prev) => {
+          const next = Math.max(1.0, Number((prev - 0.25).toFixed(2)));
+          if (next === 1.0) setPan({ x: 0, y: 0 });
+          return next;
+        });
+      }
+    };
+
+    el.addEventListener('wheel', onWheelNonPassive, { passive: false });
+    return () => {
+      el.removeEventListener('wheel', onWheelNonPassive);
+    };
+  }, []);
 
   // Click & Drag Pan Handlers
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -184,7 +199,6 @@ export const BenchmarkMatrixChart: React.FC<BenchmarkMatrixChartProps> = ({
     const newX = e.clientX - dragStart.x;
     const newY = e.clientY - dragStart.y;
 
-    // Clamp pan movement so chart stays visible
     const clampedX = Math.min(maxPan, Math.max(-maxPan, newX));
     const clampedY = Math.min(maxPan, Math.max(-maxPan, newY));
 
@@ -251,9 +265,23 @@ export const BenchmarkMatrixChart: React.FC<BenchmarkMatrixChartProps> = ({
           </div>
         </div>
 
-        {/* Zoom Controls & Compare Action */}
+        {/* Controls: Labels, Zoom, Compare */}
         <div className="flex flex-wrap items-center gap-3">
           
+          {/* Label Display Mode Toggle */}
+          <button
+            onClick={() => setLabelMode((prev) => (prev === 'hover' ? 'all' : 'hover'))}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all border cursor-pointer ${
+              labelMode === 'hover'
+                ? 'bg-[var(--bg-well)] text-[var(--accent-primary)] border-[var(--accent-primary)]/30'
+                : 'bg-[var(--accent-primary)]/10 text-[var(--signal-mint)] border-[var(--signal-mint)]/30'
+            }`}
+            title="Toggle text labels declutter mode"
+          >
+            <Tag className="w-3.5 h-3.5" />
+            <span>Labels: {labelMode === 'hover' ? 'Hover / Focus' : 'Show All'}</span>
+          </button>
+
           {/* Zoom Controls Group */}
           <div className="flex items-center bg-[var(--bg-well)] p-1 rounded-xl border border-[var(--border-subtle)] space-x-1">
             <button
@@ -309,7 +337,6 @@ export const BenchmarkMatrixChart: React.FC<BenchmarkMatrixChartProps> = ({
       {/* Main Interactive Chart Container */}
       <div
         ref={chartContainerRef}
-        onWheel={handleWheel}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
@@ -325,14 +352,12 @@ export const BenchmarkMatrixChart: React.FC<BenchmarkMatrixChartProps> = ({
             <span>
               {zoomLevel > 1.0
                 ? 'Zoomed view active • Click & drag to pan • Scroll wheel to adjust'
-                : 'Scroll wheel inside chart to zoom • Click nodes to select models'}
+                : 'Scroll wheel inside chart to zoom • Hover node for model details'}
             </span>
           </span>
-          {zoomLevel > 1.0 && (
-            <span className="text-[var(--signal-mint)] font-bold">
-              {Math.round(zoomLevel * 100)}% Zoomed
-            </span>
-          )}
+          <span className="text-[var(--text-secondary)] font-bold">
+            Showing {filteredModels.length} models
+          </span>
         </div>
 
         {/* SVG Scatter Chart Canvas */}
@@ -528,6 +553,7 @@ export const BenchmarkMatrixChart: React.FC<BenchmarkMatrixChartProps> = ({
                   const isSelected = selectedModelIds.includes(model.id);
                   const isHovered = hoveredModel?.id === model.id;
                   const color = getProviderColor(model.providerSlug);
+                  const shouldShowLabel = labelMode === 'all' || isHovered || isSelected;
 
                   return (
                     <g
@@ -557,25 +583,27 @@ export const BenchmarkMatrixChart: React.FC<BenchmarkMatrixChartProps> = ({
                       <circle
                         cx={cx}
                         cy={cy}
-                        r={(isHovered ? 9 : isSelected ? 8 : 6.5) / Math.sqrt(zoomLevel)}
+                        r={(isHovered ? 8 : isSelected ? 7 : 5) / Math.sqrt(zoomLevel)}
                         fill={color}
                         stroke="var(--bg-obsidian)"
-                        strokeWidth={2 / Math.sqrt(zoomLevel)}
+                        strokeWidth={1.5 / Math.sqrt(zoomLevel)}
                         className="transition-all duration-150 shadow-md"
                       />
 
-                      {/* Model Label Badge */}
-                      <text
-                        x={cx + (10 / Math.sqrt(zoomLevel))}
-                        y={cy + (4 / Math.sqrt(zoomLevel))}
-                        fill={isHovered || isSelected ? 'var(--text-primary)' : 'var(--text-secondary)'}
-                        fontSize={Math.max(8, 10 / Math.sqrt(zoomLevel))}
-                        fontWeight={isHovered || isSelected ? 'bold' : 'normal'}
-                        fontFamily="sans-serif"
-                        className="pointer-events-none drop-shadow"
-                      >
-                        {model.displayName}
-                      </text>
+                      {/* Model Label Badge (rendered cleanly when hovered, selected, or when Show All is enabled) */}
+                      {shouldShowLabel && (
+                        <text
+                          x={cx + (8 / Math.sqrt(zoomLevel))}
+                          y={cy + (4 / Math.sqrt(zoomLevel))}
+                          fill={isHovered || isSelected ? 'var(--text-primary)' : 'var(--text-secondary)'}
+                          fontSize={Math.max(8, 10 / Math.sqrt(zoomLevel))}
+                          fontWeight={isHovered || isSelected ? 'bold' : 'normal'}
+                          fontFamily="sans-serif"
+                          className="pointer-events-none drop-shadow"
+                        >
+                          {model.displayName}
+                        </text>
+                      )}
                     </g>
                   );
                 })}
