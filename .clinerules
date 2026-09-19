@@ -1,0 +1,35 @@
+# CLINULES — MANDATORY DIRECTIVES FOR CLINE
+
+## 🚨 STRICT GIT RULES (STRICTLY ENFORCED - DO NOT VIOLATE)
+1. **NEVER COMMIT OR PUSH**: You are ABSOLUTELY FORBIDDEN from running any git commit or push commands (`git commit`, `git push`, `git checkout -b`, `git reset`, `git rebase`, `git merge`, `git clean`, etc.).
+2. **LOCAL EDITS ONLY**: Make code edits strictly in the working tree. All git operations (committing, branching, staging, pushing) MUST be performed manually by the developer.
+3. **NO HISTORY MUTATION**: Never modify `.git` history or alter remote tracking.
+
+## ⚡ ARCHITECTURAL & SCALABILITY STANDARDS (>1000 ACTIVE USERS)
+This project is `GoalRoute` / FreeLLM-Gateway, a high-throughput multi-provider LLM gateway serving 1000+ users concurrently.
+1. **CONCURRENCY & PERFORMANCE**:
+   - Never block the Node.js event loop with heavy synchronous operations.
+   - Use async execution, streaming responses, proper batching, and `p-limit` for rate/concurrency control.
+   - Database operations (via `better-sqlite3`) must be index-optimized and use transactions (`db.transaction()`) for multi-step mutations.
+2. **RESOURCE MANAGEMENT & MEMORY**:
+   - Prevent memory leaks (clean up event listeners, timers, database handles, HTTP connections).
+   - Ensure proper error bounds, socket destruction, and request abort signals (`AbortController`).
+3. **STRICT INPUT VALIDATION & SCHEMAS**:
+   - Validate all API payloads and environment configurations using `Zod` schemas.
+   - Enforce robust failover/retry strategies across provider backends.
+
+## 🛠️ CODE QUALITY & HYGIENE PROTOCOLS
+1. **NO GUESSWORK**: Never guess file paths, symbol names, or API structures. Inspect source files before implementing changes.
+2. **NO SUPERFICIAL PATCHES**:
+   - NEVER wrap broken code in silent `try/catch` blocks or return fake fallback data to mask bugs.
+   - Identify and resolve the true root cause of failure.
+3. **PRESERVE API CONTRACTS**:
+   - If modifying a function signature or route handler, search and update all invocation sites across the codebase.
+4. **NO DESTRUCTIVE REWRITES**:
+   - Make surgical, targeted edits. Do not reformat unrelated lines or delete non-target comments/docstrings.
+
+## 🧪 TESTING & VERIFICATION REQUIREMENTS
+1. **ALWAYS VERIFY**: Before completing any task, run the test and build checks:
+   - Run tests: `npm test`
+   - Run build: `npm run build`
+2. **LOG DIAGNOSTICS**: When an error occurs, read the complete stack trace before attempting fixes.
