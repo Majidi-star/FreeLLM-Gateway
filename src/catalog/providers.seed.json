@@ -1112,7 +1112,7 @@
   {
     "slug": "groq",
     "displayName": "Groq",
-    "baseUrl": "https://api.groq.com/openai/v1/chat/completions",
+    "baseUrl": "https://api.groq.com/openai/v1",
     "authType": "api_key",
     "protocol": "openai",
     "docsUrl": "https://groq.com/docs",

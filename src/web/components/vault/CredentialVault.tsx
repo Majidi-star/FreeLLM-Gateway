@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Key, ShieldCheck, RefreshCw, CheckCircle2, AlertTriangle, Cpu, Lock, Terminal, Activity, Zap, Check, ChevronDown, Plus, X, ExternalLink, Search, SlidersHorizontal, ArrowUpDown, Filter, RotateCcw } from 'lucide-react';
 import { GlossaryTerm } from '../common/GlossaryTerm.js';
+import { getAdminToken } from '../settings/EndpointsManager.js';
+
 
 export function formatCleanError(rawErr: string | null | undefined): string {
   if (!rawErr) return 'Verification failed';
@@ -167,12 +169,6 @@ export function filterCatalogOptions(
     return matchesTier && matchesSearch;
   });
 }
-
-const getAdminToken = () =>
-  sessionStorage.getItem('goalroute_admin_token') ||
-  localStorage.getItem('goalroute_admin_token') ||
-  (import.meta as any).env?.VITE_ADMIN_API_TOKEN ||
-  '';
 
 export const CredentialVault: React.FC = () => {
   const [keys, setKeys] = useState<KeyEntry[]>([]);

@@ -1,35 +1,145 @@
-# CLINULES — MANDATORY DIRECTIVES FOR CLINE
+# CLINERULES — GoalRoute / FreeLLM-Gateway
 
-## 🚨 STRICT GIT RULES (STRICTLY ENFORCED - DO NOT VIOLATE)
-1. **NEVER COMMIT OR PUSH**: You are ABSOLUTELY FORBIDDEN from running any git commit or push commands (`git commit`, `git push`, `git checkout -b`, `git reset`, `git rebase`, `git merge`, `git clean`, etc.).
-2. **LOCAL EDITS ONLY**: Make code edits strictly in the working tree. All git operations (committing, branching, staging, pushing) MUST be performed manually by the developer.
-3. **NO HISTORY MUTATION**: Never modify `.git` history or alter remote tracking.
+## 🧭 PRIME DIRECTIVE & WORKFLOW
 
-## ⚡ ARCHITECTURAL & SCALABILITY STANDARDS (>1000 ACTIVE USERS)
-This project is `GoalRoute` / FreeLLM-Gateway, a high-throughput multi-provider LLM gateway serving 1000+ users concurrently.
-1. **CONCURRENCY & PERFORMANCE**:
-   - Never block the Node.js event loop with heavy synchronous operations.
-   - Use async execution, streaming responses, proper batching, and `p-limit` for rate/concurrency control.
-   - Database operations (via `better-sqlite3`) must be index-optimized and use transactions (`db.transaction()`) for multi-step mutations.
-2. **RESOURCE MANAGEMENT & MEMORY**:
-   - Prevent memory leaks (clean up event listeners, timers, database handles, HTTP connections).
-   - Ensure proper error bounds, socket destruction, and request abort signals (`AbortController`).
-3. **STRICT INPUT VALIDATION & SCHEMAS**:
-   - Validate all API payloads and environment configurations using `Zod` schemas.
-   - Enforce robust failover/retry strategies across provider backends.
+`docs/IMPLEMENTATION_PLAN.md` is the absolute specification.
 
-## 🛠️ CODE QUALITY & HYGIENE PROTOCOLS
-1. **NO GUESSWORK**: Never guess file paths, symbol names, or API structures. Inspect source files before implementing changes.
-2. **NO SUPERFICIAL PATCHES**:
-   - NEVER wrap broken code in silent `try/catch` blocks or return fake fallback data to mask bugs.
-   - Identify and resolve the true root cause of failure.
-3. **PRESERVE API CONTRACTS**:
-   - If modifying a function signature or route handler, search and update all invocation sites across the codebase.
-4. **NO DESTRUCTIVE REWRITES**:
-   - Make surgical, targeted edits. Do not reformat unrelated lines or delete non-target comments/docstrings.
+1. **One Phase Per Task:** Execute **exactly one PHASE per task**, then **STOP** and report. Never plan ahead, redesign, or scope-creep. When your judgment conflicts with the plan, the plan wins.
+2. **When Stuck / Blocked:**
+* **Ambiguous Spec:** Pick the simplest implementation that satisfies the phase's Definition of Done, log one line in `docs/DEVIATIONS.md`, and proceed. Do not halt to ask.
+* **Repeated Failures:** If a failure cannot be diagnosed in 3 attempts, stop, revert your partial edits for that item, and report `FAIL` with the full error trace. Do not thrash or attempt a 4th speculative variation.
+* **Unrelated Issues:** Never "also fix" out-of-scope issues. Record them in `docs/DEVIATIONS.md` under `## Observed, not fixed` and move on.
 
-## 🧪 TESTING & VERIFICATION REQUIREMENTS
-1. **ALWAYS VERIFY**: Before completing any task, run the test and build checks:
-   - Run tests: `npm test`
-   - Run build: `npm run build`
-2. **LOG DIAGNOSTICS**: When an error occurs, read the complete stack trace before attempting fixes.
+
+
+---
+
+## 🚨 GIT — ABSOLUTE PROHIBITION (STRICTLY ENFORCED)
+
+1. **Forbidden Operations:** You are strictly forbidden from running any command that creates, stages, commits, or mutates git history or branches:
+`git commit`, `git push`, `git add`, `git checkout`, `git switch`, `git branch`, `git reset`, `git revert`, `git stash`, `git rebase`, `git merge`, `git clean`, `git tag`.
+2. **Local Working Tree Edits Only:** Edits must exist solely in the working tree. All staging, branching, committing, and pushing operations are performed manually by the developer.
+3. **Inspection Only:** Read-only inspection commands (`git status`, `git diff`) are permitted.
+
+---
+
+## 🔒 DEPENDENCY FREEZE
+
+1. **Forbidden Package Installs:** `npm install <package>`, `npm add`, `yarn add`, and `pnpm add` are strictly forbidden.
+2. **Allowed Operations:** Only `npm ci` and `npm install` with **no arguments** (restoring existing lockfiles) are permitted.
+3. **Zero New External Libraries:** Write functionality by hand using standard Node.js runtime and in-tree utilities:
+* **No chart libraries:** Hand-roll SVG (see `src/web/components/database/BenchmarkMatrixChart.tsx`).
+* **No bcrypt/argon2/scrypt packages:** Use Node.js built-in `crypto` HMAC as specified.
+* **No ORM or query builders:** Use raw parameterized SQLite.
+* **No date libraries:** Use native `Date` / `Intl`.
+* **No uuid libraries:** Use `src/shared/ids.ts`.
+
+
+4. **Verification:** `git diff --stat package.json` must remain completely empty at the end of every phase, except Phase 0 and Phase 10.
+
+---
+
+## 🔍 CONTEXT DISCIPLINE & INSPECTION
+
+Do not guess file paths, symbol names, or API structures. Inspect source files before implementing changes while strictly minimizing token load:
+
+1. **Read Scope:** Read only the files explicitly listed in your phase's "Files to read".
+2. **Bounded Line Ranges:** When a phase specifies line ranges, use targeted reads:
+`sed -n '420,470p' src/services/gatewayService.ts`
+3. **Large File Restriction:** Never read a file over 200 lines in full (e.g., `gatewayService.ts`, `CredentialVault.tsx`, `server.ts`, `models.seed.json`). Use bounded line ranges or targeted `grep -n`.
+4. **Prohibited Dumps:** Never run `grep -r`, `find .`, `cat src/**/*`, `tree`, or any recursive repo dump.
+5. **Symbol Lookup:** Locate symbols by listing matching files first:
+`grep -rn "symbolName" src --include=*.ts -l`
+Then read only the targeted line range in that specific file.
+6. **Execution Threshold:** If you read 10 files without making an edit, stop immediately, re-read your phase instructions, and begin targeted editing.
+
+---
+
+## ✂️ EDIT DISCIPLINE & HYGIENE
+
+1. **Surgical Edits Only:** Use targeted SEARCH/REPLACE blocks for existing files. Never emit full-file rewrites of pre-existing files.
+2. **No Unsolicited Formatting:** Do not reformat, re-indent, reorder imports, or "tidy" lines outside the targeted change. Any diff line not required by the plan is considered a bug.
+3. **Preserve Documentation:** Do not delete comments, JSDoc, or existing TODOs unless they are the explicit target of the edit.
+4. **Preserve Call Contracts:** If modifying a function signature or route handler, inspect and update every call site across the codebase in the same edit. Leaving broken callers for later phases is unacceptable.
+5. **NodeNext ESM Imports:** All relative imports must include the `.js` extension (e.g., `import { x } from './foo.js'`).
+
+---
+
+## 🧪 NO FAKE GREEN & VERIFICATION REQUIREMENTS
+
+1. **No Masking Failures:** Never wrap failing code in silent `try { } catch { }` blocks or return fallback data (`[]`, `null`, `{}`) to hide errors. Fix the root cause. The sole exception is explicitly authorized in Phase 7 (`recordOutcome` telemetry write) and must include the exact comment specified in the plan.
+2. **No Weakening Tests:** Never delete, skip (`it.skip`), or weaken assertions to pass test suites. If an assertion contradicts an intended plan change, update only that assertion and explicitly declare it in your report.
+3. **No Type Suppressions:** Never suppress the typechecker using `// @ts-ignore`, `// @ts-expect-error`, `as any`, or `eslint-disable`.
+4. **Test & Build Verification:** Before marking any task complete, run the required verification suite:
+* Run verification pipeline: `npm run verify 2>&1 | tail -n 40`
+* Run unit/integration tests: `npm test`
+* Run build check: `npm run build`
+
+
+5. **Diagnostic Discipline:** When an error occurs, inspect the entire stack trace before altering code.
+
+---
+
+## ⚡ ARCHITECTURE & SCALABILITY STANDARDS (1000+ CONCURRENT USERS)
+
+GoalRoute / FreeLLM-Gateway is a high-throughput multi-provider gateway. Code must be built for heavy concurrent loads:
+
+1. **Non-Blocking Event Loop:**
+* No synchronous file I/O in request paths.
+* No busy-wait loops or large synchronous iterations.
+* Never run `JSON.parse` or `JSON.stringify` on multi-MB blobs inside request flows.
+* Use streaming responses, asynchronous execution, and `p-limit` for fine-grained concurrency and provider rate-limiting.
+
+
+2. **Database Performance (`better-sqlite3`):**
+* Hot-path prepared statements must be initialized **once** in class constructors, never created inside per-request functions via `db.prepare()`.
+* Wrap multi-statement mutations inside `db.transaction(() => { ... })()`.
+* Ensure every column queried in a hot `WHERE` clause is indexed. Validate using `EXPLAIN QUERY PLAN`.
+* Implement **keyset pagination** (`WHERE created_at < ? ORDER BY created_at DESC LIMIT ?`), never SQL `OFFSET`.
+
+
+3. **Resource & Memory Management:**
+* Clean up all timers and intervals (`clearInterval` in React cleanups, `.unref()` on server timers).
+* Detach event listeners (`removeListener` within `finally` blocks).
+* Properly destroy lingering sockets, database handles, and HTTP connections.
+* Propagate `AbortController` signals to downstream provider calls to release aborted client requests. Cap all dynamic memory buffers.
+
+
+4. **Validation & Schemas:**
+* Parse all incoming HTTP request bodies, query strings, and environment configurations through strict **Zod** schemas.
+* Schema validation failures must throw `AppError(msg, 'VALIDATION_ERROR', 400)` from `src/shared/errors.ts`.
+* Implement robust provider failover and retry logic across LLM backends.
+
+
+5. **SQL Injection Prevention:**
+* Every user value must be passed via bound parameters.
+* Dynamic identifiers (`groupBy`, sort fields, order dimensions) must be matched against strict hardcoded whitelist mappings (`Record` or `Set`) before query assembly. Never interpolate raw user input into SQL templates.
+
+
+
+---
+
+## 🔐 SECRET HANDLING & SECURITY
+
+1. **API Key Lifecycle:** Plaintext API keys exist only in the return value of the initial generation/rotation service call. Plaintext keys must never be logged, persisted to disk, embedded in URLs, stored in `localStorage`/`sessionStorage`, or returned in error payloads.
+2. **Encryption:** Encrypt credentials using `src/infra/security/vault.ts` (AES-256-GCM). Never introduce secondary cryptographic wrappers.
+3. **Log Redaction:** All logger outputs must pass through `redactSensitiveData`. When introducing new credential shapes, implement corresponding regex redaction patterns accompanied by automated unit tests.
+
+---
+
+## 🗣️ OUTPUT PROTOCOL
+
+Keep prose to an absolute minimum. No pleasantries, no request summaries, no emojis.
+Upon completing a phase, output **exactly** this report format:
+
+```
+PHASE <n> COMPLETE
+Files created:  <paths, one per line, or "none">
+Files modified: <paths, one per line, or "none">
+Verify:         <the exact command you ran> → PASS | FAIL (<n> failures)
+Deviations:     <one line each, or "none">
+Next:           Phase <n+1>
+
+```
+
+Append the completion status line to `docs/PROGRESS.md` and **immediately stop**. Do not proceed to the next phase without instruction.
