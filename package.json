@@ -8,6 +8,8 @@
     "goalroute": "./dist/cli/index.js"
   },
   "scripts": {
+    "typecheck": "tsc --noEmit",
+    "verify": "npm run typecheck && npm run build && npm test",
     "build": "tsc",
     "build:web": "tsc && vite build",
     "clean": "rimraf dist",
