@@ -443,6 +443,14 @@ export class GatewayService extends EventEmitter {
           cost_usd: 0,
           error_code: null,
           decision_trace: JSON.stringify(redactSensitiveData(decisionTrace)),
+          account_id: null,
+          api_key_id: null,
+          provider_slug: step.providerSlug,
+          model_name: step.modelName,
+          route_protocol: step.providerProtocol,
+          is_stream: request.stream ? 'true' : 'false',
+          client_name: clientName,
+          trace_id: traceId,
         });
 
         const promptTokens = oaiResponse.usage?.prompt_tokens || 0;
@@ -579,6 +587,14 @@ export class GatewayService extends EventEmitter {
       cost_usd: 0,
       error_code: 'ALL_TARGETS_EXHAUSTED',
       decision_trace: JSON.stringify(redactSensitiveData(decisionTrace)),
+account_id: null,
+       api_key_id: null,
+       provider_slug: null,
+       model_name: null,
+       route_protocol: null,
+       is_stream: request.stream ? 'true' : 'false',
+       client_name: clientName,
+       trace_id: traceId,
     });
 
     this.emitLogEvent({
@@ -856,6 +872,14 @@ export class GatewayService extends EventEmitter {
               cost_usd: 0,
               error_code: null,
               decision_trace: JSON.stringify(redactSensitiveData(decisionTrace)),
+account_id: null,
+api_key_id: null,
+provider_slug: step.providerSlug,
+model_name: step.modelName,
+route_protocol: step.providerProtocol,
+is_stream: 'true',
+client_name: clientName,
+trace_id: traceId,
             });
 
             const isFallback = decisionTrace.some((t) => t.status === 'attempted_failed') || decisionTrace.length > 1;
@@ -1008,6 +1032,14 @@ export class GatewayService extends EventEmitter {
       cost_usd: 0,
       error_code: 'ALL_TARGETS_EXHAUSTED',
       decision_trace: JSON.stringify(redactSensitiveData(decisionTrace)),
+      account_id: null,
+      api_key_id: null,
+      provider_slug: null,
+      model_name: null,
+      route_protocol: null,
+      is_stream: request.stream ? 'true' : 'false',
+      client_name: clientName,
+      trace_id: traceId,
     });
 
     this.emitLogEvent({

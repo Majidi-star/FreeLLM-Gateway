@@ -36,12 +36,7 @@ import { OpenAIChatRequest } from '../domain/translation/types.js';
 import { generateId } from '../shared/ids.js';
 import { AppError } from '../shared/errors.js';
 
-function safeCompareTokens(provided: string, expected: string): boolean {
-  if (!provided || !expected) return false;
-  const hashA = crypto.createHash('sha256').update(provided).digest();
-  const hashB = crypto.createHash('sha256').update(expected).digest();
-  return crypto.timingSafeEqual(hashA, hashB);
-}
+import { safeCompareTokens } from '../infra/security/constantTime.js';
 
 let activeEndpointsService: MultiPortServerService | null = null;
 
