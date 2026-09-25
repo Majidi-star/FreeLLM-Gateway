@@ -218,7 +218,15 @@ export class GatewayService extends EventEmitter {
           )
         : 0;
 
-      const transaction = db.transaction(() => {
+      const runInTxn = (fn: () => void) => {
+        if (db && typeof db.transaction === 'function') {
+          db.transaction(fn)();
+        } else {
+          fn();
+        }
+      };
+
+      runInTxn(() => {
         // Log to request_logs
         this.logRepo.log({
           pool_id: fact.poolId,
@@ -265,7 +273,6 @@ export class GatewayService extends EventEmitter {
           fallbackUsed: fact.fallbackUsed,
         });
       });
-      transaction();
     } catch (err) {
       logger.error({ err }, 'telemetry write failed');
     }
@@ -1151,6 +1158,10 @@ export class GatewayService extends EventEmitter {
             latencyMs: 0,
             isFallback: true,
             candidateTrace: [...decisionTrace],
+            accountId: ctx?.accountId ?? null,
+            apiKeyId: ctx?.apiKeyId ?? null,
+            costUsd: 0,
+            ttftMs: null,
           });
           logger.warn({ connectionId: conn.id, error: err.message }, 'Credential expired (401/403), connection status updated to expired');
           continue;
@@ -1194,6 +1205,10 @@ export class GatewayService extends EventEmitter {
           latencyMs: 0,
           isFallback: true,
           candidateTrace: [...decisionTrace],
+          accountId: ctx?.accountId ?? null,
+          apiKeyId: ctx?.apiKeyId ?? null,
+          costUsd: 0,
+          ttftMs: null,
         });
 
         logger.warn({ connectionId: conn.id, error: err.message }, 'Target stream dispatch failed, falling back to next step');

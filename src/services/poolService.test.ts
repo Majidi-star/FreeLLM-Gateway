@@ -47,6 +47,7 @@ describe('PoolService', () => {
       base_url: 'https://api.openai.com/v1',
       auth_type: 'api_key',
       protocol: 'openai',
+      docs_url: null,
       capabilities: JSON.stringify({ vision: true }),
       is_active: 1,
     });
@@ -68,8 +69,13 @@ describe('PoolService', () => {
       model_name: 'gpt-4o',
       display_name: 'GPT-4o',
       context_window: 128000,
+      supports_tools: 1,
+      supports_vision: 1,
       cost_input_per_1k: 0.005,
       cost_output_per_1k: 0.015,
+      bench_tps: null,
+      bench_ttft_ms: null,
+      bench_p95_latency_ms: null,
       is_active: 1,
       task_fitness: JSON.stringify({ coding_agent: 0.95 }),
     });

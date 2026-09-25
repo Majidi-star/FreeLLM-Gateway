@@ -157,7 +157,9 @@ describe('Multi-Port Gateway Server (live bindings)', () => {
   });
 
   it('serves OpenAI-compatible payloads on the dedicated OpenAI port', async () => {
-    const res = await fetch(`http://127.0.0.1:${openaiPort}/v1/models`);
+    const res = await fetch(`http://127.0.0.1:${openaiPort}/v1/models`, {
+      headers: { connection: 'close' },
+    });
     expect(res.status).toBe(200);
     const body = (await res.json()) as { object: string; data: Array<{ id: string; object: string }> };
     expect(body.object).toBe('list');
@@ -169,7 +171,7 @@ describe('Multi-Port Gateway Server (live bindings)', () => {
   it('serves Anthropic-compatible payloads on the dedicated Anthropic port', async () => {
     const res = await fetch(`http://127.0.0.1:${anthropicPort}/v1/messages`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', connection: 'close' },
       body: JSON.stringify({ model: 'm', max_tokens: 64, messages: [{ role: 'user', content: 'hi' }] }),
     });
     // With no routing pools configured, the translated dispatch fails with NO_ACTIVE_POOLS —
@@ -180,7 +182,9 @@ describe('Multi-Port Gateway Server (live bindings)', () => {
   });
 
   it('serves the native gateway health route on the native port', async () => {
-    const res = await fetch(`http://127.0.0.1:${nativePort}/api/v1/health`);
+    const res = await fetch(`http://127.0.0.1:${nativePort}/api/v1/health`, {
+      headers: { connection: 'close' },
+    });
     expect(res.status).toBe(200);
     const body = (await res.json()) as { status: string };
     expect(body.status).toBe('ok');
@@ -204,7 +208,9 @@ describe('Multi-Port Gateway Server (live bindings)', () => {
     expect(await tcpFetchRefused(openaiPort)).toBe(true);
 
     // New port must serve OpenAI traffic.
-    const modelsRes = await fetch(`http://127.0.0.1:${newOpenaiPort}/v1/models`);
+    const modelsRes = await fetch(`http://127.0.0.1:${newOpenaiPort}/v1/models`, {
+      headers: { connection: 'close' },
+    });
     expect(modelsRes.status).toBe(200);
 
     openaiPort = newOpenaiPort;

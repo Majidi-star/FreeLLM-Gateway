@@ -86,7 +86,7 @@ export interface AccountOverview {
   };
 }
 
-interface Filters {
+export interface Filters {
   accountId?: string;
   apiKeyId?: string;
   poolId?: string;

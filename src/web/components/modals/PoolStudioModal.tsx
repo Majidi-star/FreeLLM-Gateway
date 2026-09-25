@@ -135,7 +135,7 @@ export const PoolStudioModal: React.FC<PoolStudioModalProps> = ({ isOpen, onClos
 
   const fetchProvidersAndModels = async () => {
     const adminToken = getAdminToken();
-    const headers = adminToken ? { authorization: `Bearer ${adminToken}` } : {};
+    const headers: Record<string, string> = adminToken ? { authorization: `Bearer ${adminToken}` } : {};
 
     try {
       const [provRes, catRes] = await Promise.all([
@@ -251,7 +251,7 @@ export const PoolStudioModal: React.FC<PoolStudioModalProps> = ({ isOpen, onClos
       if (onPoolsUpdated) onPoolsUpdated();
     } catch (e: any) {
       setError(e.message || 'Error saving pool options');
-    } fontually {
+    } finally {
       setSaving(false);
     }
   };
