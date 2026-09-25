@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Activity, Zap, Cpu, ArrowUpRight, CheckCircle2, AlertTriangle, Sparkles, Sliders, ChevronRight, ChevronDown, Network, Copy, Check } from 'lucide-react';
+import { Activity, Zap, Cpu, ArrowUpRight, CheckCircle2, AlertTriangle, Sparkles, Sliders, ChevronRight, ChevronDown, Network, Copy, Check, Layers } from 'lucide-react';
 import { DecisionTrace } from '../drawers/DecisionInspectorDrawer.js';
 import { GlossaryTerm } from '../common/GlossaryTerm.js';
 import { EndpointsManager } from '../settings/EndpointsManager.js';
 
 interface CockpitDashboardProps {
   onOpenGoalStudio: () => void;
+  onOpenPoolStudio?: () => void;
   onSelectTrace: (trace: DecisionTrace) => void;
 }
 
@@ -75,7 +76,7 @@ const formatContextWindow = (cw: number): string => {
   return `${Math.round(cw / 1000)}k`;
 };
 
-export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalStudio, onSelectTrace }) => {
+export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalStudio, onOpenPoolStudio, onSelectTrace }) => {
   const [activeSetupPreset, setActiveSetupPreset] = useState<'standard' | 'high_perf' | 'cost_saver' | 'reasoning'>('standard');
   const [traces, setTraces] = useState<DecisionTrace[]>([]);
   const [activePools, setActivePools] = useState(0);
@@ -399,13 +400,24 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <label className="text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">1-Click Setup Presets</label>
-          <button
-            onClick={onOpenGoalStudio}
-            className="text-xs font-semibold text-[var(--accent-primary)] hover:underline flex items-center gap-1"
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Customize Goal Studio Constraints →</span>
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={onOpenGoalStudio}
+              className="text-xs font-semibold text-purple-400 hover:underline flex items-center gap-1"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Goal Studio →</span>
+            </button>
+            {onOpenPoolStudio && (
+              <button
+                onClick={onOpenPoolStudio}
+                className="text-xs font-semibold text-indigo-400 hover:underline flex items-center gap-1 border-l border-[var(--border-subtle)] pl-3"
+              >
+                <Layers className="w-3.5 h-3.5" />
+                <span>Pool Studio & Routing →</span>
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

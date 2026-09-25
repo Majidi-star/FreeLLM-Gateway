@@ -22,6 +22,11 @@ export interface RequestLogRecord {
   is_stream: string | null;
   client_name: string | null;
   trace_id: string | null;
+  ttft_ms: number | null;
+  attempt_count: number | null;
+  fallback_used: number | null;
+  tokens_cached: number | null;
+  tokens_reasoning: number | null;
   created_at: number;
 }
 
@@ -30,20 +35,21 @@ export class RequestLogRepository {
   private findByIdStmt: any;
   private purgeStmt: any;
   constructor(private db: Database.Database) {
-    this.logStmt = this.db.prepare(`INSERT INTO request_logs (id, pool_id, connection_id, model_id, status, latency_ms, tokens_in, tokens_out, cost_usd, error_code, decision_trace, account_id, api_key_id, provider_slug, model_name, route_protocol, is_stream, client_name, trace_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+    this.logStmt = this.db.prepare(`INSERT INTO request_logs (id, pool_id, connection_id, model_id, status, latency_ms, tokens_in, tokens_out, cost_usd, error_code, decision_trace, account_id, api_key_id, provider_slug, model_name, route_protocol, is_stream, client_name, trace_id, ttft_ms, attempt_count, fallback_used, tokens_cached, tokens_reasoning, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
     this.findByIdStmt = this.db.prepare('SELECT * FROM request_logs WHERE id = ?');
     this.purgeStmt = this.db.prepare('DELETE FROM request_logs WHERE created_at < ?');
   }
 
-  public log(entry: Omit<RequestLogRecord, 'id' | 'created_at'> & { id?: string }): RequestLogRecord {
+  public log(entry: Omit<RequestLogRecord, 'id' | 'created_at'> & { id?: string; created_at?: number }): RequestLogRecord {
     const id = entry.id || generateId('req');
-    const now = Date.now();
+    const createdAt = entry.created_at ?? Date.now();
 
     const stmt = this.db.prepare(`
       INSERT INTO request_logs (
         id, pool_id, connection_id, model_id, status, latency_ms, tokens_in, tokens_out, cost_usd, error_code, decision_trace,
-        account_id, api_key_id, provider_slug, model_name, route_protocol, is_stream, client_name, trace_id, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        account_id, api_key_id, provider_slug, model_name, route_protocol, is_stream, client_name, trace_id,
+        ttft_ms, attempt_count, fallback_used, tokens_cached, tokens_reasoning, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     stmt.run(
@@ -66,10 +72,15 @@ export class RequestLogRepository {
       entry.is_stream || null,
       entry.client_name || null,
       entry.trace_id || null,
-      now
+      entry.ttft_ms ?? null,
+      entry.attempt_count ?? null,
+      entry.fallback_used ?? null,
+      entry.tokens_cached ?? null,
+      entry.tokens_reasoning ?? null,
+      createdAt
     );
 
-    return { ...entry, id, created_at: now };
+    return { ...entry, id, created_at: createdAt };
   }
 
   public query(opts: {
@@ -125,7 +136,7 @@ export class RequestLogRepository {
     // keyset pagination: we need to handle cursor
     let cursorCreatedAt: number | null = null;
     let cursorId: string | null = null;
-    if (opts.cursor !== undefined) {
+    if (opts.cursor != null) {
       const parts = opts.cursor.split(':');
       if (parts.length !== 2) {
         throw new Error('invalid cursor');
@@ -150,7 +161,8 @@ export class RequestLogRepository {
     const rows = stmt.all(...vals) as RequestLogRecord[];
     let nextCursor: string | null = null;
     if (rows.length === limit + 1) {
-      const last = rows.pop()!;
+      rows.pop(); // remove the extra probe item
+      const last = rows[rows.length - 1];
       nextCursor = `${last.created_at}:${last.id}`;
     }
     return { rows, nextCursor };

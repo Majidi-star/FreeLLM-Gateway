@@ -12,6 +12,7 @@ import { PoolRepository } from '../../src/infra/db/repositories/poolRepo.js';
 import { HealthRepository } from '../../src/infra/db/repositories/healthRepo.js';
 import { QuotaRepository } from '../../src/infra/db/repositories/quotaRepo.js';
 import { RequestLogRepository } from '../../src/infra/db/repositories/requestLogRepo.js';
+import { UsageRepository } from '../../src/infra/db/repositories/usageRepo.js';
 import { encryptCredential } from '../../src/infra/security/vault.js';
 import { AppError, AllTargetsExhaustedError } from '../../src/shared/errors.js';
 
@@ -42,7 +43,8 @@ describe('OPERATION IRONCLAD REMEDIATION (R1 - R8)', () => {
       healthRepo = new HealthRepository(db);
       quotaRepo = new QuotaRepository(db);
       logRepo = new RequestLogRepository(db);
-      gateway = new GatewayService(poolRepo, connRepo, modelRepo, provRepo, healthRepo, quotaRepo, logRepo);
+      const usageRepo = new UsageRepository(db);
+      gateway = new GatewayService(poolRepo, connRepo, modelRepo, provRepo, healthRepo, quotaRepo, logRepo, usageRepo);
       locallyExpiredConnectionIds.clear();
     });
 
@@ -103,7 +105,8 @@ describe('OPERATION IRONCLAD REMEDIATION (R1 - R8)', () => {
       healthRepo = new HealthRepository(db);
       quotaRepo = new QuotaRepository(db);
       logRepo = new RequestLogRepository(db);
-      gateway = new GatewayService(poolRepo, connRepo, modelRepo, provRepo, healthRepo, quotaRepo, logRepo);
+      const usageRepo = new UsageRepository(db);
+      gateway = new GatewayService(poolRepo, connRepo, modelRepo, provRepo, healthRepo, quotaRepo, logRepo, usageRepo);
       locallyExpiredConnectionIds.clear();
     });
 

@@ -11,6 +11,7 @@ import { PoolRepository } from '../../src/infra/db/repositories/poolRepo.js';
 import { HealthRepository } from '../../src/infra/db/repositories/healthRepo.js';
 import { QuotaRepository } from '../../src/infra/db/repositories/quotaRepo.js';
 import { RequestLogRepository } from '../../src/infra/db/repositories/requestLogRepo.js';
+import { UsageRepository } from '../../src/infra/db/repositories/usageRepo.js';
 import { GatewayService, breakerRegistry, locallyExpiredConnectionIds } from '../../src/services/gatewayService.js';
 import { encryptCredential } from '../../src/infra/security/vault.js';
 import { callProviderEndpoint, readBoundedBody } from '../../src/infra/http/providerClient.js';
@@ -89,6 +90,7 @@ describe('OPERATION HYPER-PARANOID REMEDIATION REGRESSION SUITE', () => {
       const healthRepo = new HealthRepository(db);
       const quotaRepo = new QuotaRepository(db);
       const logRepo = new RequestLogRepository(db);
+      const usageRepo = new UsageRepository(db);
 
       const prov = providerRepo.upsert({ slug: 'mock_quota_prov', display_name: 'Mock Quota', base_url: 'https://mock.api', protocol: 'openai', auth_type: 'api_key', is_active: 1 });
       const enc = encryptCredential('test_key');
@@ -131,7 +133,7 @@ describe('OPERATION HYPER-PARANOID REMEDIATION REGRESSION SUITE', () => {
         } as Response;
       });
 
-      const gateway = new GatewayService(poolRepo, connectionRepo, modelRepo, providerRepo, healthRepo, quotaRepo, logRepo);
+      const gateway = new GatewayService(poolRepo, connectionRepo, modelRepo, providerRepo, healthRepo, quotaRepo, logRepo, usageRepo);
 
       // Dispatch 10 concurrent requests requesting 1,000 tokens each
       const reqPayload = { model: 'm_quota', messages: [{ role: 'user', content: 'hi' }], max_tokens: 1000 };
@@ -159,6 +161,7 @@ describe('OPERATION HYPER-PARANOID REMEDIATION REGRESSION SUITE', () => {
       const healthRepo = new HealthRepository(db);
       const quotaRepo = new QuotaRepository(db);
       const logRepo = new RequestLogRepository(db);
+      const usageRepo = new UsageRepository(db);
 
       const prov = providerRepo.upsert({ slug: 'mock_ho_prov', display_name: 'Mock HO', base_url: 'https://mock.api', protocol: 'openai', auth_type: 'api_key', is_active: 1 });
       const enc = encryptCredential('test_key');
@@ -192,7 +195,7 @@ describe('OPERATION HYPER-PARANOID REMEDIATION REGRESSION SUITE', () => {
         } as Response;
       });
 
-      const gateway = new GatewayService(poolRepo, connectionRepo, modelRepo, providerRepo, healthRepo, quotaRepo, logRepo);
+      const gateway = new GatewayService(poolRepo, connectionRepo, modelRepo, providerRepo, healthRepo, quotaRepo, logRepo, usageRepo);
 
       // Fire 20 concurrent requests simultaneously
       const results = await Promise.allSettled(
@@ -252,6 +255,7 @@ describe('OPERATION HYPER-PARANOID REMEDIATION REGRESSION SUITE', () => {
       const healthRepo = new HealthRepository(db);
       const quotaRepo = new QuotaRepository(db);
       const logRepo = new RequestLogRepository(db);
+      const usageRepo = new UsageRepository(db);
 
       const prov = providerRepo.upsert({ slug: 'corrupt_prov', display_name: 'Corrupt Prov', base_url: 'https://corrupt.api', protocol: 'openai', auth_type: 'api_key', is_active: 1 });
       const enc = encryptCredential('test_key');
@@ -283,7 +287,7 @@ describe('OPERATION HYPER-PARANOID REMEDIATION REGRESSION SUITE', () => {
         text: async () => JSON.stringify({ id: 'chatcmpl-corrupt-test', choices: [{ message: { content: 'hello' } }] }),
       } as Response);
 
-      const gateway = new GatewayService(poolRepo, connectionRepo, modelRepo, providerRepo, healthRepo, quotaRepo, logRepo);
+      const gateway = new GatewayService(poolRepo, connectionRepo, modelRepo, providerRepo, healthRepo, quotaRepo, logRepo, usageRepo);
 
       const res = await gateway.dispatch(pool.id, { model: 'm_corrupt', messages: [{ role: 'user', content: 'hi' }] });
       expect(res.response.id).toBe('chatcmpl-corrupt-test');

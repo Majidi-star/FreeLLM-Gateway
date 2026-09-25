@@ -99,6 +99,8 @@ describe('Quota Engine & Logging Security', () => {
 
       const mockLogRepo = { log: vi.fn() };
 
+      const mockUsageRepo = { record: vi.fn() };
+
       vi.spyOn(globalThis, 'fetch').mockResolvedValue({
         ok: true,
         status: 200,
@@ -113,7 +115,8 @@ describe('Quota Engine & Logging Security', () => {
         mockProviderRepo as any,
         mockHealthRepo as any,
         mockQuotaRepo as any,
-        mockLogRepo as any
+        mockLogRepo as any,
+        mockUsageRepo as any
       );
 
       const res = await gatewayService.dispatch('pool_quota', { model: 'gpt-4o', messages: [{ role: 'user', content: 'hello' }] });

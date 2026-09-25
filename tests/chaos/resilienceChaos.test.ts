@@ -10,6 +10,7 @@ import { PoolRepository } from '../../src/infra/db/repositories/poolRepo.js';
 import { HealthRepository } from '../../src/infra/db/repositories/healthRepo.js';
 import { QuotaRepository } from '../../src/infra/db/repositories/quotaRepo.js';
 import { RequestLogRepository } from '../../src/infra/db/repositories/requestLogRepo.js';
+import { UsageRepository } from '../../src/infra/db/repositories/usageRepo.js';
 import { GatewayService } from '../../src/services/gatewayService.js';
 import { AllTargetsExhaustedError } from '../../src/shared/errors.js';
 
@@ -23,6 +24,7 @@ describe('Chaos & Resilience Test Suite', () => {
   let healthRepo: HealthRepository;
   let quotaRepo: QuotaRepository;
   let logRepo: RequestLogRepository;
+  let usageRepo: UsageRepository;
   let gatewayService: GatewayService;
 
   beforeEach(() => {
@@ -38,6 +40,7 @@ describe('Chaos & Resilience Test Suite', () => {
     healthRepo = new HealthRepository(db);
     quotaRepo = new QuotaRepository(db);
     logRepo = new RequestLogRepository(db);
+    usageRepo = new UsageRepository(db);
 
     gatewayService = new GatewayService(
       poolRepo,
@@ -46,7 +49,8 @@ describe('Chaos & Resilience Test Suite', () => {
       providerRepo,
       healthRepo,
       quotaRepo,
-      logRepo
+      logRepo,
+      usageRepo
     );
   });
 

@@ -7,6 +7,7 @@ import { HealthRepository } from '../infra/db/repositories/healthRepo.js';
 import { QuotaRepository } from '../infra/db/repositories/quotaRepo.js';
 import { RequestLogRepository } from '../infra/db/repositories/requestLogRepo.js';
 import { GoalRepository } from '../infra/db/repositories/goalRepo.js';
+import { UsageRepository } from '../infra/db/repositories/usageRepo.js';
 import { CircuitBreaker } from '../domain/resilience/circuitBreaker.js';
 import { calculateCooldownMs } from '../domain/resilience/cooldown.js';
 import { computeSlidingWindowUsage, getWindowStart, wouldQuotaExceed } from '../domain/quota/slidingWindow.js';
@@ -22,6 +23,7 @@ import { AllTargetsExhaustedError, NotFoundError } from '../shared/errors.js';
 import { DecisionTraceEntry } from '../shared/types.js';
 import { PoolStepInfo } from '../domain/routing/types.js';
 import { logger, redactSensitiveData } from '../infra/logger.js';
+import { computeCostUsd, estimateTokens } from '../domain/pricing/costCalculator.js';
 
 export interface DispatchResult {
   response: OpenAIChatResponse;
@@ -36,6 +38,13 @@ export interface DispatchStreamResult {
   selectedStep: PoolStepInfo;
   latencyMs: number;
 }
+
+export type DispatchCtx = {
+  accountId: string | null;
+  apiKeyId: string | null;
+  protocol: 'openai' | 'anthropic' | 'mcp' | 'native';
+  clientName?: string;
+};
 
 export const breakerRegistry = new Map<string, CircuitBreaker>();
 
@@ -142,6 +151,7 @@ export class GatewayService extends EventEmitter {
     private healthRepo: HealthRepository,
     private quotaRepo: QuotaRepository,
     private logRepo: RequestLogRepository,
+    private usageRepo: UsageRepository,
     private goalRepo?: GoalRepository
   ) {
     super();
@@ -157,15 +167,134 @@ export class GatewayService extends EventEmitter {
     latencyMs: number;
     isFallback: boolean;
     candidateTrace: DecisionTraceEntry[];
+    accountId: string | null;
+    apiKeyId: string | null;
+    costUsd: number;
+    ttftMs: number | null;
   }) {
     const timestamp = Math.max(Date.now(), this.lastLogTimestamp + 1);
     this.lastLogTimestamp = timestamp;
     this.emit('log', { ...payload, timestamp });
   }
 
-  public async dispatch(poolId: string, request: OpenAIChatRequest, signal?: AbortSignal): Promise<DispatchResult> {
+  /**
+   * Records the outcome of a dispatch to the request log and usage rollups.
+   * This method must never throw into the request path — any failure is logged and swallowed.
+   * Dropping a metric must not fail a served request.
+   */
+  private recordOutcome(fact: {
+    poolId: string;
+    connectionId: string | null;
+    modelId: string | null;
+    providerSlug: string | null;
+    modelName: string | null;
+    status: 'success' | 'failed' | 'timeout';
+    latencyMs: number;
+    ttftMs: number | null;
+    tokensIn: number;
+    tokensOut: number;
+    tokensCached: number;
+    tokensReasoning: number;
+    errorCode: string | null;
+    finishReason: string | null;
+    decisionTrace: DecisionTraceEntry[];
+    attemptCount: number;
+    fallbackUsed: boolean;
+    isStream: boolean;
+    traceId: string;
+    clientName: string;
+    ctx: DispatchCtx;
+  }): void {
+    let costUsd = 0;
+    try {
+      const db = this.logRepo['db'] as any; // Access the database from the logRepo
+      // Look up the model for pricing
+      const modelRecord = fact.modelId ? this.modelRepo.findById(fact.modelId) : null;
+      costUsd = modelRecord
+        ? computeCostUsd(
+            { cost_input_per_1k: modelRecord.cost_input_per_1k, cost_output_per_1k: modelRecord.cost_output_per_1k },
+            fact.tokensIn,
+            fact.tokensOut
+          )
+        : 0;
+
+      const transaction = db.transaction(() => {
+        // Log to request_logs
+        this.logRepo.log({
+          pool_id: fact.poolId,
+          connection_id: fact.connectionId,
+          model_id: fact.modelId,
+          status: fact.status,
+          latency_ms: fact.latencyMs,
+          tokens_in: fact.tokensIn,
+          tokens_out: fact.tokensOut,
+          cost_usd: costUsd,
+          error_code: fact.errorCode,
+          decision_trace: JSON.stringify(redactSensitiveData(fact.decisionTrace)),
+          account_id: fact.ctx.accountId,
+          api_key_id: fact.ctx.apiKeyId,
+          provider_slug: fact.providerSlug,
+          model_name: fact.modelName,
+          route_protocol: fact.ctx.protocol,
+          is_stream: fact.isStream ? 'true' : 'false',
+          client_name: fact.clientName,
+          trace_id: fact.traceId,
+          ttft_ms: fact.ttftMs,
+          attempt_count: fact.attemptCount,
+          fallback_used: fact.fallbackUsed ? 1 : 0,
+          tokens_cached: fact.tokensCached,
+          tokens_reasoning: fact.tokensReasoning,
+        });
+
+        // Record to usage rollups
+        this.usageRepo.record({
+          at: Date.now(),
+          accountId: fact.ctx.accountId,
+          apiKeyId: fact.ctx.apiKeyId,
+          poolId: fact.poolId,
+          providerSlug: fact.providerSlug,
+          modelName: fact.modelName,
+          status: fact.status,
+          tokensIn: fact.tokensIn,
+          tokensOut: fact.tokensOut,
+          tokensCached: fact.tokensCached,
+          tokensReasoning: fact.tokensReasoning,
+          costUsd,
+          latencyMs: fact.latencyMs,
+          ttftMs: fact.ttftMs,
+          fallbackUsed: fact.fallbackUsed,
+        });
+      });
+      transaction();
+    } catch (err) {
+      logger.error({ err }, 'telemetry write failed');
+    }
+
+    // Emit the log event for SSE listeners (UI)
+    this.emitLogEvent({
+      traceId: fact.traceId,
+      timestamp: Date.now(),
+      clientName: fact.clientName,
+      provider: fact.providerSlug ?? 'unknown',
+      model: fact.modelName ?? 'unknown',
+      tokens: {
+        prompt: fact.tokensIn,
+        completion: fact.tokensOut,
+        total: fact.tokensIn + fact.tokensOut,
+      },
+      latencyMs: fact.latencyMs,
+      isFallback: fact.fallbackUsed,
+      candidateTrace: fact.decisionTrace,
+      accountId: fact.ctx.accountId,
+      apiKeyId: fact.ctx.apiKeyId,
+      costUsd: costUsd,
+      ttftMs: fact.ttftMs,
+    });
+  }
+
+  public async dispatch(poolId: string, request: OpenAIChatRequest, signal?: AbortSignal, ctx?: DispatchCtx): Promise<DispatchResult> {
     const traceId = (request as any).traceId || generateId('tr');
-    const clientName = (request as any).user || 'GoalRoute Client';
+    const clientName = ctx?.clientName ?? ((request as any).user || 'GoalRoute Client');
 
     const pool = this.poolRepo.findPoolById(poolId);
     if (!pool || !pool.is_active) {
@@ -431,46 +560,35 @@ export class GatewayService extends EventEmitter {
           reason: `Successfully served request via ${step.providerSlug}/${step.modelName}`,
         });
 
-        // Log Request
-        this.logRepo.log({
-          pool_id: poolId,
-          connection_id: conn.id,
-          model_id: step.modelId,
-          status: 'success',
-          latency_ms: httpRes.latencyMs,
-          tokens_in: oaiResponse.usage?.prompt_tokens || 0,
-          tokens_out: oaiResponse.usage?.completion_tokens || 0,
-          cost_usd: 0,
-          error_code: null,
-          decision_trace: JSON.stringify(redactSensitiveData(decisionTrace)),
-          account_id: null,
-          api_key_id: null,
-          provider_slug: step.providerSlug,
-          model_name: step.modelName,
-          route_protocol: step.providerProtocol,
-          is_stream: request.stream ? 'true' : 'false',
-          client_name: clientName,
-          trace_id: traceId,
-        });
-
         const promptTokens = oaiResponse.usage?.prompt_tokens || 0;
         const completionTokens = oaiResponse.usage?.completion_tokens || 0;
-        const isFallback = decisionTrace.some((t) => t.status === 'attempted_failed') || decisionTrace.length > 1;
+        const attemptCount = decisionTrace.filter((t) => t.status !== 'skipped').length;
+        const fallbackUsed = decisionTrace.some((t) => t.status === 'attempted_failed');
+        const defaultCtx: DispatchCtx = { accountId: null, apiKeyId: null, protocol: 'openai', clientName };
+        const ctxToUse = ctx ?? defaultCtx;
 
-        this.emitLogEvent({
-          traceId,
-          timestamp: Date.now(),
-          clientName,
-          provider: step.providerSlug,
-          model: step.modelName,
-          tokens: {
-            prompt: promptTokens,
-            completion: completionTokens,
-            total: promptTokens + completionTokens,
-          },
+        this.recordOutcome({
+          poolId,
+          connectionId: conn.id,
+          modelId: step.modelId,
+          providerSlug: step.providerSlug,
+          modelName: step.modelName,
+          status: 'success',
           latencyMs: httpRes.latencyMs,
-          isFallback,
-          candidateTrace: [...decisionTrace],
+          ttftMs: null,
+          tokensIn: promptTokens,
+          tokensOut: completionTokens,
+          tokensCached: 0,
+          tokensReasoning: 0,
+          errorCode: null,
+          finishReason: oaiResponse.choices?.[0]?.finish_reason ?? null,
+          decisionTrace,
+          attemptCount,
+          fallbackUsed,
+          isStream: false,
+          traceId,
+          clientName,
+          ctx: ctxToUse,
         });
 
         return {
@@ -526,6 +644,10 @@ export class GatewayService extends EventEmitter {
             latencyMs: 0,
             isFallback: true,
             candidateTrace: [...decisionTrace],
+            accountId: ctx?.accountId ?? null,
+            apiKeyId: ctx?.apiKeyId ?? null,
+            costUsd: 0,
+            ttftMs: null,
           });
           logger.warn({ connectionId: conn.id, error: err.message }, 'Credential expired (401/403), connection status updated to expired');
           continue;
@@ -569,6 +691,10 @@ export class GatewayService extends EventEmitter {
           latencyMs: 0,
           isFallback: true,
           candidateTrace: [...decisionTrace],
+          accountId: ctx?.accountId ?? null,
+          apiKeyId: ctx?.apiKeyId ?? null,
+          costUsd: 0,
+          ttftMs: null,
         });
 
         logger.warn({ connectionId: conn.id, error: err.message }, 'Target dispatch failed, falling back to next step');
@@ -576,45 +702,41 @@ export class GatewayService extends EventEmitter {
     }
 
     // All steps exhausted
-    this.logRepo.log({
-      pool_id: poolId,
-      connection_id: null,
-      model_id: null,
-      status: 'failed',
-      latency_ms: 0,
-      tokens_in: 0,
-      tokens_out: 0,
-      cost_usd: 0,
-      error_code: 'ALL_TARGETS_EXHAUSTED',
-      decision_trace: JSON.stringify(redactSensitiveData(decisionTrace)),
-account_id: null,
-       api_key_id: null,
-       provider_slug: null,
-       model_name: null,
-       route_protocol: null,
-       is_stream: request.stream ? 'true' : 'false',
-       client_name: clientName,
-       trace_id: traceId,
-    });
+    const attemptCount = decisionTrace.filter((t) => t.status !== 'skipped').length;
+    const fallbackUsed = decisionTrace.some((t) => t.status === 'attempted_failed');
+    const defaultCtx: DispatchCtx = { accountId: null, apiKeyId: null, protocol: 'openai', clientName };
+    const ctxToUse = ctx ?? defaultCtx;
 
-    this.emitLogEvent({
-      traceId,
-      timestamp: Date.now(),
-      clientName,
-      provider: 'unknown',
-      model: 'unknown',
-      tokens: { prompt: 0, completion: 0, total: 0 },
+    this.recordOutcome({
+      poolId,
+      connectionId: null,
+      modelId: null,
+      providerSlug: null,
+      modelName: null,
+      status: 'failed',
       latencyMs: 0,
-      isFallback: true,
-      candidateTrace: [...decisionTrace],
+      ttftMs: null,
+      tokensIn: 0,
+      tokensOut: 0,
+      tokensCached: 0,
+      tokensReasoning: 0,
+      errorCode: 'ALL_TARGETS_EXHAUSTED',
+      finishReason: null,
+      decisionTrace,
+      attemptCount,
+      fallbackUsed,
+      isStream: false,
+      traceId,
+      clientName,
+      ctx: ctxToUse,
     });
 
     throw new AllTargetsExhaustedError(decisionTrace);
   }
 
-  public async dispatchStream(poolId: string, request: OpenAIChatRequest, signal?: AbortSignal): Promise<DispatchStreamResult> {
+  public async dispatchStream(poolId: string, request: OpenAIChatRequest, signal?: AbortSignal, ctx?: DispatchCtx): Promise<DispatchStreamResult> {
     const traceId = (request as any).traceId || generateId('tr');
-    const clientName = (request as any).user || 'GoalRoute Client';
+    const clientName = ctx?.clientName ?? ((request as any).user || 'GoalRoute Client');
 
     const pool = this.poolRepo.findPoolById(poolId);
     if (!pool || !pool.is_active) {
@@ -850,56 +972,32 @@ account_id: null,
           reason: `Successfully served request via ${step.providerSlug}/${step.modelName}`,
         });
 
+        // Variables for streaming telemetry
+        let ttftMs: number | null = null;
+        let accumulatedText = '';
+        let promptTokens = 0;
+        let completionTokens = 0;
+        let usageReceived = false;
+        const streamStartTime = Date.now();
+        const MAX_ACCUMULATED_TEXT = 256 * 1024; // 256KB cap
+
         const sseStream = transformToOpenAISSEStream(
           httpRes.stream,
           step.providerProtocol,
           step.modelName,
           (usage) => {
+            // Provider reported usage — capture it for recordOutcome
+            usageReceived = true;
+            promptTokens = usage.promptTokens;
+            completionTokens = usage.completionTokens;
             try {
               settleStreamQuota(usage.totalTokens, true);
             } catch (recErr: any) {
               logger.warn({ connectionId: conn.id, error: recErr.message }, 'Failed to record quota usage');
             }
-
-            this.logRepo.log({
-              pool_id: poolId,
-              connection_id: conn.id,
-              model_id: step.modelId,
-              status: 'success',
-              latency_ms: httpRes.latencyMs,
-              tokens_in: usage.promptTokens,
-              tokens_out: usage.completionTokens,
-              cost_usd: 0,
-              error_code: null,
-              decision_trace: JSON.stringify(redactSensitiveData(decisionTrace)),
-account_id: null,
-api_key_id: null,
-provider_slug: step.providerSlug,
-model_name: step.modelName,
-route_protocol: step.providerProtocol,
-is_stream: 'true',
-client_name: clientName,
-trace_id: traceId,
-            });
-
-            const isFallback = decisionTrace.some((t) => t.status === 'attempted_failed') || decisionTrace.length > 1;
-            this.emitLogEvent({
-              traceId,
-              timestamp: Date.now(),
-              clientName,
-              provider: step.providerSlug,
-              model: step.modelName,
-              tokens: {
-                prompt: usage.promptTokens,
-                completion: usage.completionTokens,
-                total: usage.totalTokens,
-              },
-              latencyMs: httpRes.latencyMs,
-              isFallback,
-              candidateTrace: [...decisionTrace],
-            });
           },
           () => {
+            // Stream completed successfully
             settleStreamQuota(estimatedTokens, true);
             cb.recordSuccess();
             const snapshot = cb.getSnapshot();
@@ -912,6 +1010,7 @@ trace_id: traceId,
             });
           },
           (err) => {
+            // Stream errored
             settleStreamQuota(undefined, false);
             if (signal?.aborted) {
               cb.releaseProbe();
@@ -934,8 +1033,88 @@ trace_id: traceId,
           }
         );
 
+        // Wrap the stream in a generator that captures TTFT, accumulates text for fallback,
+        // and calls recordOutcome in the finally block.
+        const self = this;
+        const wrappedStream = (async function* () {
+          try {
+            for await (const chunk of sseStream) {
+              // Capture TTFT on first chunk
+              if (ttftMs === null) {
+                ttftMs = Date.now() - streamStartTime;
+              }
+              // Accumulate text content for fallback token estimation (cap at 256KB)
+              try {
+                const dataLines = chunk.split('\n');
+                for (const line of dataLines) {
+                  if (line.startsWith('data: ') && line !== 'data: [DONE]') {
+                    const jsonStr = line.slice(6);
+                    const data = JSON.parse(jsonStr);
+                    if (data.choices?.[0]?.delta?.content) {
+                      const content = data.choices[0].delta.content;
+                      if (accumulatedText.length + content.length <= MAX_ACCUMULATED_TEXT) {
+                        accumulatedText += content;
+                      }
+                    }
+                  }
+                }
+              } catch {
+                // Ignore parse errors in telemetry accumulation
+              }
+              yield chunk;
+            }
+          } finally {
+            // Determine tokens: use provider usage if received, else estimate from accumulated text
+            let finalTokensIn = promptTokens;
+            let finalTokensOut = completionTokens;
+            let finishReason: string | null = null;
+            let estimated = false;
+
+            if (!usageReceived) {
+              estimated = true;
+              // Estimate from request messages (prompt) and accumulated text (completion)
+              const promptChars = (request.messages || []).reduce(
+                (acc, m) => acc + (typeof m.content === 'string' ? m.content.length : 0),
+                0
+              );
+              finalTokensIn = Math.ceil(promptChars / 4);
+              finalTokensOut = estimateTokens(accumulatedText);
+              finishReason = 'stop|estimated';
+            }
+
+            const attemptCount = decisionTrace.filter((t) => t.status !== 'skipped').length;
+            const fallbackUsed = decisionTrace.some((t) => t.status === 'attempted_failed');
+            const defaultCtx: DispatchCtx = { accountId: null, apiKeyId: null, protocol: 'openai', clientName };
+            const ctxToUse = ctx ?? defaultCtx;
+
+            self.recordOutcome({
+              poolId,
+              connectionId: conn.id,
+              modelId: step.modelId,
+              providerSlug: step.providerSlug,
+              modelName: step.modelName,
+              status: 'success',
+              latencyMs: httpRes.latencyMs,
+              ttftMs,
+              tokensIn: finalTokensIn,
+              tokensOut: finalTokensOut,
+              tokensCached: 0,
+              tokensReasoning: 0,
+              errorCode: null,
+              finishReason,
+              decisionTrace,
+              attemptCount,
+              fallbackUsed,
+              isStream: true,
+              traceId,
+              clientName,
+              ctx: ctxToUse,
+            });
+          }
+        })();
+
         return {
-          stream: sseStream,
+          stream: wrappedStream,
           decisionTrace,
           selectedStep: step,
           latencyMs: httpRes.latencyMs,
@@ -1021,37 +1200,34 @@ trace_id: traceId,
       }
     }
 
-    this.logRepo.log({
-      pool_id: poolId,
-      connection_id: null,
-      model_id: null,
-      status: 'failed',
-      latency_ms: 0,
-      tokens_in: 0,
-      tokens_out: 0,
-      cost_usd: 0,
-      error_code: 'ALL_TARGETS_EXHAUSTED',
-      decision_trace: JSON.stringify(redactSensitiveData(decisionTrace)),
-      account_id: null,
-      api_key_id: null,
-      provider_slug: null,
-      model_name: null,
-      route_protocol: null,
-      is_stream: request.stream ? 'true' : 'false',
-      client_name: clientName,
-      trace_id: traceId,
-    });
+    // All steps exhausted (streaming)
+    const attemptCount = decisionTrace.filter((t) => t.status !== 'skipped').length;
+    const fallbackUsed = decisionTrace.some((t) => t.status === 'attempted_failed');
+    const defaultCtx: DispatchCtx = { accountId: null, apiKeyId: null, protocol: 'openai', clientName };
+    const ctxToUse = ctx ?? defaultCtx;
 
-    this.emitLogEvent({
-      traceId,
-      timestamp: Date.now(),
-      clientName,
-      provider: 'unknown',
-      model: 'unknown',
-      tokens: { prompt: 0, completion: 0, total: 0 },
+    this.recordOutcome({
+      poolId,
+      connectionId: null,
+      modelId: null,
+      providerSlug: null,
+      modelName: null,
+      status: 'failed',
       latencyMs: 0,
-      isFallback: true,
-      candidateTrace: [...decisionTrace],
+      ttftMs: null,
+      tokensIn: 0,
+      tokensOut: 0,
+      tokensCached: 0,
+      tokensReasoning: 0,
+      errorCode: 'ALL_TARGETS_EXHAUSTED',
+      finishReason: null,
+      decisionTrace,
+      attemptCount,
+      fallbackUsed,
+      isStream: true,
+      traceId,
+      clientName,
+      ctx: ctxToUse,
     });
 
     throw new AllTargetsExhaustedError(decisionTrace);

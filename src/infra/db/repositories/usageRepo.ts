@@ -184,11 +184,11 @@ public query(q: UsageQuery): RollupRow[] {
       WHERE granularity = ?
         AND bucket_start >= ?
         AND bucket_start < ?
-        ${q.accountId ? 'AND account_id = ?' : ''}
-        ${q.apiKeyId ? 'AND api_key_id = ?' : ''}
-        ${q.poolId ? 'AND pool_id = ?' : ''}
-        ${q.providerSlug ? 'AND provider_slug = ?' : ''}
-        ${q.modelName ? 'AND model_name = ?' : ''}
+        ${q.accountId !== undefined ? 'AND account_id = ?' : ''}
+        ${q.apiKeyId !== undefined ? 'AND api_key_id = ?' : ''}
+        ${q.poolId !== undefined ? 'AND pool_id = ?' : ''}
+        ${q.providerSlug !== undefined ? 'AND provider_slug = ?' : ''}
+        ${q.modelName !== undefined ? 'AND model_name = ?' : ''}
       GROUP BY ${groupByCols.join(', ')}
       ORDER BY bucket_start ASC
     `;
@@ -198,11 +198,11 @@ public query(q: UsageQuery): RollupRow[] {
       q.from,
       q.to
     ];
-    if (q.accountId !== undefined) params.push(q.accountId);
-    if (q.apiKeyId !== undefined) params.push(q.apiKeyId);
-    if (q.poolId !== undefined) params.push(q.poolId);
-    if (q.providerSlug !== undefined) params.push(q.providerSlug);
-    if (q.modelName !== undefined) params.push(q.modelName);
+    if (q.accountId !== undefined) params.push(q.accountId ?? '');
+    if (q.apiKeyId !== undefined) params.push(q.apiKeyId ?? '');
+    if (q.poolId !== undefined) params.push(q.poolId ?? '');
+    if (q.providerSlug !== undefined) params.push(q.providerSlug ?? '');
+    if (q.modelName !== undefined) params.push(q.modelName ?? '');
     const stmt = this.db.prepare(sql);
     const rows = stmt.all(...params) as RollupRow[];
     return rows;

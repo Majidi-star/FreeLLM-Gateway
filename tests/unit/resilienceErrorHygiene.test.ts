@@ -95,6 +95,10 @@ describe('Resilience & Error Hygiene', () => {
         log: vi.fn(),
       };
 
+      const mockUsageRepo = {
+        record: vi.fn(),
+      };
+
       vi.spyOn(globalThis, 'fetch').mockResolvedValue({
         ok: false,
         status: 401,
@@ -109,7 +113,8 @@ describe('Resilience & Error Hygiene', () => {
         mockProviderRepo as any,
         mockHealthRepo as any,
         mockQuotaRepo as any,
-        mockLogRepo as any
+        mockLogRepo as any,
+        mockUsageRepo as any
       );
 
       try {

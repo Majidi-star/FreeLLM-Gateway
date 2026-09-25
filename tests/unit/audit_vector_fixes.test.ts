@@ -24,6 +24,7 @@ describe('Vector 3 & Vector 1 Audit Fixes', () => {
       const mockHealthRepo = {} as any;
       const mockQuotaRepo = {} as any;
       const mockLogRepo = {} as any;
+      const mockUsageRepo = { record: vi.fn() } as any;
 
       const gateway = new GatewayService(
         mockPoolRepo,
@@ -32,7 +33,8 @@ describe('Vector 3 & Vector 1 Audit Fixes', () => {
         mockProvRepo,
         mockHealthRepo,
         mockQuotaRepo,
-        mockLogRepo
+        mockLogRepo,
+        mockUsageRepo
       );
 
       const timestamps: number[] = [];

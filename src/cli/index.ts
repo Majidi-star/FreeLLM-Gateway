@@ -11,6 +11,7 @@ import { PoolRepository } from '../infra/db/repositories/poolRepo.js';
 import { HealthRepository } from '../infra/db/repositories/healthRepo.js';
 import { QuotaRepository } from '../infra/db/repositories/quotaRepo.js';
 import { RequestLogRepository } from '../infra/db/repositories/requestLogRepo.js';
+import { UsageRepository } from '../infra/db/repositories/usageRepo.js';
 
 import { ProviderService } from '../services/providerService.js';
 import { CatalogService } from '../catalog/catalogService.js';
@@ -39,12 +40,13 @@ function getServices() {
   const healthRepo = new HealthRepository(db);
   const quotaRepo = new QuotaRepository(db);
   const logRepo = new RequestLogRepository(db);
+  const usageRepo = new UsageRepository(db);
 
   const providerService = new ProviderService(providerRepo, connectionRepo);
   const catalogService = new CatalogService(providerRepo, modelRepo, db);
   const goalService = new GoalService(goalRepo, connectionRepo, providerRepo, modelRepo, healthRepo, quotaRepo);
   const poolService = new PoolService(poolRepo, goalService);
-  const gatewayService = new GatewayService(poolRepo, connectionRepo, modelRepo, providerRepo, healthRepo, quotaRepo, logRepo);
+  const gatewayService = new GatewayService(poolRepo, connectionRepo, modelRepo, providerRepo, healthRepo, quotaRepo, logRepo, usageRepo);
   const simulationService = new SimulationService(poolService, goalService, quotaRepo, connectionRepo, providerRepo, modelRepo);
 
   return {

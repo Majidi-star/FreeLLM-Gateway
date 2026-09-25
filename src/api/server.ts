@@ -20,6 +20,7 @@ import { PoolRepository } from '../infra/db/repositories/poolRepo.js';
 import { HealthRepository } from '../infra/db/repositories/healthRepo.js';
 import { QuotaRepository } from '../infra/db/repositories/quotaRepo.js';
 import { RequestLogRepository } from '../infra/db/repositories/requestLogRepo.js';
+import { UsageRepository } from '../infra/db/repositories/usageRepo.js';
 import { ProviderService } from '../services/providerService.js';
 import { CatalogService } from '../catalog/catalogService.js';
 import { ModelSyncService } from '../catalog/modelSyncService.js';
@@ -29,7 +30,17 @@ import { GatewayService } from '../services/gatewayService.js';
 import { McpService } from '../services/mcpService.js';
 import { MultiPortServerService } from '../services/multiPortServerService.js';
 import { ExternalAgentService } from '../services/externalAgentService.js';
+import { AccountRepository } from '../infra/db/repositories/accountRepo.js';
+import { ApiKeyRepository } from '../infra/db/repositories/apiKeyRepo.js';
+import { AccountService } from '../services/accountService.js';
+import { AuthService } from '../services/authService.js';
+import { TenantRateLimiter } from '../domain/quota/tenantRateLimiter.js';
+import { StatsService } from '../services/statsService.js';
+import { registerAccountRoutes } from './routes/accountRoutes.js';
+import { registerStatsRoutes } from './routes/statsRoutes.js';
+import { buildTrafficAuthHook, buildAdminAuthHook } from './authHooks.js';
 import { ProtocolType, UpdateEndpointsInput } from '../domain/server/types.js';
+import { AuthContext } from '../domain/auth/types.js';
 import { translateAnthropicToOpenAI, translateOpenAIToAnthropic } from '../domain/translation/anthropicProtocol.js';
 import { AnthropicMessagesRequest } from '../domain/translation/anthropicTypes.js';
 import { OpenAIChatRequest } from '../domain/translation/types.js';
@@ -62,26 +73,6 @@ const updateEndpointsSchema = z.object({
     )
     .optional(),
 }) satisfies z.ZodType<UpdateEndpointsInput>;
-
-// Auth hook shared by all dedicated protocol ports (OpenAI / Anthropic / MCP / Native).
-function buildProtocolAuthHook(config: Config) {
-  return async (req: FastifyRequest, reply: FastifyReply) => {
-    const authHeader = req.headers['authorization'];
-    if (authHeader) {
-      const token = authHeader.replace(/^Bearer\s+/i, '').trim();
-      const isValid = safeCompareTokens(token, config.ADMIN_API_TOKEN);
-      if (!isValid) {
-        return reply.status(401).send({ error: { message: 'Unauthorized', type: 'authentication_error' } });
-      }
-    } else {
-      const isDevAllowed =
-        config.NODE_ENV === 'development' && process.env.ALLOW_ANONYMOUS_DEV === 'true';
-      if (!isDevAllowed) {
-        return reply.status(401).send({ error: { message: 'Unauthorized', type: 'authentication_error' } });
-      }
-    }
-  };
-}
 
 // Error handler shared by all dedicated protocol ports.
 async function protocolErrorHandler(error: Error | AppError, req: FastifyRequest, reply: FastifyReply) {
@@ -129,28 +120,46 @@ export async function buildApp() {
   const healthRepo = new HealthRepository(db);
   const quotaRepo = new QuotaRepository(db);
   const logRepo = new RequestLogRepository(db);
+  const usageRepo = new UsageRepository(db);
+  const accountRepo = new AccountRepository(db);
+  const apiKeyRepo = new ApiKeyRepository(db);
 
   // Initialize Services
   const providerService = new ProviderService(providerRepo, connectionRepo, quotaRepo);
   const catalogService = new CatalogService(providerRepo, modelRepo, db);
   const modelSyncService = new ModelSyncService(providerRepo, connectionRepo, modelRepo);
   const goalService = new GoalService(goalRepo, connectionRepo, providerRepo, modelRepo, healthRepo, quotaRepo);
-  const poolService = new PoolService(poolRepo, goalService);
-  const gatewayService = new GatewayService(poolRepo, connectionRepo, modelRepo, providerRepo, healthRepo, quotaRepo, logRepo, goalRepo);
+  const poolService = new PoolService(poolRepo, goalService, modelRepo, providerRepo, connectionRepo);
+  const gatewayService = new GatewayService(poolRepo, connectionRepo, modelRepo, providerRepo, healthRepo, quotaRepo, logRepo, usageRepo, goalRepo);
   const mcpService = new McpService(quotaRepo, healthRepo, connectionRepo, providerRepo, goalService, poolService, providerService);
+  const accountService = new AccountService(accountRepo, apiKeyRepo, poolRepo, goalService, db);
+  const authService = new AuthService(accountRepo, apiKeyRepo);
+  const rateLimiter = new TenantRateLimiter(db);
+  const statsService = new StatsService(usageRepo, logRepo);
+
+  // Resolves the target routing pool for gateway dispatch with auth context.
+  // Precedence: explicit header > key pin > account default > first active pool.
+  const resolvePoolForAuth = (poolIdHeader: string | null, auth: AuthContext | undefined): string => {
+    const candidate = poolIdHeader ?? auth?.pinnedPoolId ?? auth?.defaultPoolId ?? null;
+    if (candidate) {
+      const pool = poolRepo.findPoolById(candidate);
+      if (!pool || !pool.is_active) throw new AppError(`Pool '${candidate}' not found or inactive`, 'POOL_NOT_FOUND', 404);
+      if (auth?.kind === 'account' && pool.account_id && pool.account_id !== auth.accountId) {
+        throw new AppError('Pool does not belong to this account', 'POOL_FORBIDDEN', 403);
+      }
+      if (auth?.kind === 'account' && auth.pinnedPoolId && candidate !== auth.pinnedPoolId) {
+        throw new AppError('This API key is pinned to a specific pool', 'POOL_PINNED', 403);
+      }
+      return candidate;
+    }
+    const pools = poolRepo.listPools().filter(p => p.is_active &&
+      (auth?.kind !== 'account' || !p.account_id || p.account_id === auth.accountId));
+    if (pools.length === 0) throw new AppError('No active pools available for this account.', 'NO_ACTIVE_POOLS', 400);
+    return pools[0].id;
+  };
 
   // Auto-sync catalog on server boot
   catalogService.syncCatalog();
-
-  // Resolves the target routing pool for gateway dispatch (header override, else first active pool).
-  const resolveTargetPool = (poolIdHeader: string | null): string => {
-    if (poolIdHeader) return poolIdHeader;
-    const pools = poolRepo.listPools().filter((p) => p.is_active);
-    if (pools.length === 0) {
-      throw new AppError('No active pools exist. Create a pool first.', 'NO_ACTIVE_POOLS', 400);
-    }
-    return pools[0].id;
-  };
 
   const fastify = Fastify({
     logger: false, // Use our Pino redacting logger
@@ -198,53 +207,17 @@ export async function buildApp() {
     logger.info({ reqId: req.id, method: req.method, url: req.url }, 'Incoming HTTP request');
 
     const url = req.url;
-    const isGetEndpoints = req.method === 'GET' && (url.startsWith('/api/v1/system/endpoints') || url.includes('/system/endpoints'));
-    // Only exempt this from auth when the gateway is not reachable from the network.
-    // Once remote access is on, endpoint topology should not be handed out for free.
-    const isLocalhost = req.ip === '127.0.0.1' || req.ip === '::1' || req.ip === '::ffff:127.0.0.1';
-    if (
-      (isGetEndpoints && !config.REMOTE_ACCESS_ENABLED) ||
-      url.startsWith('/api/v1/health') ||
-      url.startsWith('/api/v1/mcp/settings') ||
-      (url.startsWith('/api/v1/system/token') && isLocalhost)
-    ) {
+
+    // Admin routes: /api/v1/* and /mcp/*
+    if (url.startsWith('/api/v1/') || url.startsWith('/mcp/')) {
+      await buildAdminAuthHook({ config }).call(fastify, req, reply, () => {});
       return;
     }
 
-    if (url.startsWith('/api/v1/') || url.startsWith('/mcp/')) {
-
-      // Extract query token safely (Fastify req.query is not parsed yet during onRequest)
-      const parsedUrl = new URL(req.url, 'http://localhost');
-      const queryToken = parsedUrl.searchParams.get('token');
-
-      if (url.startsWith('/api/v1/request-logs/stream')) {
-        const isStreamTokenValid = safeCompareTokens(queryToken || '', config.ADMIN_API_TOKEN);
-        if (isStreamTokenValid) {
-          return;
-        }
-      }
-
-      const authHeader = req.headers['authorization'];
-      const token = authHeader ? authHeader.replace(/^Bearer\s+/i, '').trim() : '';
-
-      const isTokenValid = safeCompareTokens(token, config.ADMIN_API_TOKEN);
-
-      if (!isTokenValid) {
-        return reply.status(401).send({ error: { message: 'Unauthorized', type: 'authentication_error' } });
-      }
-    } else if (url.startsWith('/v1/chat/completions')) {
-      const authHeader = req.headers['authorization'];
-      if (authHeader) {
-        const token = authHeader.replace(/^Bearer\s+/i, '').trim();
-        if (!safeCompareTokens(token, config.ADMIN_API_TOKEN)) {
-          return reply.status(401).send({ error: { message: 'Unauthorized', type: 'authentication_error' } });
-        }
-      } else {
-        const isDevAllowed = config.NODE_ENV === 'development' && process.env.ALLOW_ANONYMOUS_DEV === 'true';
-        if (!isDevAllowed) {
-          return reply.status(401).send({ error: { message: 'Unauthorized', type: 'authentication_error' } });
-        }
-      }
+    // Traffic route: /v1/chat/completions (OpenAI-compatible)
+    if (url.startsWith('/v1/chat/completions')) {
+      await buildTrafficAuthHook({ authService, config, rateLimiter }).call(fastify, req, reply, () => {});
+      return;
     }
   });
 
@@ -257,14 +230,16 @@ export async function buildApp() {
       return;
     }
 
-    if (error instanceof AppError) {
-      logger.warn({ reqId: req.id, code: error.code, message: error.message }, 'Application error');
-      return reply.status(error.statusCode).send({
+    if (error instanceof AppError || (error && ((error as any).name === 'AppError' || typeof (error as any).statusCode === 'number' && (error as any).code))) {
+      const appErr = error as any;
+      const status = appErr.statusCode || 500;
+      logger.warn({ reqId: req.id, code: appErr.code, message: appErr.message }, 'Application error');
+      return reply.status(status).send({
         error: {
-          message: error.message,
-          type: error.name,
-          code: error.code,
-          details: error.details,
+          message: appErr.message,
+          type: appErr.name || 'AppError',
+          code: appErr.code || 'APP_ERROR',
+          details: appErr.details,
         },
       });
     }
@@ -323,7 +298,7 @@ export async function buildApp() {
     const poolIdHeader =
       (req.headers['x-goalroute-pool'] as string) || (req.query as { poolId?: string })?.poolId || null;
 
-    const targetPoolId = resolveTargetPool(poolIdHeader);
+    const targetPoolId = resolvePoolForAuth(poolIdHeader, req.auth);
     const body = req.body as OpenAIChatRequest & { stream?: boolean };
 
     if (body?.stream) {
@@ -338,7 +313,12 @@ export async function buildApp() {
       req.raw.on('close', onClose);
 
       try {
-        const dispatchResult = await gatewayService.dispatchStream(targetPoolId, body, abortController.signal);
+        const dispatchResult = await gatewayService.dispatchStream(targetPoolId, body, abortController.signal, {
+          accountId: req.auth?.kind === 'account' ? req.auth.accountId : null,
+          apiKeyId: req.auth?.kind === 'account' ? req.auth.apiKeyId : null,
+          protocol: 'openai',
+          clientName: (body as any).user || 'GoalRoute Client',
+        });
 
         reply.raw.setHeader('Content-Type', 'text/event-stream');
         reply.raw.setHeader('Cache-Control', 'no-cache');
@@ -384,7 +364,12 @@ export async function buildApp() {
     req.raw.on('close', onClose);
 
     try {
-      const dispatchResult = await gatewayService.dispatch(targetPoolId, body, abortController.signal);
+      const dispatchResult = await gatewayService.dispatch(targetPoolId, body, abortController.signal, {
+        accountId: req.auth?.kind === 'account' ? req.auth.accountId : null,
+        apiKeyId: req.auth?.kind === 'account' ? req.auth.apiKeyId : null,
+        protocol: 'openai',
+        clientName: (body as any).user || 'GoalRoute Client',
+      });
       isFinished = true;
 
       reply.header('x-goalroute-provider', dispatchResult.selectedStep.providerSlug);
@@ -414,8 +399,15 @@ export async function buildApp() {
     return { success: true, syncedProviders, failedProviders, totalModels };
   });
 
-  fastify.get('/api/v1/goals', async () => goalService.listGoals());
+  fastify.get('/api/v1/goals', async (req) => goalService.listGoals((req.query as any)?.accountId));
+  fastify.get('/api/v1/goals/:id', async (req) => goalService.getGoal((req.params as any).id));
   fastify.post('/api/v1/goals', async (req) => goalService.createGoal(req.body as any));
+  fastify.put('/api/v1/goals/:id', async (req) => goalService.updateGoal((req.params as any).id, req.body as any));
+  fastify.delete('/api/v1/goals/:id', async (req) => {
+    goalService.deleteGoal((req.params as any).id);
+    return { success: true };
+  });
+
   fastify.post('/api/v1/goals/preview-solve', async (req) => {
     const body = (req.body || {}) as any;
     return goalService.solveGoalInput({
@@ -432,17 +424,21 @@ export async function buildApp() {
   });
   fastify.post('/api/v1/goals/:id/solve', async (req) => goalService.solveGoalById((req.params as any).id));
 
-  fastify.get('/api/v1/pools', async () => poolService.listPools());
+  fastify.get('/api/v1/pools', async (req) => poolService.listPools((req.query as any)?.accountId));
+  fastify.get('/api/v1/pools/:id', async (req) => poolService.getPool((req.params as any).id));
   fastify.post('/api/v1/pools', async (req) => {
     const body = req.body as any;
-    return poolService.createPoolFromGoal(body.goalId, body.name);
+    if (body.steps && Array.isArray(body.steps)) {
+      return poolService.createCustomPool(body);
+    }
+    return poolService.createPoolFromGoal(body.goalId || body.goal_id, body.name, body.accountId || body.account_id);
   });
-
-  fastify.get('/api/v1/request-logs', async (req) => {
-    const q = req.query as any;
-    const limit = Math.min(Math.max(1, Math.floor(Number(q?.limit)) || 50), 500);
-    return logRepo.query({ poolId: q?.poolId, limit });
+  fastify.put('/api/v1/pools/:id', async (req) => poolService.updatePool((req.params as any).id, req.body as any));
+  fastify.delete('/api/v1/pools/:id', async (req) => {
+    poolService.deletePool((req.params as any).id);
+    return { success: true };
   });
+  fastify.post('/api/v1/pools/:id/regenerate', async (req) => poolService.regeneratePoolFromGoal((req.params as any).id));
 
   fastify.get('/api/v1/request-logs/stream', async (req, reply) => {
 reply.raw.on('error', () => {});
@@ -556,7 +552,7 @@ reply.raw.on('error', () => {});
     }
 
     const poolIdHeader = (req.headers['x-goalroute-pool'] as string) || null;
-    const targetPoolId = resolveTargetPool(poolIdHeader);
+    const targetPoolId = resolvePoolForAuth(poolIdHeader, req.auth);
     const openaiRequest = translateAnthropicToOpenAI(body);
 
     const abortController = new AbortController();
@@ -566,7 +562,12 @@ reply.raw.on('error', () => {});
     try {
       if (body.stream === true) {
         // Anthropic SSE: emit a deterministic message envelope with one content delta.
-        const dispatchResult = await gatewayService.dispatch(targetPoolId, openaiRequest, abortController.signal);
+        const dispatchResult = await gatewayService.dispatch(targetPoolId, openaiRequest, abortController.signal, {
+          accountId: req.auth?.kind === 'account' ? req.auth.accountId : null,
+          apiKeyId: req.auth?.kind === 'account' ? req.auth.apiKeyId : null,
+          protocol: 'anthropic',
+          clientName: (body as any).user || 'GoalRoute Client',
+        });
         const anthropicResponse = translateOpenAIToAnthropic(dispatchResult.response, body.model);
         const text = anthropicResponse.content.map((block) => block.text).join('');
 
@@ -588,7 +589,12 @@ reply.raw.on('error', () => {});
         return reply;
       }
 
-      const dispatchResult = await gatewayService.dispatch(targetPoolId, openaiRequest, abortController.signal);
+      const dispatchResult = await gatewayService.dispatch(targetPoolId, openaiRequest, abortController.signal, {
+        accountId: req.auth?.kind === 'account' ? req.auth.accountId : null,
+        apiKeyId: req.auth?.kind === 'account' ? req.auth.apiKeyId : null,
+        protocol: 'anthropic',
+        clientName: (body as any).user || 'GoalRoute Client',
+      });
       reply.header('x-goalroute-provider', dispatchResult.selectedStep.providerSlug);
       reply.header('x-goalroute-model', dispatchResult.selectedStep.modelName);
       reply.header('x-goalroute-latency-ms', dispatchResult.latencyMs);
@@ -609,7 +615,7 @@ reply.raw.on('error', () => {});
     });
 
     await app.register(cors, { origin: corsOriginValidator });
-    app.addHook('onRequest', buildProtocolAuthHook(config));
+    app.addHook('onRequest', buildTrafficAuthHook({ authService, config, rateLimiter }));
     app.setErrorHandler(protocolErrorHandler);
 
     switch (protocol) {
@@ -653,6 +659,15 @@ reply.raw.on('error', () => {});
     isDefaultAdminToken: config.ADMIN_API_TOKEN === 'dev-admin-secret-token',
   });
   activeEndpointsService = endpointsService;
+
+  registerAccountRoutes(fastify, {
+    accountService,
+    poolService,
+    endpointsService,
+    config,
+  });
+
+  registerStatsRoutes(fastify, statsService);
 
   // System endpoints management routes.
   fastify.get('/api/v1/system/endpoints', async () => endpointsService.getEndpointsStatus());

@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { AccountRepository } from '../../../src/infra/db/repositories/accountRepo.js';
-import { ApiKeyRepository } from '../../../src/infra/db/repositories/apiKeyRepo.js';
-import { UsageRepository } from '../../../src/infra/db/repositories/usageRepo.js';
-import { RequestLogRepository } from '../../../src/infra/db/repositories/requestLogRepo.js';
-import { getDatabase } from '../../../src/infra/db/client.js';
-import { generateId } from '../../../src/shared/ids.js';
+import { AccountRepository } from '../../src/infra/db/repositories/accountRepo';
+import { ApiKeyRepository } from '../../src/infra/db/repositories/apiKeyRepo';
+import { UsageRepository } from '../../src/infra/db/repositories/usageRepo';
+import { RequestLogRepository } from '../../src/infra/db/repositories/requestLogRepo';
+import { getDatabase } from '../../src/infra/db/client';
+import { generateId } from '../../src/shared/ids';
 
 const db = getDatabase();
 
@@ -58,7 +58,7 @@ describe('AccountRepository', () => {
         max_keys: 5,
         metadata: '{}'
       });
-    }).toThrowError(/SQLITE_CONSTRAINT_UNIQUE/);
+    }).toThrowError(/UNIQUE constraint failed/);
   });
 });
 describe('ApiKeyRepository', () => {
@@ -87,22 +87,10 @@ describe('ApiKeyRepository', () => {
   });
 
   it('insert key → findByLookup hits; markRevoked flips status; markRotated links both directions', () => {
-    const accRepo = new AccountRepository(db);
-    const account = accRepo.create({
-      name: 'Acc for Key',
-      description: null,
-      status: 'active',
-      default_pool_id: null,
-      default_goal_id: null,
-      monthly_budget_usd: null,
-      rate_limit_rpm: null,
-      rate_limit_tpm: null,
-      max_keys: 20,
-      metadata: '{}'
-    });
+    const accountId = (this as any).testAccountId;
     const keyRepo = new ApiKeyRepository(db);
     const key = keyRepo.insert({
-      account_id: account.id,
+      account_id: accountId,
       name: 'Test Key',
       key_lookup: 'gr_live_abcd1234', // 16 chars incl prefix? we'll just use a fake
       key_hash: 'hashed',
@@ -128,7 +116,7 @@ describe('ApiKeyRepository', () => {
     expect(revoked?.revoked_at).not.toBeNull();
     // markRotated
     const newKey = keyRepo.insert({
-      account_id: account.id,
+      account_id: accountId,
       name: 'Test Key New',
       key_lookup: 'gr_live_abcd5678',
       key_hash: 'hashed2',
@@ -248,7 +236,7 @@ describe('UsageRepository', () => {
       from: now - 3600_000,
       to: now + 3600_000,
       granularity: 'hour',
-      groupBy: ['bucket_start']
+      groupBy: ['bucket_start', 'account_id']
     });
     expect(rows.length).toBe(1);
     const row = rows[0];
@@ -262,7 +250,7 @@ describe('UsageRepository', () => {
   it('requestLogRepo.query with 5 rows and limit: 2 walks the full set in 3 pages with no duplicates and no gaps', () => {
     const logRepo = new RequestLogRepository(db);
     const baseTime = Date.now() - 10000;
-    // insert 5 logs with increasing created_at
+    // insert 5 logs with increasing created_at (add small delay to ensure different timestamps)
     for (let i = 0; i < 5; i++) {
       logRepo.log({
         pool_id: null,
@@ -285,6 +273,12 @@ describe('UsageRepository', () => {
         trace_id: null,
         id: undefined // let repo generate
       });
+      // Small delay to ensure different created_at timestamps
+      if (i < 4) {
+        // busy wait for next millisecond
+        const start = Date.now();
+        while (Date.now() === start) {}
+      }
     }
     let cursor = null;
     const pages: any[] = [];
@@ -314,5 +308,4 @@ describe('UsageRepository', () => {
     const ids = flat.map(r => r.id);
     expect(new Set(ids).size).toBe(ids.length);
   });
-});
 });

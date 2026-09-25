@@ -117,8 +117,8 @@ export class ApiKeyRepository {
   public markRotated(oldId: string, newId: string): void {
     const now = Date.now();
     this.db.transaction(() => {
-      this.markRotatedOldStmt.run(oldId, newId, now);
-      this.markRotatedNewStmt.run(newId, oldId);
+      this.markRotatedOldStmt.run(newId, now, oldId);
+      this.markRotatedNewStmt.run(oldId, newId);
     })();
   }
 

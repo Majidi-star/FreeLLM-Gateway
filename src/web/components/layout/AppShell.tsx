@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { LayoutDashboard, Key, Palette, Sparkles, Activity, ShieldCheck, Cpu, Terminal, ArrowUpRight, CheckCircle2, ChevronRight, Zap, RefreshCw, MessageSquare, Database } from 'lucide-react';
+import { LayoutDashboard, Key, Palette, Sparkles, Activity, ShieldCheck, Cpu, Terminal, ArrowUpRight, CheckCircle2, ChevronRight, Zap, RefreshCw, MessageSquare, Database, Layers } from 'lucide-react';
 import { CockpitDashboard } from '../cockpit/CockpitDashboard.js';
 import { AgentBridge } from '../bridge/AgentBridge.js';
 import { CredentialVault } from '../vault/CredentialVault.js';
 import { DatabaseStudio } from '../database/DatabaseStudio.js';
 import { SettingsAppearanceStudio } from '../settings/SettingsAppearanceStudio.js';
 import { GoalStudioModal } from '../modals/GoalStudioModal.js';
+import { PoolStudioModal } from '../modals/PoolStudioModal.js';
 import { DecisionInspectorDrawer, DecisionTrace } from '../drawers/DecisionInspectorDrawer.js';
 import { GlossaryTerm } from '../common/GlossaryTerm.js';
 import { AgenticChat } from '../chat/AgenticChat.js';
@@ -14,6 +15,7 @@ import { getAdminToken } from '../settings/EndpointsManager.js';
 export const AppShell: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'cockpit' | 'bridge' | 'vault' | 'database' | 'settings'>('cockpit');
   const [isGoalStudioOpen, setIsGoalStudioOpen] = useState(false);
+  const [isPoolStudioOpen, setIsPoolStudioOpen] = useState(false);
   const [selectedTrace, setSelectedTrace] = useState<DecisionTrace | null>(null);
   const [conciergeMsg, setConciergeMsg] = useState('GoalRoute Copilot active. Monitoring your configured enclave keys with 0ms overhead.');
   const [activeKeys, setActiveKeys] = useState<number | null>(null);
@@ -227,8 +229,16 @@ export const AppShell: React.FC = () => {
               onClick={() => setIsGoalStudioOpen(true)}
               className="w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)] transition-all cursor-pointer"
             >
-              <Sparkles className="w-4.5 h-4.5 shrink-0" />
+              <Sparkles className="w-4.5 h-4.5 shrink-0 text-purple-400" />
               <span>Goal Studio</span>
+            </button>
+
+            <button
+              onClick={() => setIsPoolStudioOpen(true)}
+              className="w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)] transition-all cursor-pointer"
+            >
+              <Layers className="w-4.5 h-4.5 shrink-0 text-indigo-400" />
+              <span>Pool Studio</span>
             </button>
 
             <button
@@ -320,6 +330,7 @@ export const AppShell: React.FC = () => {
         {activeTab === 'cockpit' && (
           <CockpitDashboard
             onOpenGoalStudio={() => setIsGoalStudioOpen(true)}
+            onOpenPoolStudio={() => setIsPoolStudioOpen(true)}
             onSelectTrace={(trace) => setSelectedTrace(trace)}
           />
         )}
@@ -356,6 +367,15 @@ export const AppShell: React.FC = () => {
         onClose={() => setIsGoalStudioOpen(false)}
         onApplyGoal={(goal) => {
           setConciergeMsg(`Goal updated to ${goal.intent.toUpperCase()} preset with max latency ${goal.maxLatency}ms.`);
+        }}
+      />
+
+      {/* Pool Studio Modal Container */}
+      <PoolStudioModal
+        isOpen={isPoolStudioOpen}
+        onClose={() => setIsPoolStudioOpen(false)}
+        onPoolsUpdated={() => {
+          setConciergeMsg('Routing pools updated. Execution rules apply immediately to incoming traffic.');
         }}
       />
 

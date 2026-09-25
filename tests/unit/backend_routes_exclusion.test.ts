@@ -10,6 +10,7 @@ import { PoolRepository } from '../../src/infra/db/repositories/poolRepo.js';
 import { HealthRepository } from '../../src/infra/db/repositories/healthRepo.js';
 import { QuotaRepository } from '../../src/infra/db/repositories/quotaRepo.js';
 import { RequestLogRepository } from '../../src/infra/db/repositories/requestLogRepo.js';
+import { UsageRepository } from '../../src/infra/db/repositories/usageRepo.js';
 import { GatewayService, locallyExpiredConnectionIds, isConnectionActive, breakerRegistry } from '../../src/services/gatewayService.js';
 import { ProviderService } from '../../src/services/providerService.js';
 import { GoalService } from '../../src/services/goalService.js';
@@ -47,10 +48,11 @@ describe('Backend Routes & Candidate Exclusion (REVOCATION, SSE, EXCLUSION)', ()
     quotaRepo = new QuotaRepository(db);
     logRepo = new RequestLogRepository(db);
     goalRepo = new GoalRepository(db);
+    const usageRepo = new UsageRepository(db);
 
     providerService = new ProviderService(provRepo, connRepo);
     goalService = new GoalService(goalRepo, connRepo, provRepo, modelRepo, healthRepo, quotaRepo);
-    gateway = new GatewayService(poolRepo, connRepo, modelRepo, provRepo, healthRepo, quotaRepo, logRepo);
+    gateway = new GatewayService(poolRepo, connRepo, modelRepo, provRepo, healthRepo, quotaRepo, logRepo, usageRepo);
     locallyExpiredConnectionIds.clear();
     breakerRegistry.clear();
   });

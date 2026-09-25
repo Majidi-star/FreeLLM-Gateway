@@ -19,18 +19,29 @@ export class GoalService {
     private quotaRepo: QuotaRepository
   ) {}
 
-  public createGoal(input: Omit<GoalRecord, 'id' | 'created_at' | 'updated_at'>): GoalRecord {
+  public createGoal(input: Omit<GoalRecord, 'id' | 'created_at' | 'updated_at' | 'account_id'> & { account_id?: string | null }): GoalRecord {
     return this.goalRepo.create(input);
   }
 
-  public listGoals(): GoalRecord[] {
-    return this.goalRepo.listAll();
+  public listGoals(accountId?: string | null): GoalRecord[] {
+    return this.goalRepo.listAll(accountId);
   }
 
   public getGoal(id: string): GoalRecord {
     const goal = this.goalRepo.findById(id);
     if (!goal) throw new NotFoundError(`Goal with ID '${id}' not found`);
     return goal;
+  }
+
+  public updateGoal(id: string, updates: Partial<Omit<GoalRecord, 'id' | 'created_at'>>): GoalRecord {
+    const updated = this.goalRepo.update(id, updates);
+    if (!updated) throw new NotFoundError(`Goal with ID '${id}' not found`);
+    return updated;
+  }
+
+  public deleteGoal(id: string): void {
+    const deleted = this.goalRepo.delete(id);
+    if (!deleted) throw new NotFoundError(`Goal with ID '${id}' not found`);
   }
 
   public solveGoalById(goalId: string): PoolPlan {

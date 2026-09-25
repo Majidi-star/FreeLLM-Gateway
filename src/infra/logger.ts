@@ -50,6 +50,9 @@ export function redactSensitiveData(obj: unknown, seen = new WeakSet()): unknown
 
     if (/hf_[A-Za-z0-9]{20,}/.test(result)) {
       result = result.replace(/hf_[A-Za-z0-9]{20,}/g, 'hf_[REDACTED]');
+    if (/gr_live_[A-Za-z0-9_-]{20,}/.test(result)) {
+      result = result.replace(/gr_live_[A-Za-z0-9_-]{20,}/g, 'gr_live_[REDACTED]');
+    }
     }
 
     if (/(?:[?&]|%26)?(?:api_key|key|token|auth)(?:=|%3D)[^&\s]+/i.test(result)) {
