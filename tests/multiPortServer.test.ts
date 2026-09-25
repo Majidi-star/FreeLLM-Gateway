@@ -39,6 +39,55 @@ function tcpFetchRefused(port: number): Promise<boolean> {
   });
 }
 
+function httpRawFetch(
+  urlStr: string,
+  options: { method?: string; headers?: Record<string, string>; body?: string } = {}
+): Promise<{ status: number; json: () => Promise<any> }> {
+  return new Promise((resolve, reject) => {
+    const parsed = new URL(urlStr);
+    const req = net.connect(Number(parsed.port), parsed.hostname, () => {
+      const pathStr = parsed.pathname + parsed.search;
+      const method = options.method || 'GET';
+      const bodyStr = options.body || '';
+      const headers = {
+        Host: `${parsed.hostname}:${parsed.port}`,
+        Connection: 'close',
+        ...options.headers,
+      };
+      if (bodyStr && !headers['Content-Length'] && !headers['content-length']) {
+        (headers as any)['Content-Length'] = String(Buffer.byteLength(bodyStr));
+      }
+      let reqLines = `${method} ${pathStr} HTTP/1.1\r\n`;
+      for (const [k, v] of Object.entries(headers)) {
+        reqLines += `${k}: ${v}\r\n`;
+      }
+      reqLines += '\r\n';
+      req.write(reqLines);
+      if (bodyStr) req.write(bodyStr);
+    });
+
+    let rawData = '';
+    req.on('data', (chunk) => {
+      rawData += chunk.toString('utf8');
+    });
+    req.on('end', () => {
+      const headerEnd = rawData.indexOf('\r\n\r\n');
+      if (headerEnd === -1) {
+        return resolve({ status: 500, json: async () => ({}) });
+      }
+      const headerText = rawData.substring(0, headerEnd);
+      const bodyText = rawData.substring(headerEnd + 4);
+      const statusLine = headerText.split('\r\n')[0] || '';
+      const statusCode = Number(statusLine.split(' ')[1]) || 500;
+      resolve({
+        status: statusCode,
+        json: async () => (bodyText ? JSON.parse(bodyText) : {}),
+      });
+    });
+    req.on('error', reject);
+  });
+}
+
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'goalroute-multiport-'));
 let openaiPort = 0;
 let anthropicPort = 0;
@@ -157,9 +206,7 @@ describe('Multi-Port Gateway Server (live bindings)', () => {
   });
 
   it('serves OpenAI-compatible payloads on the dedicated OpenAI port', async () => {
-    const res = await fetch(`http://127.0.0.1:${openaiPort}/v1/models`, {
-      headers: { connection: 'close' },
-    });
+    const res = await httpRawFetch(`http://127.0.0.1:${openaiPort}/v1/models`);
     expect(res.status).toBe(200);
     const body = (await res.json()) as { object: string; data: Array<{ id: string; object: string }> };
     expect(body.object).toBe('list');
@@ -169,9 +216,9 @@ describe('Multi-Port Gateway Server (live bindings)', () => {
   });
 
   it('serves Anthropic-compatible payloads on the dedicated Anthropic port', async () => {
-    const res = await fetch(`http://127.0.0.1:${anthropicPort}/v1/messages`, {
+    const res = await httpRawFetch(`http://127.0.0.1:${anthropicPort}/v1/messages`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json', connection: 'close' },
+      headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ model: 'm', max_tokens: 64, messages: [{ role: 'user', content: 'hi' }] }),
     });
     // With no routing pools configured, the translated dispatch fails with NO_ACTIVE_POOLS —
@@ -182,9 +229,7 @@ describe('Multi-Port Gateway Server (live bindings)', () => {
   });
 
   it('serves the native gateway health route on the native port', async () => {
-    const res = await fetch(`http://127.0.0.1:${nativePort}/api/v1/health`, {
-      headers: { connection: 'close' },
-    });
+    const res = await httpRawFetch(`http://127.0.0.1:${nativePort}/api/v1/health`);
     expect(res.status).toBe(200);
     const body = (await res.json()) as { status: string };
     expect(body.status).toBe('ok');
@@ -208,9 +253,7 @@ describe('Multi-Port Gateway Server (live bindings)', () => {
     expect(await tcpFetchRefused(openaiPort)).toBe(true);
 
     // New port must serve OpenAI traffic.
-    const modelsRes = await fetch(`http://127.0.0.1:${newOpenaiPort}/v1/models`, {
-      headers: { connection: 'close' },
-    });
+    const modelsRes = await httpRawFetch(`http://127.0.0.1:${newOpenaiPort}/v1/models`);
     expect(modelsRes.status).toBe(200);
 
     openaiPort = newOpenaiPort;
@@ -238,9 +281,9 @@ describe('Multi-Port Gateway Server (live bindings)', () => {
 
     // Original Anthropic binding must be restored and serving again.
     await new Promise((r) => setTimeout(r, 50));
-    const retry = await fetch(`http://127.0.0.1:${anthropicPort}/v1/messages`, {
+    const retry = await httpRawFetch(`http://127.0.0.1:${anthropicPort}/v1/messages`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json', connection: 'close' },
+      headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ model: 'm', max_tokens: 8, messages: [{ role: 'user', content: 'x' }] }),
     });
     expect(retry.status).toBe(400);
@@ -265,9 +308,7 @@ describe('Multi-Port Gateway Server (live bindings)', () => {
     expect(status.remoteAccessEnabled).toBe(true);
 
     // Loopback still reaches the re-bound listener.
-    const remoteCheck = await fetch(`http://127.0.0.1:${openaiPort}/v1/models`, {
-      headers: { connection: 'close' },
-    });
+    const remoteCheck = await httpRawFetch(`http://127.0.0.1:${openaiPort}/v1/models`);
     expect(remoteCheck.status).toBe(200);
 
     const localRes = await getApp().inject({
@@ -281,9 +322,7 @@ describe('Multi-Port Gateway Server (live bindings)', () => {
     expect(status.host).toBe('127.0.0.1');
     expect(status.remoteAccessEnabled).toBe(false);
 
-    const localCheck = await fetch(`http://127.0.0.1:${openaiPort}/v1/models`, {
-      headers: { connection: 'close' },
-    });
+    const localCheck = await httpRawFetch(`http://127.0.0.1:${openaiPort}/v1/models`);
     expect(localCheck.status).toBe(200);
   });
 
