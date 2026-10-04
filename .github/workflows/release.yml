@@ -39,6 +39,8 @@ jobs:
         run: npm run build:electron
 
       - name: Package Release Artifacts
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: 1
         run: npx electron-builder --config electron-builder.yml --publish never
 
       - name: Upload Release Artifacts
