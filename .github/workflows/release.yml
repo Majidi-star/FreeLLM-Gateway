@@ -5,6 +5,9 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: write
+
 jobs:
   release:
     name: Build & Upload Assets (${{ matrix.os }})
@@ -28,8 +31,7 @@ jobs:
       - name: Build Application
         run: npm run build:electron
 
-      - name: Packaging & Publish Release Artifacts
-        uses: electron-userland/electron-builder-action@v1
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          release: true
+      - name: Package & Publish Release Artifacts
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx electron-builder --config electron-builder.yml --publish always
