@@ -201,7 +201,7 @@ export async function buildApp() {
     },
   });
 
-  const distWebPath = path.join(path.dirname(fileURLToPath(import.meta.url)), '../../dist-web');
+  const distWebPath = path.join(__dirname, '../../dist-web');
   if (fs.existsSync(distWebPath)) {
     await fastify.register(fastifyStatic, {
       root: distWebPath,
@@ -826,6 +826,6 @@ export async function startServer(port?: number) {
   }
 }
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
+if (process.argv[1] && typeof __filename !== 'undefined' && __filename === path.resolve(process.argv[1])) {
   void startServer();
 }

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Network, ToggleLeft, ToggleRight, Copy, Check, RefreshCw, Globe, Lock, AlertCircle } from 'lucide-react';
 import { sanitizeForClipboard } from '../../utils/clipboardSanitizer.js';
+import { UpdateCheckerWidget } from '../common/UpdateCheckerWidget.js';
 
 interface ProtocolEndpointConfig {
   protocol: string;
@@ -243,6 +244,7 @@ export const EndpointsManager: React.FC<EndpointsManagerProps> = ({ hideMcp = fa
         </p>
       </div>
 
+      <UpdateCheckerWidget />
 
       {/* Exposed Endpoints List */}
       <div className="space-y-3">

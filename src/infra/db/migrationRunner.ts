@@ -1,12 +1,8 @@
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import Database from 'better-sqlite3';
 import { logger } from '../logger.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 export function runMigrations(db: Database.Database, migrationsDir?: string): void {
   const projectRoot = process.cwd();

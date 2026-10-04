@@ -1,5 +1,8 @@
 node_modules/
 dist/
+dist-web/
+electron/dist/
+dist-electron/
 data/
 .env
 graphify-out/

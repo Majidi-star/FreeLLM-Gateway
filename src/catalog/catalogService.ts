@@ -1,6 +1,5 @@
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import Database from 'better-sqlite3';
 import { ProviderRepository } from '../infra/db/repositories/providerRepo.js';
 import { ModelRepository } from '../infra/db/repositories/modelRepo.js';
@@ -8,9 +7,6 @@ import { providerSeedSchema, modelSeedSchema } from './catalogTypes.js';
 import { CanonicalResolver } from './canonicalResolver.js';
 import { logger } from '../infra/logger.js';
 import { z } from 'zod';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 export class CatalogService {
   private resolver: CanonicalResolver;

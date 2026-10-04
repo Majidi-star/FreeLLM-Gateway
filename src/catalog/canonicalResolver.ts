@@ -1,11 +1,7 @@
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import { CanonicalModelSeed, canonicalModelSeedSchema } from './catalogTypes.js';
 import { z } from 'zod';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 export class CanonicalResolver {
   private canonicalModels: CanonicalModelSeed[] = [];
