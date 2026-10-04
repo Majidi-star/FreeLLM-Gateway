@@ -11,7 +11,17 @@ const envSchema = z.object({
   PORT_ANTHROPIC: z.coerce.number().default(8789),
   PORT_MCP: z.coerce.number().default(8790),
   HOST: z.string().default('127.0.0.1'),
-  REMOTE_ACCESS_ENABLED: z.coerce.boolean().default(false),
+  REMOTE_ACCESS_ENABLED: z
+    .preprocess((val) => {
+      if (typeof val === 'boolean') return val;
+      if (typeof val === 'string') {
+        const lower = val.trim().toLowerCase();
+        if (lower === 'true' || lower === '1' || lower === 'yes') return true;
+        if (lower === 'false' || lower === '0' || lower === 'no' || lower === '') return false;
+      }
+      return val;
+    }, z.boolean())
+    .default(false),
   DATABASE_PATH: z.string().default('./data/goalroute.db'),
   ENCRYPTION_MASTER_KEY: z.string().refine(
     (val) => {

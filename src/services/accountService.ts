@@ -1,11 +1,11 @@
-﻿import { AccountRepository } from "../../src/infra/db/repositories/accountRepo.js";
-import { ApiKeyRepository } from "../../src/infra/db/repositories/apiKeyRepo.js";
-import { PoolRepository } from "../../src/infra/db/repositories/poolRepo.js";
-import { GoalService } from "../../src/services/goalService.js";
-import { generateApiKey, hashApiKey } from "../../src/infra/security/apiKeyCrypto.js";
-import { AppError, NotFoundError } from "../../src/shared/errors.js";
-import type { AccountRecord } from "../../src/infra/db/repositories/accountRepo.js";
-import type { ApiKeyRecord } from "../../src/infra/db/repositories/apiKeyRepo.js";
+import { AccountRepository } from "../infra/db/repositories/accountRepo.js";
+import { ApiKeyRepository } from "../infra/db/repositories/apiKeyRepo.js";
+import { PoolRepository } from "../infra/db/repositories/poolRepo.js";
+import { GoalService } from "./goalService.js";
+import { generateApiKey, hashApiKey } from "../infra/security/apiKeyCrypto.js";
+import { AppError, NotFoundError } from "../shared/errors.js";
+import type { AccountRecord } from "../infra/db/repositories/accountRepo.js";
+import type { ApiKeyRecord } from "../infra/db/repositories/apiKeyRepo.js";
 import Database from "better-sqlite3";
 
 export interface AccountDTO {

@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { LayoutDashboard, Key, Palette, Sparkles, Activity, ShieldCheck, Cpu, Terminal, ArrowUpRight, CheckCircle2, ChevronRight, Zap, RefreshCw, MessageSquare, Database, Layers } from 'lucide-react';
+import { LayoutDashboard, Key, Palette, Sparkles, Activity, ShieldCheck, Cpu, Terminal, ArrowUpRight, CheckCircle2, ChevronRight, Zap, RefreshCw, MessageSquare, Database, Layers, Users } from 'lucide-react';
 import { CockpitDashboard } from '../cockpit/CockpitDashboard.js';
 import { AgentBridge } from '../bridge/AgentBridge.js';
 import { CredentialVault } from '../vault/CredentialVault.js';
 import { DatabaseStudio } from '../database/DatabaseStudio.js';
 import { SettingsAppearanceStudio } from '../settings/SettingsAppearanceStudio.js';
+import { AccountsStudio } from '../accounts/AccountsStudio.js';
 import { GoalStudioModal } from '../modals/GoalStudioModal.js';
 import { PoolStudioModal } from '../modals/PoolStudioModal.js';
 import { DecisionInspectorDrawer, DecisionTrace } from '../drawers/DecisionInspectorDrawer.js';
@@ -13,7 +14,7 @@ import { AgenticChat } from '../chat/AgenticChat.js';
 import { getAdminToken } from '../settings/EndpointsManager.js';
 
 export const AppShell: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'cockpit' | 'bridge' | 'vault' | 'database' | 'settings'>('cockpit');
+  const [activeTab, setActiveTab] = useState<'cockpit' | 'accounts' | 'bridge' | 'vault' | 'database' | 'settings'>('cockpit');
   const [isGoalStudioOpen, setIsGoalStudioOpen] = useState(false);
   const [isPoolStudioOpen, setIsPoolStudioOpen] = useState(false);
   const [selectedTrace, setSelectedTrace] = useState<DecisionTrace | null>(null);
@@ -202,6 +203,18 @@ export const AppShell: React.FC = () => {
             </button>
 
             <button
+              onClick={() => setActiveTab('accounts')}
+              className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                activeTab === 'accounts'
+                  ? 'bg-[var(--bg-card-active)] text-[var(--text-primary)] border border-[var(--border-hover)] shadow-md'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)]'
+              }`}
+            >
+              <Users className="w-4.5 h-4.5 shrink-0 text-[var(--signal-mint)]" />
+              <span>Accounts & Client Keys</span>
+            </button>
+
+            <button
               onClick={() => setActiveTab('bridge')}
               className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all ${
                 activeTab === 'bridge'
@@ -334,6 +347,7 @@ export const AppShell: React.FC = () => {
             onSelectTrace={(trace) => setSelectedTrace(trace)}
           />
         )}
+        {activeTab === 'accounts' && <AccountsStudio />}
         {activeTab === 'bridge' && <AgentBridge />}
         {activeTab === 'vault' && <CredentialVault />}
         {activeTab === 'database' && <DatabaseStudio />}

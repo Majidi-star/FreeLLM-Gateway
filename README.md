@@ -102,9 +102,12 @@ Run FreeLLM-Gateway as a containerized service:
 
 ```bash
 docker build -t goalroute .
-docker run -d -p 8787:8787 -p 8788:8788 -p 8789:8789 -p 8790:8790 \
-  -e ADMIN_API_TOKEN=your-secure-token \
+docker run -d \
+  -p 8787:8787 -p 8788:8788 -p 8789:8789 -p 8790:8790 \
+  -v goalroute-data:/app/data \
+  -e ADMIN_API_TOKEN=your-secure-admin-token \
   -e ENCRYPTION_MASTER_KEY=your-64-hex-master-key \
+  -e REMOTE_ACCESS_ENABLED=true \
   goalroute
 ```
 

@@ -52,27 +52,8 @@ async function assertSafeProviderUrl(rawUrl: string): Promise<void> {
   } catch {
     throw new ValidationError('Provider baseUrl is not a valid URL');
   }
-  if (url.protocol !== 'https:') {
-    throw new ValidationError('Provider baseUrl must use the https:// protocol');
-  }
-  const hostname = url.hostname;
-  if (hostname === 'localhost' || hostname.endsWith('.localhost')) {
-    throw new ValidationError('Provider baseUrl cannot target localhost');
-  }
-  if (isIP(hostname)) {
-    if (isPrivateOrLocalIp(hostname)) {
-      throw new ValidationError('Provider baseUrl cannot target a private or link-local IP address');
-    }
-    return;
-  }
-  let resolved;
-  try {
-    resolved = await dns.lookup(hostname, { all: true });
-  } catch {
-    throw new ValidationError(`Provider baseUrl hostname "${hostname}" could not be resolved`);
-  }
-  if (resolved.some((addr: { address: string }) => isPrivateOrLocalIp(addr.address))) {
-    throw new ValidationError('Provider baseUrl resolves to a private or link-local IP address');
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+    throw new ValidationError('Provider baseUrl must use http:// or https:// protocol');
   }
 }
 

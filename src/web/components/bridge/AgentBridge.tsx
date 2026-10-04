@@ -128,10 +128,13 @@ export const AgentBridge: React.FC = () => {
       }
     }
 
-    fetch('/api/v1/mcp/settings')
-      .then((res) => res.json())
+    const adminToken = getAdminToken();
+    const authHeaders: Record<string, string> = adminToken ? { authorization: `Bearer ${adminToken}` } : {};
+
+    fetch('/api/v1/mcp/settings', { headers: authHeaders })
+      .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (typeof data.isSafeMode === 'boolean') {
+        if (data && typeof data.isSafeMode === 'boolean') {
           setSecurityMode(data.isSafeMode ? 'safe' : 'full');
         }
       })
@@ -231,9 +234,14 @@ export const AgentBridge: React.FC = () => {
     setSecurityMode(mode);
     const isSafe = mode === 'safe';
     try {
+      const adminToken = getAdminToken();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (adminToken) {
+        headers['authorization'] = `Bearer ${adminToken}`;
+      }
       await fetch('/api/v1/mcp/settings', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ isSafeMode: isSafe }),
       });
     } catch (e) {

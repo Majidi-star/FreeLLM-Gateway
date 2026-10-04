@@ -10,7 +10,7 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "verify": "npm run typecheck && npm run build && npm test",
-    "build": "tsc",
+    "build": "tsc && node scripts/copy-assets.js",
     "build:web": "tsc && vite build",
     "clean": "rimraf dist",
     "start": "node dist/api/server.js",

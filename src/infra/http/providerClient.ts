@@ -196,8 +196,18 @@ export async function callProviderEndpoint<T = unknown>(options: ProviderRequest
     };
   } catch (err: any) {
     clearTimeout(timer);
+    if (options.signal) {
+      options.signal.removeEventListener('abort', onExternalAbort);
+    }
     if (err.name === 'AbortError') {
-      throw new AppError(`Provider request timed out after ${timeoutMs}ms`, 'PROVIDER_TIMEOUT', 408);
+      if (options.signal?.aborted) {
+        throw new AppError('Client cancelled provider request', 'CLIENT_CANCELLED', 499);
+      }
+      const elapsedMs = Date.now() - startTime;
+      if (elapsedMs >= Math.max(100, timeoutMs - 500)) {
+        throw new AppError(`Provider request timed out after ${timeoutMs}ms`, 'PROVIDER_TIMEOUT', 408);
+      }
+      throw new AppError(`Provider network request aborted: ${err.message || 'connection failed'}`, 'PROVIDER_FETCH_FAILED', 502);
     }
     if (err instanceof AppError) {
       throw err;
@@ -341,7 +351,14 @@ export async function callProviderEndpointStream(options: ProviderRequestOptions
       options.signal.removeEventListener('abort', onExternalAbort);
     }
     if (err.name === 'AbortError') {
-      throw new AppError(`Provider stream request timed out after ${timeoutMs}ms`, 'PROVIDER_TIMEOUT', 408);
+      if (options.signal?.aborted) {
+        throw new AppError('Client cancelled provider stream request', 'CLIENT_CANCELLED', 499);
+      }
+      const elapsedMs = Date.now() - startTime;
+      if (elapsedMs >= Math.max(100, timeoutMs - 500)) {
+        throw new AppError(`Provider stream request timed out after ${timeoutMs}ms`, 'PROVIDER_TIMEOUT', 408);
+      }
+      throw new AppError(`Provider network stream request aborted: ${err.message || 'connection failed'}`, 'PROVIDER_FETCH_FAILED', 502);
     }
     if (err instanceof AppError) {
       throw err;
