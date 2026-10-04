@@ -689,6 +689,18 @@ reply.raw.on('error', () => {});
     return endpointsService.updateConfig(parsed.data);
   });
 
+  fastify.get('/api/v1/system/token', async (req) => {
+    const isLocalhost = req.ip === '127.0.0.1' || req.ip === '::1' || req.ip === '::ffff:127.0.0.1';
+    if (!isLocalhost) {
+      const authHeader = req.headers['authorization'];
+      const token = authHeader ? authHeader.replace(/^Bearer\s+/i, '').trim() : '';
+      if (!safeCompareTokens(token, config.ADMIN_API_TOKEN)) {
+        throw new AppError('Unauthorized', 'AUTHENTICATION_ERROR', 401);
+      }
+    }
+    return { token: config.ADMIN_API_TOKEN, isLocalhost };
+  });
+
   fastify.post('/api/v1/system/token', async (req) => {
     const isLocalhost = req.ip === '127.0.0.1' || req.ip === '::1' || req.ip === '::ffff:127.0.0.1';
     if (!isLocalhost) {

@@ -115,48 +115,108 @@ export const AppShell: React.FC = () => {
 
   const [isAuthRequired, setIsAuthRequired] = useState(false);
   const [authInputToken, setAuthInputToken] = useState('');
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [isAutoDetecting, setIsAutoDetecting] = useState(false);
 
-  const checkInitialAuth = () => {
-    const adminToken = getAdminToken();
-    fetch('/api/v1/providers', {
-      headers: adminToken ? { authorization: `Bearer ${adminToken}` } : {},
-    })
-      .then((res) => {
-        if (res.status === 401) {
-          setIsAuthRequired(true);
-          return [];
+  const attemptAutoLoginFromSystem = async (): Promise<string | null> => {
+    try {
+      const res = await fetch('/api/v1/system/token');
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.token) {
+          localStorage.setItem('goalroute_admin_token', data.token);
+          sessionStorage.setItem('goalroute_admin_token', data.token);
+          return data.token;
         }
-        setIsAuthRequired(false);
-        return res.ok ? res.json() : [];
-      })
-      .then((providers) => {
-        if (Array.isArray(providers)) {
-          const active = providers.filter((p: any) => p && p.hasKey && p.status !== 'unconfigured').length;
-          setActiveKeys(active);
-          if (active === 0) {
-            setConciergeMsg('No active enclave keys configured. Connect provider API keys in Credential Vault to start routing.');
-          } else {
-            setConciergeMsg(`GoalRoute Copilot active. Monitoring ${active} active provider key${active > 1 ? 's' : ''} with zero-latency failover.`);
-          }
+      }
+    } catch {}
+    return null;
+  };
+
+  const checkInitialAuth = async () => {
+    let adminToken = getAdminToken();
+    if (!adminToken) {
+      adminToken = await attemptAutoLoginFromSystem() || '';
+    }
+
+    try {
+      let res = await fetch('/api/v1/providers', {
+        headers: adminToken ? { authorization: `Bearer ${adminToken}` } : {},
+      });
+
+      if (res.status === 401) {
+        // Attempt localhost auto-token discovery if initial token was missing or stale
+        const discovered = await attemptAutoLoginFromSystem();
+        if (discovered) {
+          adminToken = discovered;
+          res = await fetch('/api/v1/providers', {
+            headers: { authorization: `Bearer ${adminToken}` },
+          });
         }
-      })
-      .catch(() => {});
+      }
+
+      if (res.status === 401) {
+        setIsAuthRequired(true);
+        return;
+      }
+
+      setIsAuthRequired(false);
+      const providers = res.ok ? await res.json() : [];
+      if (Array.isArray(providers)) {
+        const active = providers.filter((p: any) => p && p.hasKey && p.status !== 'unconfigured').length;
+        setActiveKeys(active);
+        if (active === 0) {
+          setConciergeMsg('No active enclave keys configured. Connect provider API keys in Credential Vault to start routing.');
+        } else {
+          setConciergeMsg(`GoalRoute Copilot active. Monitoring ${active} active provider key${active > 1 ? 's' : ''} with zero-latency failover.`);
+        }
+      }
+    } catch {
+      // If network fails, don't force auth modal unless explicitly unauthorized
+    }
   };
 
   useEffect(() => {
     checkInitialAuth();
   }, []);
 
-  const handleSaveAuthToken = (e: React.FormEvent) => {
+  const handleSaveAuthToken = async (e: React.FormEvent) => {
     e.preventDefault();
+    setAuthError(null);
     const clean = authInputToken.trim();
     if (!clean) return;
+
     try {
+      const res = await fetch('/api/v1/providers', {
+        headers: { authorization: `Bearer ${clean}` },
+      });
+
+      if (!res.ok && res.status === 401) {
+        setAuthError('Incorrect Admin Password or Access Key. Please check your config.');
+        return;
+      }
+
       localStorage.setItem('goalroute_admin_token', clean);
       sessionStorage.setItem('goalroute_admin_token', clean);
-    } catch {}
-    setIsAuthRequired(false);
-    checkInitialAuth();
+      setIsAuthRequired(false);
+      checkInitialAuth();
+    } catch {
+      setAuthError('Unable to connect to gateway server.');
+    }
+  };
+
+  const handleAutoDetectKey = async () => {
+    setIsAutoDetecting(true);
+    setAuthError(null);
+    const token = await attemptAutoLoginFromSystem();
+    setIsAutoDetecting(false);
+
+    if (token) {
+      setIsAuthRequired(false);
+      checkInitialAuth();
+    } else {
+      setAuthError('Could not auto-detect local key. Please enter your Admin Password manually.');
+    }
   };
 
   return (
@@ -426,37 +486,61 @@ export const AppShell: React.FC = () => {
         onClose={() => setSelectedTrace(null)}
       />
 
-      {/* Admin Authentication Required Modal */}
+      {/* Admin Security Access Modal */}
       {isAuthRequired && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-[var(--bg-card)] border border-[var(--accent-primary)]/40 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+          <div className="bg-[var(--bg-card)] border border-[var(--accent-primary)]/40 rounded-2xl max-w-md w-full p-6 space-y-5 shadow-2xl">
             <div className="flex items-center space-x-3">
-              <div className="p-2.5 rounded-xl bg-[var(--accent-primary)]/10 text-[var(--accent-primary)]">
+              <div className="p-3 rounded-xl bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] border border-[var(--accent-primary)]/20">
                 <ShieldCheck className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="font-bold text-base text-[var(--text-primary)]">Admin Authentication Required</h3>
-                <p className="text-xs text-[var(--text-muted)]">Please enter your ADMIN_API_TOKEN to access the gateway UI.</p>
+                <h3 className="font-bold text-base text-[var(--text-primary)]">Gateway Security Login</h3>
+                <p className="text-xs text-[var(--text-muted)] mt-0.5">Please enter your Admin Password or Access Secret to manage this gateway.</p>
               </div>
             </div>
+
+            {authError && (
+              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center gap-2 font-semibold">
+                <div className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" />
+                <span>{authError}</span>
+              </div>
+            )}
+
             <form onSubmit={handleSaveAuthToken} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1">Admin API Token</label>
+                <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5">Admin Password / Access Secret</label>
                 <input
                   type="password"
                   required
-                  placeholder="Enter ADMIN_API_TOKEN..."
+                  placeholder="Enter your admin password..."
                   value={authInputToken}
                   onChange={(e) => setAuthInputToken(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl bg-[var(--bg-well)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-primary)] font-mono"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-well)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-primary)] font-mono transition-colors"
                 />
               </div>
-              <div className="flex justify-end pt-2">
+
+              <div className="p-3 rounded-xl bg-[var(--bg-well)] border border-[var(--border-subtle)] text-[11px] text-[var(--text-muted)] space-y-1 leading-relaxed">
+                <div className="font-semibold text-[var(--text-secondary)]">Running locally?</div>
+                <div>Your gateway access token is auto-configured in your <code className="font-mono text-[var(--signal-mint)]">.env</code> file as <code className="font-mono text-[var(--text-primary)]">ADMIN_API_TOKEN</code>.</div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={handleAutoDetectKey}
+                  disabled={isAutoDetecting}
+                  className="py-2.5 px-4 rounded-xl bg-[var(--bg-well)] hover:bg-[var(--bg-card-active)] border border-[var(--border-subtle)] hover:border-[var(--accent-primary)] text-xs font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)] flex items-center justify-center space-x-1.5 transition-all cursor-pointer disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isAutoDetecting ? 'animate-spin text-[var(--accent-primary)]' : ''}`} />
+                  <span>{isAutoDetecting ? 'Detecting…' : 'Auto-Detect Session'}</span>
+                </button>
+
                 <button
                   type="submit"
-                  className="w-full py-2.5 rounded-xl bg-[var(--accent-primary)] text-white text-xs font-bold hover:opacity-90 transition-all cursor-pointer shadow-lg shadow-[var(--accent-primary)]/20"
+                  className="flex-1 py-2.5 rounded-xl bg-[var(--accent-primary)] text-white text-xs font-bold hover:opacity-90 transition-all cursor-pointer shadow-lg shadow-[var(--accent-primary)]/20 text-center"
                 >
-                  Authenticate & Continue
+                  Log In &amp; Continue
                 </button>
               </div>
             </form>
