@@ -8,6 +8,7 @@ interface CockpitDashboardProps {
   onOpenGoalStudio: () => void;
   onOpenPoolStudio?: () => void;
   onOpenVault?: () => void;
+  onOpenGuide?: () => void;
   onSelectTrace: (trace: DecisionTrace) => void;
 }
 
@@ -77,7 +78,7 @@ const formatContextWindow = (cw: number): string => {
   return `${Math.round(cw / 1000)}k`;
 };
 
-export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalStudio, onOpenPoolStudio, onOpenVault, onSelectTrace }) => {
+export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalStudio, onOpenPoolStudio, onOpenVault, onOpenGuide, onSelectTrace }) => {
   const [activeSetupPreset, setActiveSetupPreset] = useState<'standard' | 'high_perf' | 'cost_saver' | 'reasoning'>('standard');
   const [traces, setTraces] = useState<DecisionTrace[]>([]);
   const [activePools, setActivePools] = useState(0);
@@ -322,16 +323,27 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
                 </p>
               </div>
             </div>
-            <button
-              onClick={() => {
-                setShowQuickstart(false);
-                try { localStorage.setItem('cockpit_show_quickstart', 'false'); } catch {}
-              }}
-              className="text-[var(--text-muted)] hover:text-[var(--text-primary)] p-1 rounded-lg hover:bg-[var(--bg-card-active)] transition-colors cursor-pointer"
-              title="Dismiss quickstart guide"
-            >
-              <X className="w-4 h-4" />
-            </button>
+            <div className="flex items-center gap-2">
+              {onOpenGuide && (
+                <button
+                  onClick={onOpenGuide}
+                  className="px-3 py-1.5 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+                >
+                  <BookOpen className="w-4 h-4" />
+                  <span>Product Guide &amp; Docs</span>
+                </button>
+              )}
+              <button
+                onClick={() => {
+                  setShowQuickstart(false);
+                  try { localStorage.setItem('cockpit_show_quickstart', 'false'); } catch {}
+                }}
+                className="text-[var(--text-muted)] hover:text-[var(--text-primary)] p-1 rounded-lg hover:bg-[var(--bg-card-active)] transition-colors cursor-pointer"
+                title="Dismiss quickstart guide"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
           </div>
 
           {/* Onboarding Progress Bar */}

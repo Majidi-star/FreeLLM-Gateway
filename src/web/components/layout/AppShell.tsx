@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { LayoutDashboard, Key, Palette, Sparkles, Activity, ShieldCheck, Cpu, Terminal, ArrowUpRight, CheckCircle2, ChevronRight, Zap, RefreshCw, MessageSquare, Database, Layers, Users } from 'lucide-react';
+import { LayoutDashboard, Key, Palette, Sparkles, Activity, ShieldCheck, Cpu, Terminal, ArrowUpRight, CheckCircle2, ChevronRight, Zap, RefreshCw, MessageSquare, Database, Layers, Users, BookOpen } from 'lucide-react';
 import { CockpitDashboard } from '../cockpit/CockpitDashboard.js';
 import { AgentBridge } from '../bridge/AgentBridge.js';
 import { CredentialVault } from '../vault/CredentialVault.js';
@@ -8,6 +8,7 @@ import { SettingsAppearanceStudio } from '../settings/SettingsAppearanceStudio.j
 import { AccountsStudio } from '../accounts/AccountsStudio.js';
 import { GoalStudioModal } from '../modals/GoalStudioModal.js';
 import { PoolStudioModal } from '../modals/PoolStudioModal.js';
+import { ProductGuideModal } from '../modals/ProductGuideModal.js';
 import { DecisionInspectorDrawer, DecisionTrace } from '../drawers/DecisionInspectorDrawer.js';
 import { GlossaryTerm } from '../common/GlossaryTerm.js';
 import { AgenticChat } from '../chat/AgenticChat.js';
@@ -17,6 +18,7 @@ export const AppShell: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'cockpit' | 'accounts' | 'bridge' | 'vault' | 'database' | 'settings'>('cockpit');
   const [isGoalStudioOpen, setIsGoalStudioOpen] = useState(false);
   const [isPoolStudioOpen, setIsPoolStudioOpen] = useState(false);
+  const [isGuideModalOpen, setIsGuideModalOpen] = useState(false);
   const [selectedTrace, setSelectedTrace] = useState<DecisionTrace | null>(null);
   const [conciergeMsg, setConciergeMsg] = useState('GoalRoute Copilot active. Monitoring your configured enclave keys with 0ms overhead.');
   const [activeKeys, setActiveKeys] = useState<number | null>(null);
@@ -341,6 +343,14 @@ export const AppShell: React.FC = () => {
             </button>
 
             <button
+              onClick={() => setIsGuideModalOpen(true)}
+              className="w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)] transition-all cursor-pointer"
+            >
+              <BookOpen className="w-4.5 h-4.5 shrink-0 text-cyan-400" />
+              <span>Product Guide &amp; Docs</span>
+            </button>
+
+            <button
               onClick={() => setActiveTab('settings')}
               className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all ${
                 activeTab === 'settings'
@@ -431,6 +441,7 @@ export const AppShell: React.FC = () => {
             onOpenGoalStudio={() => setIsGoalStudioOpen(true)}
             onOpenPoolStudio={() => setIsPoolStudioOpen(true)}
             onOpenVault={() => setActiveTab('vault')}
+            onOpenGuide={() => setIsGuideModalOpen(true)}
             onSelectTrace={(trace) => setSelectedTrace(trace)}
           />
         )}
@@ -478,6 +489,12 @@ export const AppShell: React.FC = () => {
         onPoolsUpdated={() => {
           setConciergeMsg('Routing pools updated. Execution rules apply immediately to incoming traffic.');
         }}
+      />
+
+      {/* Product Guide & Documentation Modal Container */}
+      <ProductGuideModal
+        isOpen={isGuideModalOpen}
+        onClose={() => setIsGuideModalOpen(false)}
       />
 
       {/* Decision Inspector Drawer Container */}
