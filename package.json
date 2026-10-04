@@ -1,6 +1,6 @@
 {
   "name": "goalroute",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Multi-provider LLM gateway with goal-based self-healing routing",
   "license": "Apache-2.0",
   "main": "electron/dist/main.js",
