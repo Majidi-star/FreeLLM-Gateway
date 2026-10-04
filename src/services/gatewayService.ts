@@ -140,6 +140,21 @@ export function safeParseTaskFitness(raw?: string | null): Record<string, number
   }
 }
 
+export function requestHasImages(request: OpenAIChatRequest): boolean {
+  if (!request.messages || !Array.isArray(request.messages)) return false;
+  for (const msg of request.messages) {
+    if (Array.isArray(msg.content)) {
+      for (const item of msg.content) {
+        if (!item) continue;
+        if ((item as any).type === 'image_url' || (item as any).type === 'image' || (item as any).image_url !== undefined) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
 export class GatewayService extends EventEmitter {
   private lastLogTimestamp = 0;
 
@@ -310,6 +325,7 @@ export class GatewayService extends EventEmitter {
 
     const goalRecord = pool.goal_id && this.goalRepo ? this.goalRepo.findById(pool.goal_id) : null;
     const taskType = goalRecord?.task_type || 'general';
+    const requiresVision = requestHasImages(request);
 
     const rawSteps = this.poolRepo.getPoolSteps(poolId);
     if (rawSteps.length === 0) {
@@ -327,6 +343,10 @@ export class GatewayService extends EventEmitter {
 
       if (!conn || !mdl || !prov) continue;
       if (!isConnectionActive(conn)) {
+        continue;
+      }
+
+      if (requiresVision && !mdl.supports_vision) {
         continue;
       }
 
@@ -752,6 +772,7 @@ export class GatewayService extends EventEmitter {
 
     const goalRecord = pool.goal_id && this.goalRepo ? this.goalRepo.findById(pool.goal_id) : null;
     const taskType = goalRecord?.task_type || 'general';
+    const requiresVision = requestHasImages(request);
 
     const rawSteps = this.poolRepo.getPoolSteps(poolId);
     if (rawSteps.length === 0) {
@@ -768,6 +789,10 @@ export class GatewayService extends EventEmitter {
 
       if (!conn || !mdl || !prov) continue;
       if (!isConnectionActive(conn)) {
+        continue;
+      }
+
+      if (requiresVision && !mdl.supports_vision) {
         continue;
       }
 

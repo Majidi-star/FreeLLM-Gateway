@@ -584,8 +584,8 @@ export class McpService {
         tier: conn.tier,
         status: conn.status,
         healthState: health ? health.state : 'closed',
-        dailyTokensLimit: dailyTokensPolicy ? dailyTokensPolicy.limit_value : 5000000,
-        dailyRequestsLimit: dailyReqsPolicy ? dailyReqsPolicy.limit_value : 2000,
+        dailyTokensLimit: dailyTokensPolicy ? dailyTokensPolicy.limit_value : null,
+        dailyRequestsLimit: dailyReqsPolicy ? dailyReqsPolicy.limit_value : null,
       };
     });
 

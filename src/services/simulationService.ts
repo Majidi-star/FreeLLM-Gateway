@@ -46,8 +46,8 @@ export class SimulationService {
       const tokenPolicy = this.quotaRepo.getPolicy(conn.id, 'daily_tokens');
       const reqPolicy = this.quotaRepo.getPolicy(conn.id, 'daily_requests');
 
-      const tokenLimit = tokenPolicy ? tokenPolicy.limit_value : 5000000;
-      const reqLimit = reqPolicy ? reqPolicy.limit_value : 2000;
+      const tokenLimit = tokenPolicy ? tokenPolicy.limit_value : 0;
+      const reqLimit = reqPolicy ? reqPolicy.limit_value : 0;
 
       totalCapacityTokens += tokenLimit;
       totalCapacityRequests += reqLimit;

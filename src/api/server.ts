@@ -42,6 +42,7 @@ import { buildTrafficAuthHook, buildAdminAuthHook } from './authHooks.js';
 import { ProtocolType, UpdateEndpointsInput } from '../domain/server/types.js';
 import { AuthContext } from '../domain/auth/types.js';
 import { translateAnthropicToOpenAI, translateOpenAIToAnthropic } from '../domain/translation/anthropicProtocol.js';
+import { transformOpenAIToAnthropicSSEStream } from '../domain/translation/sseStream.js';
 import { AnthropicMessagesRequest } from '../domain/translation/anthropicTypes.js';
 import { OpenAIChatRequest } from '../domain/translation/types.js';
 import { generateId } from '../shared/ids.js';
@@ -182,7 +183,8 @@ export async function buildApp() {
     requestTimeout: 30000,
     connectionTimeout: 30000,
     keepAliveTimeout: 65000,
-      bodyLimit: 20 * 1024 * 1024, // 20MB — matches the 15MB upstream response cap plus headroom
+    bodyLimit: 25 * 1024 * 1024, // 25MB payload limit for multimodal images
+    trustProxy: process.env.TRUST_PROXY === 'true' || process.env.TRUST_PROXY === '1' || true,
   });
 
   await fastify.register(cors, {
@@ -310,11 +312,19 @@ export async function buildApp() {
 
   // Shared OpenAI-compatible chat completions handler (main app + OpenAI/Native protocol ports).
   const chatCompletionsHandler = async (req: FastifyRequest, reply: FastifyReply) => {
-    const poolIdHeader =
+    let poolIdHeader =
       (req.headers['x-goalroute-pool'] as string) || (req.query as { poolId?: string })?.poolId || null;
 
-    const targetPoolId = resolvePoolForAuth(poolIdHeader, req.auth);
     const body = req.body as OpenAIChatRequest & { stream?: boolean };
+
+    if (!poolIdHeader && body?.model) {
+      const matchingPool = poolRepo.listPools().find(p => p.is_active && (p.id === body.model || p.name === body.model));
+      if (matchingPool) {
+        poolIdHeader = matchingPool.id;
+      }
+    }
+
+    const targetPoolId = resolvePoolForAuth(poolIdHeader, req.auth);
 
     if (body?.stream) {
       const abortController = new AbortController();
@@ -391,7 +401,10 @@ export async function buildApp() {
       reply.header('x-goalroute-model', dispatchResult.selectedStep.modelName);
       reply.header('x-goalroute-latency-ms', dispatchResult.latencyMs);
 
-      return reply.send(dispatchResult.response);
+      return reply.send({
+        ...dispatchResult.response,
+        model: dispatchResult.selectedStep.modelName,
+      });
     } finally {
       req.raw.removeListener('close', onClose);
     }
@@ -399,6 +412,11 @@ export async function buildApp() {
 
   const getOpenAiModelsList = () => {
     const modelsMap = new Map<string, { id: string; object: string; owned_by: string }>();
+    const activePools = poolRepo.listPools().filter(p => p.is_active);
+    for (const p of activePools) {
+      modelsMap.set(p.id, { id: p.id, object: 'model', owned_by: 'goalroute-pool' });
+      modelsMap.set(p.name, { id: p.name, object: 'model', owned_by: 'goalroute-pool' });
+    }
     for (const m of catalogService.getAllModels()) {
       if (m.isActive && !modelsMap.has(m.modelName)) {
         modelsMap.set(m.modelName, { id: m.modelName, object: 'model', owned_by: m.providerSlug });
@@ -587,30 +605,20 @@ reply.raw.on('error', () => {});
 
     try {
       if (body.stream === true) {
-        // Anthropic SSE: emit a deterministic message envelope with one content delta.
-        const dispatchResult = await gatewayService.dispatch(targetPoolId, openaiRequest, abortController.signal, {
+        const dispatchResult = await gatewayService.dispatchStream(targetPoolId, openaiRequest, abortController.signal, {
           accountId: req.auth?.kind === 'account' ? req.auth.accountId : null,
           apiKeyId: req.auth?.kind === 'account' ? req.auth.apiKeyId : null,
           protocol: 'anthropic',
           clientName: (body as any).user || 'GoalRoute Client',
         });
-        const anthropicResponse = translateOpenAIToAnthropic(dispatchResult.response, body.model);
-        const text = anthropicResponse.content.map((block) => block.text).join('');
 
         reply.raw.setHeader('Content-Type', 'text/event-stream');
         reply.raw.setHeader('Cache-Control', 'no-cache');
         reply.raw.setHeader('Connection', 'keep-alive');
 
-        const sse = (event: string, data: unknown) => `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
-        reply.raw.write(sse('message_start', {
-          type: 'message_start',
-          message: { ...anthropicResponse, content: [], stop_reason: null, usage: { input_tokens: anthropicResponse.usage.input_tokens, output_tokens: 0 } },
-        }));
-        reply.raw.write(sse('content_block_start', { type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' } }));
-        reply.raw.write(sse('content_block_delta', { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text } }));
-        reply.raw.write(sse('content_block_stop', { type: 'content_block_stop', index: 0 }));
-        reply.raw.write(sse('message_delta', { type: 'message_delta', delta: { stop_reason: anthropicResponse.stop_reason, stop_sequence: null }, usage: { output_tokens: anthropicResponse.usage.output_tokens } }));
-        reply.raw.write(sse('message_stop', { type: 'message_stop' }));
+        for await (const sseChunk of transformOpenAIToAnthropicSSEStream(dispatchResult.stream, body.model)) {
+          reply.raw.write(sseChunk);
+        }
         reply.raw.end();
         return reply;
       }
@@ -638,6 +646,7 @@ reply.raw.on('error', () => {});
       requestTimeout: 30000,
       connectionTimeout: 30000,
       keepAliveTimeout: 65000,
+      bodyLimit: 25 * 1024 * 1024,
     });
 
     await app.register(cors, { origin: corsOriginValidator });
@@ -705,25 +714,19 @@ reply.raw.on('error', () => {});
   });
 
   fastify.get('/api/v1/system/token', async (req) => {
-    const isLocalhost = req.ip === '127.0.0.1' || req.ip === '::1' || req.ip === '::ffff:127.0.0.1';
-    if (!isLocalhost) {
-      const authHeader = req.headers['authorization'];
-      const token = authHeader ? authHeader.replace(/^Bearer\s+/i, '').trim() : '';
-      if (!safeCompareTokens(token, config.ADMIN_API_TOKEN)) {
-        throw new AppError('Unauthorized', 'AUTHENTICATION_ERROR', 401);
-      }
+    const authHeader = req.headers['authorization'];
+    const token = authHeader ? authHeader.replace(/^Bearer\s+/i, '').trim() : '';
+    if (!safeCompareTokens(token, config.ADMIN_API_TOKEN)) {
+      throw new AppError('Unauthorized access to admin token endpoint', 'AUTHENTICATION_ERROR', 401);
     }
-    return { token: config.ADMIN_API_TOKEN, isLocalhost };
+    return { token: config.ADMIN_API_TOKEN };
   });
 
   fastify.post('/api/v1/system/token', async (req) => {
-    const isLocalhost = req.ip === '127.0.0.1' || req.ip === '::1' || req.ip === '::ffff:127.0.0.1';
-    if (!isLocalhost) {
-      const authHeader = req.headers['authorization'];
-      const token = authHeader ? authHeader.replace(/^Bearer\s+/i, '').trim() : '';
-      if (!safeCompareTokens(token, config.ADMIN_API_TOKEN)) {
-        throw new AppError('Unauthorized', 'AUTHENTICATION_ERROR', 401);
-      }
+    const authHeader = req.headers['authorization'];
+    const token = authHeader ? authHeader.replace(/^Bearer\s+/i, '').trim() : '';
+    if (!safeCompareTokens(token, config.ADMIN_API_TOKEN)) {
+      throw new AppError('Unauthorized access to admin token endpoint', 'AUTHENTICATION_ERROR', 401);
     }
     const body = req.body as { token?: string };
     if (!body?.token || typeof body.token !== 'string' || body.token.trim().length < 8) {

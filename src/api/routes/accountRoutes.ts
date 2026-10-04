@@ -34,6 +34,7 @@ const createKeySchema = z.object({
   name: z.string().min(1).max(64),
   scopes: z.array(z.string()).optional(),
   poolId: z.string().optional().nullable(),
+  pinnedPoolId: z.string().optional().nullable(),
   expiresAt: z.number().int().positive().optional().nullable(),
 });
 
@@ -90,9 +91,17 @@ export function registerAccountRoutes(app: FastifyInstance, deps: { accountServi
   app.post('/api/v1/accounts/:id/keys', async (req, reply) => {
     const { id } = req.params as { id: string };
     const data = validate(createKeySchema, req.body);
-    const created = accountService.createKey(id, data);
+    const targetPoolId = data.poolId || data.pinnedPoolId || null;
+    if (targetPoolId) {
+      try {
+        poolService.getPool(targetPoolId);
+      } catch {
+        throw new AppError(`Pool with ID '${targetPoolId}' does not exist`, 'POOL_NOT_FOUND', 400);
+      }
+    }
+    const created = accountService.createKey(id, { ...data, poolId: targetPoolId });
     reply.header('Cache-Control', 'no-store');
-    return created;
+    return { ...created, key: created.plaintext };
   });
 
   app.post('/api/v1/accounts/:id/keys/:keyId/rotate', async (req, reply) => {

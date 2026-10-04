@@ -1,6 +1,13 @@
+export interface OpenAIChatContentPart {
+  type: 'text' | 'image_url' | 'image';
+  text?: string;
+  image_url?: { url: string };
+  source?: { type: string; media_type?: string; data?: string; url?: string };
+}
+
 export interface OpenAIChatMessage {
   role: 'system' | 'user' | 'assistant' | 'tool';
-  content?: string | Array<{ type: string; text?: string; image_url?: { url: string } }> | null;
+  content?: string | OpenAIChatContentPart[] | null;
   name?: string;
   tool_call_id?: string;
   tool_calls?: Array<{

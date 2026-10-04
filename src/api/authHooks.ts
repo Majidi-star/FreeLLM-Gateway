@@ -72,8 +72,7 @@ export function buildAdminAuthHook(deps: { config: Config }): onRequestHookHandl
       req.ip === '127.0.0.1' || req.ip === '::1' || req.ip === '::ffff:127.0.0.1';
     if (
       (isGetEndpoints && !deps.config.REMOTE_ACCESS_ENABLED) ||
-      url.startsWith('/api/v1/health') ||
-      (url.startsWith('/api/v1/system/token') && isLocalhost)
+      url.startsWith('/api/v1/health')
     ) {
       return;
     }

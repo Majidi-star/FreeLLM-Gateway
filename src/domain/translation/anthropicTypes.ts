@@ -3,7 +3,35 @@ export interface AnthropicTextBlock {
   text: string;
 }
 
-export type AnthropicContentBlock = AnthropicTextBlock;
+export interface AnthropicImageBlock {
+  type: 'image';
+  source: {
+    type: 'base64' | 'url';
+    media_type?: string;
+    data?: string;
+    url?: string;
+  };
+}
+
+export interface AnthropicToolUseBlock {
+  type: 'tool_use';
+  id: string;
+  name: string;
+  input: Record<string, unknown>;
+}
+
+export interface AnthropicToolResultBlock {
+  type: 'tool_result';
+  tool_use_id: string;
+  content?: string | any[];
+  is_error?: boolean;
+}
+
+export type AnthropicContentBlock =
+  | AnthropicTextBlock
+  | AnthropicImageBlock
+  | AnthropicToolUseBlock
+  | AnthropicToolResultBlock;
 
 export interface AnthropicSystemBlock {
   type: 'text';
@@ -12,15 +40,23 @@ export interface AnthropicSystemBlock {
 
 export type AnthropicSystemPrompt = string | AnthropicSystemBlock[];
 
+export interface AnthropicTool {
+  name: string;
+  description?: string;
+  input_schema: Record<string, unknown>;
+}
+
 export interface AnthropicMessage {
   role: 'user' | 'assistant';
-  content: string | Array<{ type: string; text?: string }>;
+  content: string | any[];
 }
 
 export interface AnthropicMessagesRequest {
   model: string;
   messages: AnthropicMessage[];
   system?: AnthropicSystemPrompt;
+  tools?: AnthropicTool[];
+  tool_choice?: unknown;
   max_tokens?: number;
   temperature?: number;
   top_p?: number;
@@ -34,7 +70,7 @@ export interface AnthropicMessagesResponse {
   role: 'assistant';
   model: string;
   content: AnthropicContentBlock[];
-  stop_reason: 'end_turn' | 'max_tokens' | 'stop_sequence';
+  stop_reason: 'end_turn' | 'max_tokens' | 'stop_sequence' | 'tool_use';
   stop_sequence: null;
   usage: {
     input_tokens: number;

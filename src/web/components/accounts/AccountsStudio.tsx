@@ -31,10 +31,12 @@ export interface ApiKeyItem {
 
 export interface CreatedKeyResult {
   id: string;
-  key: string; // Plaintext key returned only upon creation
+  plaintext?: string;
+  key?: string; // Plaintext key returned only upon creation
   name: string;
-  keyPrefix: string;
-  pinnedPoolId: string | null;
+  keyPrefix?: string;
+  poolId?: string | null;
+  pinnedPoolId?: string | null;
 }
 
 interface PoolOption {
@@ -169,12 +171,14 @@ export const AccountsStudio: React.FC = () => {
     e.preventDefault();
     if (!selectedAccount || !newKeyName.trim()) return;
     try {
+      const selectedPool = newKeyPinnedPoolId || undefined;
       const res = await fetch(`/api/v1/accounts/${selectedAccount.id}/keys`, {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify({
           name: newKeyName.trim(),
-          pinnedPoolId: newKeyPinnedPoolId || undefined,
+          poolId: selectedPool,
+          pinnedPoolId: selectedPool,
         }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -491,83 +495,94 @@ export const AccountsStudio: React.FC = () => {
             </div>
 
             {/* Key Banner */}
-            <div className="p-4 rounded-xl bg-slate-950 border border-[var(--border-subtle)] space-y-2">
-              <div className="text-[10px] uppercase font-bold text-[var(--signal-mint)] tracking-wider">Your API Key</div>
-              <div className="flex items-center justify-between gap-2">
-                <code className="font-mono text-xs text-white break-all">{createdKeyResult.key}</code>
-                <button
-                  onClick={() => copyToClipboard(createdKeyResult.key)}
-                  className="px-3 py-1.5 rounded-lg bg-[var(--accent-primary)] text-white text-xs font-semibold flex items-center gap-1.5 shrink-0 hover:opacity-90 transition-all cursor-pointer"
-                >
-                  {copiedKey ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                  <span>{copiedKey ? 'Copied!' : 'Copy Key'}</span>
-                </button>
-              </div>
-            </div>
+            {(() => {
+              const currentHost = typeof window !== 'undefined' && window.location.hostname ? window.location.hostname : 'localhost';
+              const keyVal = createdKeyResult.plaintext || createdKeyResult.key || '';
+              const openAiUrl = `http://${currentHost}:8788/v1`;
+              const anthropicUrl = `http://${currentHost}:8789`;
 
-            {/* Quick Setup Snippets for Cline, Cursor, Claude Code */}
-            <div className="space-y-3 pt-2">
-              <div className="text-xs font-bold text-[var(--text-primary)] uppercase tracking-wider flex items-center gap-1.5">
-                <Terminal className="w-4 h-4 text-[var(--accent-primary)]" />
-                <span>Client Setup Snippets</span>
-              </div>
+              return (
+                <>
+                  <div className="p-4 rounded-xl bg-slate-950 border border-[var(--border-subtle)] space-y-2">
+                    <div className="text-[10px] uppercase font-bold text-[var(--signal-mint)] tracking-wider">Your API Key</div>
+                    <div className="flex items-center justify-between gap-2">
+                      <code className="font-mono text-xs text-white break-all">{keyVal}</code>
+                      <button
+                        onClick={() => copyToClipboard(keyVal)}
+                        className="px-3 py-1.5 rounded-lg bg-[var(--accent-primary)] text-white text-xs font-semibold flex items-center gap-1.5 shrink-0 hover:opacity-90 transition-all cursor-pointer"
+                      >
+                        {copiedKey ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                        <span>{copiedKey ? 'Copied!' : 'Copy Key'}</span>
+                      </button>
+                    </div>
+                  </div>
 
-              {/* Cline */}
-              <div className="p-3 rounded-xl bg-[var(--bg-well)] border border-[var(--border-subtle)] space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-xs text-[var(--text-primary)]">Cline / VS Code Extension</span>
-                  <button
-                    onClick={() => copyToClipboard(`Base URL: http://localhost:8788/v1\nAPI Key: ${createdKeyResult.key}`, 'cline')}
-                    className="text-[11px] text-[var(--accent-primary)] hover:underline flex items-center gap-1 cursor-pointer"
-                  >
-                    {copiedSnippet === 'cline' ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                    <span>Copy Config</span>
-                  </button>
-                </div>
-                <div className="font-mono text-[11px] text-[var(--text-muted)] space-y-0.5">
-                  <div>Provider: OpenAI Compatible</div>
-                  <div>Base URL: <span className="text-[var(--signal-mint)]">http://localhost:8788/v1</span></div>
-                  <div>API Key: <span className="text-[var(--signal-mint)]">{createdKeyResult.key}</span></div>
-                </div>
-              </div>
+                  {/* Quick Setup Snippets for Cline, Cursor, Claude Code */}
+                  <div className="space-y-3 pt-2">
+                    <div className="text-xs font-bold text-[var(--text-primary)] uppercase tracking-wider flex items-center gap-1.5">
+                      <Terminal className="w-4 h-4 text-[var(--accent-primary)]" />
+                      <span>Client Setup Snippets</span>
+                    </div>
 
-              {/* Cursor */}
-              <div className="p-3 rounded-xl bg-[var(--bg-well)] border border-[var(--border-subtle)] space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-xs text-[var(--text-primary)]">Cursor IDE</span>
-                  <button
-                    onClick={() => copyToClipboard(`Base URL: http://localhost:8788/v1\nAPI Key: ${createdKeyResult.key}`, 'cursor')}
-                    className="text-[11px] text-[var(--accent-primary)] hover:underline flex items-center gap-1 cursor-pointer"
-                  >
-                    {copiedSnippet === 'cursor' ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                    <span>Copy Config</span>
-                  </button>
-                </div>
-                <div className="font-mono text-[11px] text-[var(--text-muted)] space-y-0.5">
-                  <div>Settings → OpenAI API Key → Override Base URL: <span className="text-[var(--signal-mint)]">http://localhost:8788/v1</span></div>
-                  <div>API Key: <span className="text-[var(--signal-mint)]">{createdKeyResult.key}</span></div>
-                </div>
-              </div>
+                    {/* Cline */}
+                    <div className="p-3 rounded-xl bg-[var(--bg-well)] border border-[var(--border-subtle)] space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-xs text-[var(--text-primary)]">Cline / VS Code Extension</span>
+                        <button
+                          onClick={() => copyToClipboard(`Base URL: ${openAiUrl}\nAPI Key: ${keyVal}`, 'cline')}
+                          className="text-[11px] text-[var(--accent-primary)] hover:underline flex items-center gap-1 cursor-pointer"
+                        >
+                          {copiedSnippet === 'cline' ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                          <span>Copy Config</span>
+                        </button>
+                      </div>
+                      <div className="font-mono text-[11px] text-[var(--text-muted)] space-y-0.5">
+                        <div>Provider: OpenAI Compatible</div>
+                        <div>Base URL: <span className="text-[var(--signal-mint)]">{openAiUrl}</span></div>
+                        <div>API Key: <span className="text-[var(--signal-mint)]">{keyVal}</span></div>
+                      </div>
+                    </div>
 
-              {/* Claude Code */}
-              <div className="p-3 rounded-xl bg-[var(--bg-well)] border border-[var(--border-subtle)] space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-xs text-[var(--text-primary)]">Claude Code CLI</span>
-                  <button
-                    onClick={() => copyToClipboard(`export ANTHROPIC_BASE_URL="http://localhost:8789"\nexport ANTHROPIC_API_KEY="${createdKeyResult.key}"\nclaude`, 'claude')}
-                    className="text-[11px] text-[var(--accent-primary)] hover:underline flex items-center gap-1 cursor-pointer"
-                  >
-                    {copiedSnippet === 'claude' ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                    <span>Copy Commands</span>
-                  </button>
-                </div>
-                <div className="font-mono text-[11px] text-[var(--signal-mint)] bg-slate-950 p-2 rounded-lg">
-                  export ANTHROPIC_BASE_URL="http://localhost:8789"<br />
-                  export ANTHROPIC_API_KEY="{createdKeyResult.key}"<br />
-                  claude
-                </div>
-              </div>
-            </div>
+                    {/* Cursor */}
+                    <div className="p-3 rounded-xl bg-[var(--bg-well)] border border-[var(--border-subtle)] space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-xs text-[var(--text-primary)]">Cursor IDE</span>
+                        <button
+                          onClick={() => copyToClipboard(`Base URL: ${openAiUrl}\nAPI Key: ${keyVal}`, 'cursor')}
+                          className="text-[11px] text-[var(--accent-primary)] hover:underline flex items-center gap-1 cursor-pointer"
+                        >
+                          {copiedSnippet === 'cursor' ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                          <span>Copy Config</span>
+                        </button>
+                      </div>
+                      <div className="font-mono text-[11px] text-[var(--text-muted)] space-y-0.5">
+                        <div>Settings → OpenAI API Key → Override Base URL: <span className="text-[var(--signal-mint)]">{openAiUrl}</span></div>
+                        <div>API Key: <span className="text-[var(--signal-mint)]">{keyVal}</span></div>
+                      </div>
+                    </div>
+
+                    {/* Claude Code */}
+                    <div className="p-3 rounded-xl bg-[var(--bg-well)] border border-[var(--border-subtle)] space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-xs text-[var(--text-primary)]">Claude Code CLI</span>
+                        <button
+                          onClick={() => copyToClipboard(`export ANTHROPIC_BASE_URL="${anthropicUrl}"\nexport ANTHROPIC_API_KEY="${keyVal}"\nclaude`, 'claude')}
+                          className="text-[11px] text-[var(--accent-primary)] hover:underline flex items-center gap-1 cursor-pointer"
+                        >
+                          {copiedSnippet === 'claude' ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                          <span>Copy Commands</span>
+                        </button>
+                      </div>
+                      <div className="font-mono text-[11px] text-[var(--signal-mint)] bg-slate-950 p-2 rounded-lg">
+                        export ANTHROPIC_BASE_URL="{anthropicUrl}"<br />
+                        export ANTHROPIC_API_KEY="{keyVal}"<br />
+                        claude
+                      </div>
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
 
             <div className="flex justify-end pt-2">
               <button

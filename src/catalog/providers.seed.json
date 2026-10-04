@@ -1,5 +1,35 @@
 [
   {
+    "slug": "ollama",
+    "displayName": "Ollama Local AI",
+    "baseUrl": "http://localhost:11434/v1",
+    "authType": "keyless",
+    "protocol": "openai",
+    "docsUrl": "https://ollama.com",
+    "capabilities": {
+      "vision": true,
+      "tools": true,
+      "streaming": true,
+      "jsonMode": true
+    },
+    "isActive": true
+  },
+  {
+    "slug": "lmstudio",
+    "displayName": "LM Studio Local AI",
+    "baseUrl": "http://localhost:1234/v1",
+    "authType": "keyless",
+    "protocol": "openai",
+    "docsUrl": "https://lmstudio.ai",
+    "capabilities": {
+      "vision": true,
+      "tools": true,
+      "streaming": true,
+      "jsonMode": true
+    },
+    "isActive": true
+  },
+  {
     "slug": "agentrouter",
     "displayName": "Agentrouter",
     "baseUrl": "https://agentrouter.org/v1/messages",

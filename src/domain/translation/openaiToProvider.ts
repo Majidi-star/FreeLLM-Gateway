@@ -21,6 +21,98 @@ function findToolNameById(messages: OpenAIChatMessage[], toolCallId?: string): s
   return undefined;
 }
 
+function formatOpenAIContentToAnthropicBlocks(content: unknown): any[] {
+  if (typeof content === 'string') {
+    return [{ type: 'text', text: content }];
+  }
+  if (Array.isArray(content)) {
+    const blocks: any[] = [];
+    for (const item of content) {
+      if (!item) continue;
+      if (typeof item === 'string') {
+        blocks.push({ type: 'text', text: item });
+      } else if (item.type === 'text' && typeof item.text === 'string') {
+        blocks.push({ type: 'text', text: item.text });
+      } else if (item.type === 'image_url' || item.image_url) {
+        const urlStr = item.image_url?.url || item.url;
+        if (urlStr) {
+          if (urlStr.startsWith('data:')) {
+            const matches = urlStr.match(/^data:([^;]+);base64,(.+)$/);
+            if (matches) {
+              blocks.push({
+                type: 'image',
+                source: {
+                  type: 'base64',
+                  media_type: matches[1],
+                  data: matches[2],
+                },
+              });
+              continue;
+            }
+          }
+          blocks.push({
+            type: 'image',
+            source: {
+              type: 'base64',
+              media_type: 'image/jpeg',
+              data: urlStr,
+            },
+          });
+        }
+      } else if (item.type === 'image' && item.source) {
+        blocks.push({ type: 'image', source: item.source });
+      }
+    }
+    return blocks.length > 0 ? blocks : [{ type: 'text', text: '' }];
+  }
+  return [{ type: 'text', text: JSON.stringify(content ?? '') }];
+}
+
+function formatOpenAIContentToGeminiParts(content: unknown): any[] {
+  if (typeof content === 'string') {
+    return content.trim().length > 0 ? [{ text: content }] : [];
+  }
+  if (Array.isArray(content)) {
+    const parts: any[] = [];
+    for (const item of content) {
+      if (!item) continue;
+      if (typeof item === 'string') {
+        if (item.trim().length > 0) parts.push({ text: item });
+      } else if (item.type === 'text' && typeof item.text === 'string') {
+        if (item.text.trim().length > 0) parts.push({ text: item.text });
+      } else if (item.type === 'image_url' || item.image_url) {
+        const urlStr = item.image_url?.url || item.url;
+        if (urlStr) {
+          let mimeType = 'image/jpeg';
+          let data = urlStr;
+          if (urlStr.startsWith('data:')) {
+            const matches = urlStr.match(/^data:([^;]+);base64,(.+)$/);
+            if (matches) {
+              mimeType = matches[1];
+              data = matches[2];
+            }
+          }
+          parts.push({
+            inlineData: {
+              mimeType,
+              data,
+            },
+          });
+        }
+      } else if (item.type === 'image' && item.source) {
+        parts.push({
+          inlineData: {
+            mimeType: item.source.media_type || 'image/jpeg',
+            data: item.source.data || '',
+          },
+        });
+      }
+    }
+    return parts;
+  }
+  return [];
+}
+
 export function translateRequestToProvider(
   request: OpenAIChatRequest,
   protocol: 'openai' | 'anthropic' | 'gemini' | 'custom',
@@ -56,32 +148,27 @@ export function translateRequestToProvider(
       if (msg.role === 'system') {
         systemTexts.push(typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content ?? ''));
       } else if (msg.role === 'user') {
-        const text = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content ?? '');
+        const blocks = formatOpenAIContentToAnthropicBlocks(msg.content);
         const lastMsg = anthropicMessages[anthropicMessages.length - 1];
         if (lastMsg && lastMsg.role === 'user') {
           if (Array.isArray(lastMsg.content)) {
-            if (text) (lastMsg.content as any[]).push({ type: 'text', text });
+            (lastMsg.content as any[]).push(...blocks);
           } else {
-            const prevText = typeof lastMsg.content === 'string' ? lastMsg.content : JSON.stringify(lastMsg.content);
-            lastMsg.content = [
-              ...(prevText ? [{ type: 'text', text: prevText }] : []),
-              ...(text ? [{ type: 'text', text }] : []),
-            ];
+            const prevBlocks = formatOpenAIContentToAnthropicBlocks(lastMsg.content);
+            lastMsg.content = [...prevBlocks, ...blocks];
           }
         } else {
           anthropicMessages.push({
             role: 'user',
-            content: msg.content ?? '',
+            content: blocks.length === 1 && blocks[0].type === 'text' ? blocks[0].text : blocks,
           });
         }
       } else if (msg.role === 'assistant') {
         if (msg.tool_calls && msg.tool_calls.length > 0) {
           const contentBlocks: any[] = [];
           if (msg.content) {
-            const text = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content);
-            if (text.trim().length > 0) {
-              contentBlocks.push({ type: 'text', text });
-            }
+            const blocks = formatOpenAIContentToAnthropicBlocks(msg.content);
+            contentBlocks.push(...blocks.filter(b => b.type !== 'text' || (b.text && b.text.trim().length > 0)));
           }
           for (const tc of msg.tool_calls) {
             contentBlocks.push({
@@ -96,13 +183,11 @@ export function translateRequestToProvider(
             content: contentBlocks,
           });
         } else {
-          const text = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content ?? '');
-          if (text && text.trim().length > 0) {
-            anthropicMessages.push({
-              role: 'assistant',
-              content: msg.content,
-            });
-          }
+          const blocks = formatOpenAIContentToAnthropicBlocks(msg.content);
+          anthropicMessages.push({
+            role: 'assistant',
+            content: blocks.length === 1 && blocks[0].type === 'text' ? blocks[0].text : blocks,
+          });
         }
       } else if (msg.role === 'tool') {
         const toolResultBlock = {
@@ -115,11 +200,8 @@ export function translateRequestToProvider(
           if (Array.isArray(lastMsg.content)) {
             (lastMsg.content as any[]).push(toolResultBlock);
           } else {
-            const prevText = typeof lastMsg.content === 'string' ? lastMsg.content : JSON.stringify(lastMsg.content);
-            lastMsg.content = [
-              ...(prevText ? [{ type: 'text', text: prevText }] : []),
-              toolResultBlock,
-            ];
+            const prevBlocks = formatOpenAIContentToAnthropicBlocks(lastMsg.content);
+            lastMsg.content = [...prevBlocks, toolResultBlock];
           }
         } else {
           anthropicMessages.push({
@@ -191,25 +273,22 @@ export function translateRequestToProvider(
       if (m.role === 'system') {
         systemTexts.push(typeof m.content === 'string' ? m.content : JSON.stringify(m.content ?? ''));
       } else if (m.role === 'user') {
-        const partText = typeof m.content === 'string' ? m.content : JSON.stringify(m.content ?? '');
-        if (partText.trim().length === 0) continue;
-
-        const lastTurn = contents[contents.length - 1];
-        if (lastTurn && lastTurn.role === 'user') {
-          lastTurn.parts.push({ text: partText });
-        } else {
-          contents.push({
-            role: 'user',
-            parts: [{ text: partText }],
-          });
+        const userParts = formatOpenAIContentToGeminiParts(m.content);
+        if (userParts.length > 0) {
+          const lastTurn = contents[contents.length - 1];
+          if (lastTurn && lastTurn.role === 'user') {
+            lastTurn.parts.push(...userParts);
+          } else {
+            contents.push({
+              role: 'user',
+              parts: userParts,
+            });
+          }
         }
       } else if (m.role === 'assistant') {
         const parts: Array<Record<string, unknown>> = [];
         if (m.content) {
-          const partText = (typeof m.content === 'string' ? m.content : JSON.stringify(m.content)).trim();
-          if (partText.length > 0) {
-            parts.push({ text: partText });
-          }
+          parts.push(...formatOpenAIContentToGeminiParts(m.content));
         }
         if (m.tool_calls && m.tool_calls.length > 0) {
           hasSeenAssistantWithToolCalls = true;

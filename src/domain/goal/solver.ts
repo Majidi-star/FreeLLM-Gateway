@@ -100,10 +100,10 @@ export function solveGoal(goal: GoalInput, candidates: CandidateSource[]): PoolP
       coveredConnections.add(candidate.connectionId);
       const candTokens = candidate.dailyTokenCapacity > 0
         ? candidate.dailyTokenCapacity
-        : (candidate.hasTokenQuotaPolicy === false ? 5000000 : 0);
+        : (candidate.hasTokenQuotaPolicy === false ? 10000000 : 0);
       const candRequests = candidate.dailyRequestCapacity > 0
         ? candidate.dailyRequestCapacity
-        : (candidate.hasRequestQuotaPolicy === false ? 2000 : 0);
+        : (candidate.hasRequestQuotaPolicy === false ? 10000 : 0);
 
       coveredTokens += candTokens;
       coveredRequests += candRequests;

@@ -325,3 +325,122 @@ export async function* transformToOpenAISSEStream(
     reportUsage();
   }
 }
+
+export async function* transformOpenAIToAnthropicSSEStream(
+  openaiStream: AsyncIterable<string>,
+  requestModel: string
+): AsyncGenerator<string, void, unknown> {
+  const messageId = generateId('msg');
+  const sse = (event: string, data: unknown) => `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+
+  yield sse('message_start', {
+    type: 'message_start',
+    message: {
+      id: messageId,
+      type: 'message',
+      role: 'assistant',
+      model: requestModel,
+      content: [],
+      stop_reason: null,
+      stop_sequence: null,
+      usage: { input_tokens: 0, output_tokens: 0 },
+    },
+  });
+
+  let textBlockStarted = false;
+  let textIndex = 0;
+  let outputTokens = 0;
+  let finalStopReason = 'end_turn';
+  let currentToolIndex = -1;
+
+  for await (const chunk of openaiStream) {
+    const lines = chunk.split('\n');
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed || !trimmed.startsWith('data:')) continue;
+      const dataStr = trimmed.slice(5).trim();
+      if (dataStr === '[DONE]') continue;
+
+      try {
+        const parsed = JSON.parse(dataStr);
+        const choice = parsed.choices?.[0];
+        if (!choice) continue;
+
+        if (choice.delta?.content) {
+          if (!textBlockStarted) {
+            textBlockStarted = true;
+            yield sse('content_block_start', {
+              type: 'content_block_start',
+              index: textIndex,
+              content_block: { type: 'text', text: '' },
+            });
+          }
+          const text = choice.delta.content;
+          outputTokens += Math.ceil(text.length / 4);
+          yield sse('content_block_delta', {
+            type: 'content_block_delta',
+            index: textIndex,
+            delta: { type: 'text_delta', text },
+          });
+        }
+
+        if (choice.delta?.tool_calls) {
+          if (textBlockStarted) {
+            yield sse('content_block_stop', { type: 'content_block_stop', index: textIndex });
+            textBlockStarted = false;
+          }
+          for (const tc of choice.delta.tool_calls) {
+            if (tc.function?.name) {
+              currentToolIndex++;
+              yield sse('content_block_start', {
+                type: 'content_block_start',
+                index: currentToolIndex,
+                content_block: {
+                  type: 'tool_use',
+                  id: tc.id || generateId('call'),
+                  name: tc.function.name,
+                  input: {},
+                },
+              });
+            }
+            if (tc.function?.arguments) {
+              const partialJson = tc.function.arguments;
+              outputTokens += Math.ceil(partialJson.length / 4);
+              yield sse('content_block_delta', {
+                type: 'content_block_delta',
+                index: currentToolIndex,
+                delta: { type: 'input_json_delta', partial_json: partialJson },
+              });
+            }
+          }
+        }
+
+        if (choice.finish_reason) {
+          if (choice.finish_reason === 'tool_calls') {
+            finalStopReason = 'tool_use';
+          } else if (choice.finish_reason === 'length') {
+            finalStopReason = 'max_tokens';
+          } else {
+            finalStopReason = 'end_turn';
+          }
+        }
+      } catch {
+        // ignore parse error
+      }
+    }
+  }
+
+  if (textBlockStarted) {
+    yield sse('content_block_stop', { type: 'content_block_stop', index: textIndex });
+  } else if (currentToolIndex >= 0) {
+    yield sse('content_block_stop', { type: 'content_block_stop', index: currentToolIndex });
+  }
+
+  yield sse('message_delta', {
+    type: 'message_delta',
+    delta: { stop_reason: finalStopReason, stop_sequence: null },
+    usage: { output_tokens: outputTokens },
+  });
+
+  yield sse('message_stop', { type: 'message_stop' });
+}
