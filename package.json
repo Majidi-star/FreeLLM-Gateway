@@ -2,6 +2,7 @@
   "name": "goalroute",
   "version": "1.0.0",
   "description": "Multi-provider LLM gateway with goal-based self-healing routing",
+  "author": "FreeLLM-Gateway Team",
   "license": "Apache-2.0",
   "main": "electron/dist/main.js",
   "bin": {
