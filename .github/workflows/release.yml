@@ -44,9 +44,11 @@ jobs:
           APPIMAGE_EXTRACT_AND_RUN: 1
         run: |
           if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
-            xvfb-run --auto-servernum -- npx electron-builder --config electron-builder.yml --publish never
+            xvfb-run --auto-servernum -- npx electron-builder --linux --config electron-builder.yml --publish never
+          elif [ "${{ matrix.os }}" = "macos-latest" ]; then
+            npx electron-builder --mac --config electron-builder.yml --publish never
           else
-            npx electron-builder --config electron-builder.yml --publish never
+            npx electron-builder --win --config electron-builder.yml --publish never
           fi
 
       - name: Upload Release Artifacts
