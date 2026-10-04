@@ -382,8 +382,19 @@ export async function buildApp() {
     }
   };
 
+  const getOpenAiModelsList = () => {
+    const modelsMap = new Map<string, { id: string; object: string; owned_by: string }>();
+    for (const m of catalogService.getAllModels()) {
+      if (m.isActive && !modelsMap.has(m.modelName)) {
+        modelsMap.set(m.modelName, { id: m.modelName, object: 'model', owned_by: m.providerSlug });
+      }
+    }
+    return { object: 'list', data: Array.from(modelsMap.values()) };
+  };
+
   // Gateway Endpoint: /v1/chat/completions (main port)
   fastify.post('/v1/chat/completions', chatCompletionsHandler);
+  fastify.get('/v1/models', async () => getOpenAiModelsList());
 
   // Management Routes
   fastify.get('/api/v1/providers', async () => providerService.getProvidersWithConnections());
@@ -621,13 +632,7 @@ reply.raw.on('error', () => {});
     switch (protocol) {
       case 'openai':
         app.post('/v1/chat/completions', chatCompletionsHandler);
-        app.get('/v1/models', async () => ({
-          object: 'list',
-          data: catalogService
-            .getAllModels()
-            .filter((m) => m.isActive)
-            .map((m) => ({ id: m.modelName, object: 'model', owned_by: m.providerSlug })),
-        }));
+        app.get('/v1/models', async () => getOpenAiModelsList());
         break;
       case 'anthropic':
         app.post('/v1/messages', anthropicMessagesHandler);

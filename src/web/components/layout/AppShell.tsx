@@ -113,12 +113,22 @@ export const AppShell: React.FC = () => {
     };
   }, [isResizingRight]);
 
-  useEffect(() => {
+  const [isAuthRequired, setIsAuthRequired] = useState(false);
+  const [authInputToken, setAuthInputToken] = useState('');
+
+  const checkInitialAuth = () => {
     const adminToken = getAdminToken();
     fetch('/api/v1/providers', {
       headers: adminToken ? { authorization: `Bearer ${adminToken}` } : {},
     })
-      .then((res) => (res.ok ? res.json() : []))
+      .then((res) => {
+        if (res.status === 401) {
+          setIsAuthRequired(true);
+          return [];
+        }
+        setIsAuthRequired(false);
+        return res.ok ? res.json() : [];
+      })
       .then((providers) => {
         if (Array.isArray(providers)) {
           const active = providers.filter((p: any) => p && p.hasKey && p.status !== 'unconfigured').length;
@@ -131,7 +141,23 @@ export const AppShell: React.FC = () => {
         }
       })
       .catch(() => {});
+  };
+
+  useEffect(() => {
+    checkInitialAuth();
   }, []);
+
+  const handleSaveAuthToken = (e: React.FormEvent) => {
+    e.preventDefault();
+    const clean = authInputToken.trim();
+    if (!clean) return;
+    try {
+      localStorage.setItem('goalroute_admin_token', clean);
+      sessionStorage.setItem('goalroute_admin_token', clean);
+    } catch {}
+    setIsAuthRequired(false);
+    checkInitialAuth();
+  };
 
   return (
     <div className="h-screen max-h-screen w-screen overflow-hidden bg-[var(--bg-obsidian)] text-[var(--text-primary)] font-sans flex flex-col md:flex-row">
@@ -399,6 +425,44 @@ export const AppShell: React.FC = () => {
         trace={selectedTrace}
         onClose={() => setSelectedTrace(null)}
       />
+
+      {/* Admin Authentication Required Modal */}
+      {isAuthRequired && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-[var(--bg-card)] border border-[var(--accent-primary)]/40 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center space-x-3">
+              <div className="p-2.5 rounded-xl bg-[var(--accent-primary)]/10 text-[var(--accent-primary)]">
+                <ShieldCheck className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="font-bold text-base text-[var(--text-primary)]">Admin Authentication Required</h3>
+                <p className="text-xs text-[var(--text-muted)]">Please enter your ADMIN_API_TOKEN to access the gateway UI.</p>
+              </div>
+            </div>
+            <form onSubmit={handleSaveAuthToken} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1">Admin API Token</label>
+                <input
+                  type="password"
+                  required
+                  placeholder="Enter ADMIN_API_TOKEN..."
+                  value={authInputToken}
+                  onChange={(e) => setAuthInputToken(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-xl bg-[var(--bg-well)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-primary)] font-mono"
+                />
+              </div>
+              <div className="flex justify-end pt-2">
+                <button
+                  type="submit"
+                  className="w-full py-2.5 rounded-xl bg-[var(--accent-primary)] text-white text-xs font-bold hover:opacity-90 transition-all cursor-pointer shadow-lg shadow-[var(--accent-primary)]/20"
+                >
+                  Authenticate & Continue
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
     </div>
   );
