@@ -41,7 +41,12 @@ jobs:
       - name: Package Release Artifacts
         env:
           APPIMAGE_EXTRACT_AND_RUN: 1
-        run: npx electron-builder --config electron-builder.yml --publish never
+        run: |
+          if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
+            xvfb-run --auto-servernum -- npx electron-builder --config electron-builder.yml --publish never
+          else
+            npx electron-builder --config electron-builder.yml --publish never
+          fi
 
       - name: Upload Release Artifacts
         uses: softprops/action-gh-release@v2
