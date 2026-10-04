@@ -309,7 +309,20 @@ export const AgenticChat: React.FC = () => {
       let matchedTool: string | null = null;
       let toolArgs: Record<string, any> = {};
 
-      if (lowerPrompt.includes('quota') || lowerPrompt.includes('health') || lowerPrompt.includes('limit')) {
+      if (lowerPrompt.includes('provider') || lowerPrompt.includes('connection')) {
+        matchedTool = 'list_providers_and_connections';
+      } else if (lowerPrompt.includes('goal')) {
+        matchedTool = 'list_goals';
+      } else if (lowerPrompt.includes('account')) {
+        matchedTool = 'list_accounts';
+      } else if (lowerPrompt.includes('api key') || lowerPrompt.includes('secret key') || lowerPrompt.includes('token key')) {
+        matchedTool = 'list_api_keys';
+      } else if (lowerPrompt.includes('log') || lowerPrompt.includes('traffic') || lowerPrompt.includes('stat')) {
+        matchedTool = 'get_system_stats_and_logs';
+        toolArgs = { limit: 20, filter: lowerPrompt.includes('error') ? 'error' : 'all' };
+      } else if (lowerPrompt.includes('catalog') || lowerPrompt.includes('sync model')) {
+        matchedTool = 'sync_model_catalog';
+      } else if (lowerPrompt.includes('quota') || lowerPrompt.includes('health') || lowerPrompt.includes('limit')) {
         matchedTool = 'check_quota';
       } else if (lowerPrompt.includes('probe') || lowerPrompt.includes('test key') || lowerPrompt.includes('ping key')) {
         matchedTool = 'probe_provider_keys';
@@ -317,8 +330,7 @@ export const AgenticChat: React.FC = () => {
         matchedTool = 'solve_routing_goal';
         toolArgs = { task: lowerPrompt };
       } else if (lowerPrompt.includes('pool') || lowerPrompt.includes('mutate')) {
-        matchedTool = 'mutate_pools';
-        toolArgs = { action: lowerPrompt.includes('delete') ? 'delete' : 'create', name: 'Agent Pool' };
+        matchedTool = 'list_pools';
       }
 
       let toolResultData: any = null;
@@ -377,13 +389,14 @@ export const AgenticChat: React.FC = () => {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${adminToken}`,
       };
+      const toolsSummary = availableTools.map(t => `${t.name}: ${t.description}`).join('; ');
       let requestBody: any = {
         model: 'auto',
         messages: [
           {
             role: 'system',
             content:
-              'You are GoalRoute Copilot, an expert AI routing agent. You analyze LLM capabilities, inspect provider quotas, solve latency constraints, and report MCP status cleanly.',
+              `You are GoalRoute Copilot, an expert AI routing agent with full administrative and operational control over GoalRoute Gateway. You can manage provider connections, routing goals, pools, tenant accounts, API keys, inspect traffic logs, sync catalog, check quotas, probe latencies, and mutate system settings via MCP tools.\nAvailable MCP Tools: [${toolsSummary}]`,
           },
           ...apiMessages,
         ],

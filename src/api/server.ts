@@ -131,11 +131,26 @@ export async function buildApp() {
   const goalService = new GoalService(goalRepo, connectionRepo, providerRepo, modelRepo, healthRepo, quotaRepo);
   const poolService = new PoolService(poolRepo, goalService, modelRepo, providerRepo, connectionRepo);
   const gatewayService = new GatewayService(poolRepo, connectionRepo, modelRepo, providerRepo, healthRepo, quotaRepo, logRepo, usageRepo, goalRepo);
-  const mcpService = new McpService(quotaRepo, healthRepo, connectionRepo, providerRepo, goalService, poolService, providerService);
   const accountService = new AccountService(accountRepo, apiKeyRepo, poolRepo, goalService, db);
+  const statsService = new StatsService(usageRepo, logRepo);
+  const mcpService = new McpService(
+    quotaRepo,
+    healthRepo,
+    connectionRepo,
+    providerRepo,
+    goalService,
+    poolService,
+    providerService,
+    accountService,
+    catalogService,
+    statsService,
+    logRepo,
+    apiKeyRepo,
+    accountRepo,
+    goalRepo
+  );
   const authService = new AuthService(accountRepo, apiKeyRepo);
   const rateLimiter = new TenantRateLimiter(db);
-  const statsService = new StatsService(usageRepo, logRepo);
 
   // Resolves the target routing pool for gateway dispatch with auth context.
   // Precedence: explicit header > key pin > account default > first active pool.
