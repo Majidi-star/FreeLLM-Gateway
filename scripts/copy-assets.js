@@ -35,4 +35,11 @@ copyDir(
   (name) => name.endsWith('.seed.json')
 );
 
+// Ensure icon.png exists
+const iconPath = path.join(root, 'build', 'icon.png');
+if (!fs.existsSync(iconPath)) {
+  const { execSync } = await import('child_process');
+  execSync('node scripts/generate-icon.js', { cwd: root, stdio: 'inherit' });
+}
+
 console.log('[✓] Successfully copied database migrations and catalog seed files to dist/');

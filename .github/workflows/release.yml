@@ -30,7 +30,7 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libfuse2 desktop-file-utils fakeroot
+          sudo apt-get install -y libfuse2 libfuse2t64 desktop-file-utils fakeroot xvfb || true
 
       - name: Install Dependencies
         run: npm ci
