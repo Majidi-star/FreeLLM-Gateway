@@ -1,6 +1,7 @@
 appId: com.freellm.goalroute
 productName: GoalRoute
 copyright: "Copyright © 2026 FreeLLM-Gateway"
+npmRebuild: false
 
 directories:
   output: dist-electron
