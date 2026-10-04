@@ -430,6 +430,7 @@ export const AppShell: React.FC = () => {
           <CockpitDashboard
             onOpenGoalStudio={() => setIsGoalStudioOpen(true)}
             onOpenPoolStudio={() => setIsPoolStudioOpen(true)}
+            onOpenVault={() => setActiveTab('vault')}
             onSelectTrace={(trace) => setSelectedTrace(trace)}
           />
         )}

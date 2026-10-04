@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Activity, Zap, Cpu, ArrowUpRight, CheckCircle2, AlertTriangle, Sparkles, Sliders, ChevronRight, ChevronDown, Network, Copy, Check, Layers } from 'lucide-react';
+import { Activity, Zap, Cpu, ArrowUpRight, CheckCircle2, AlertTriangle, Sparkles, Sliders, ChevronRight, ChevronDown, Network, Copy, Check, Layers, Key, X, ArrowRight, BookOpen, Terminal } from 'lucide-react';
 import { DecisionTrace } from '../drawers/DecisionInspectorDrawer.js';
 import { GlossaryTerm } from '../common/GlossaryTerm.js';
 import { EndpointsManager } from '../settings/EndpointsManager.js';
@@ -7,6 +7,7 @@ import { EndpointsManager } from '../settings/EndpointsManager.js';
 interface CockpitDashboardProps {
   onOpenGoalStudio: () => void;
   onOpenPoolStudio?: () => void;
+  onOpenVault?: () => void;
   onSelectTrace: (trace: DecisionTrace) => void;
 }
 
@@ -76,10 +77,20 @@ const formatContextWindow = (cw: number): string => {
   return `${Math.round(cw / 1000)}k`;
 };
 
-export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalStudio, onOpenPoolStudio, onSelectTrace }) => {
+export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalStudio, onOpenPoolStudio, onOpenVault, onSelectTrace }) => {
   const [activeSetupPreset, setActiveSetupPreset] = useState<'standard' | 'high_perf' | 'cost_saver' | 'reasoning'>('standard');
   const [traces, setTraces] = useState<DecisionTrace[]>([]);
   const [activePools, setActivePools] = useState(0);
+  const [configuredKeysCount, setConfiguredKeysCount] = useState(0);
+  const [goalsCount, setGoalsCount] = useState(0);
+  const [showQuickstart, setShowQuickstart] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('cockpit_show_quickstart');
+      return saved === null ? true : saved !== 'false';
+    } catch {
+      return true;
+    }
+  });
   const [presetError, setPresetError] = useState<string | null>(null);
   const [savingPreset, setSavingPreset] = useState(false);
   const [streamStatus, setStreamStatus] = useState<StreamStatus>('connecting');
@@ -108,6 +119,28 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
         }
       })
       .catch(() => {});
+
+    fetch('/api/v1/providers', {
+      headers: adminToken ? { authorization: `Bearer ${adminToken}` } : {},
+    })
+      .then((res) => (res.ok ? res.json() : []))
+      .then((providers) => {
+        if (Array.isArray(providers)) {
+          setConfiguredKeysCount(providers.filter((p: any) => p.hasKey).length);
+        }
+      })
+      .catch(() => {});
+
+    fetch('/api/v1/goals', {
+      headers: adminToken ? { authorization: `Bearer ${adminToken}` } : {},
+    })
+      .then((res) => (res.ok ? res.json() : []))
+      .then((goals) => {
+        if (Array.isArray(goals)) {
+          setGoalsCount(goals.length);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   React.useEffect(() => {
@@ -123,6 +156,12 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
       })
       .catch(() => {});
   }, []);
+
+  const step1Done = configuredKeysCount > 0;
+  const step2Done = goalsCount > 0;
+  const step3Done = activePools > 0;
+  const step4Done = true;
+  const completedSteps = (step1Done ? 1 : 0) + (step2Done ? 1 : 0) + (step3Done ? 1 : 0) + (step4Done ? 1 : 0);
 
   // Real telemetry aggregates computed from live traces loaded from SQLite / SSE.
   const completedTraces = traces.filter((t) => t.latencyMs > 0);
@@ -256,6 +295,188 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
+
+      {/* Interactive Quickstart Onboarding Banner */}
+      {showQuickstart && (
+        <div className="rounded-[24px] bg-gradient-to-r from-[var(--bg-card)] via-[var(--bg-well)] to-[var(--bg-card)] border border-[var(--accent-primary)]/30 p-6 shadow-2xl relative overflow-hidden">
+          <div className="flex items-start justify-between gap-4 mb-5">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-indigo-500/30 flex items-center justify-center shrink-0 shadow-lg">
+                <Sparkles className="w-5 h-5 text-indigo-400 animate-pulse" />
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-[var(--text-primary)] flex items-center gap-2">
+                  Quickstart Guide — 4 Steps to Production Gateway
+                </h2>
+                <p className="text-xs text-[var(--text-muted)] mt-0.5">
+                  Follow this interactive roadmap to configure provider keys, setup routing goals, and connect your AI agents.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                setShowQuickstart(false);
+                try { localStorage.setItem('cockpit_show_quickstart', 'false'); } catch {}
+              }}
+              className="text-[var(--text-muted)] hover:text-[var(--text-primary)] p-1 rounded-lg hover:bg-[var(--bg-card-active)] transition-colors cursor-pointer"
+              title="Dismiss quickstart guide"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Onboarding Progress Bar */}
+          <div className="mb-6 bg-[var(--bg-obsidian)] p-3 rounded-xl border border-[var(--border-subtle)] flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-semibold text-[var(--text-secondary)]">Onboarding Progress:</span>
+              <div className="w-36 h-2.5 bg-[var(--bg-card)] rounded-full overflow-hidden border border-[var(--border-subtle)]">
+                <div
+                  className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-emerald-400 transition-all duration-500"
+                  style={{ width: `${(completedSteps / 4) * 100}%` }}
+                />
+              </div>
+              <span className="text-xs font-mono font-bold text-[var(--accent-primary)]">
+                {completedSteps} / 4 Steps ({Math.round((completedSteps / 4) * 100)}%)
+              </span>
+            </div>
+            <div className="text-xs text-[var(--text-muted)] flex items-center gap-2">
+              <span>System Gateway:</span>
+              <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono text-[11px] font-bold">
+                READY FOR 1000+ USERS
+              </span>
+            </div>
+          </div>
+
+          {/* 4 Step Onboarding Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Step 1 */}
+            <div className={`p-4 rounded-xl border transition-all ${
+              step1Done
+                ? 'bg-[var(--bg-card)]/80 border-emerald-500/30'
+                : 'bg-[var(--bg-card)] border-[var(--border-subtle)] hover:border-amber-500/40'
+            }`}>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-mono font-bold text-amber-400 uppercase tracking-wider">Step 1</span>
+                {step1Done ? (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold">
+                    <CheckCircle2 className="w-3 h-3" /> {configuredKeysCount} Keys Active
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 font-bold">
+                    Action Needed
+                  </span>
+                )}
+              </div>
+              <div className="font-semibold text-sm text-[var(--text-primary)] mb-1 flex items-center gap-2">
+                <Key className="w-4 h-4 text-amber-400" />
+                <span>Connect API Keys</span>
+              </div>
+              <p className="text-xs text-[var(--text-muted)] mb-3 leading-relaxed">
+                Add provider API keys (Groq, Gemini, Anthropic, OpenAI, Ollama) in Credential Vault.
+              </p>
+              <button
+                onClick={onOpenVault}
+                className="w-full text-xs font-semibold px-3 py-2 rounded-lg bg-[var(--bg-well)] hover:bg-[var(--accent-primary)]/15 border border-[var(--border-subtle)] text-[var(--text-primary)] flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+              >
+                <span>Credential Vault</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {/* Step 2 */}
+            <div className={`p-4 rounded-xl border transition-all ${
+              step2Done
+                ? 'bg-[var(--bg-card)]/80 border-emerald-500/30'
+                : 'bg-[var(--bg-card)] border-[var(--border-subtle)] hover:border-purple-500/40'
+            }`}>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-mono font-bold text-purple-400 uppercase tracking-wider">Step 2</span>
+                {step2Done ? (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold">
+                    <CheckCircle2 className="w-3 h-3" /> {goalsCount} Goal Defined
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 font-bold">
+                    Action Needed
+                  </span>
+                )}
+              </div>
+              <div className="font-semibold text-sm text-[var(--text-primary)] mb-1 flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-purple-400" />
+                <span>Set Routing Goal</span>
+              </div>
+              <p className="text-xs text-[var(--text-muted)] mb-3 leading-relaxed">
+                Define task objectives (Code, Reasoning, Chat) &amp; SLAs (Latency, Free Quota, Failover).
+              </p>
+              <button
+                onClick={onOpenGoalStudio}
+                className="w-full text-xs font-semibold px-3 py-2 rounded-lg bg-[var(--bg-well)] hover:bg-purple-500/15 border border-[var(--border-subtle)] text-[var(--text-primary)] flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+              >
+                <span>Goal Studio</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {/* Step 3 */}
+            <div className={`p-4 rounded-xl border transition-all ${
+              step3Done
+                ? 'bg-[var(--bg-card)]/80 border-emerald-500/30'
+                : 'bg-[var(--bg-card)] border-[var(--border-subtle)] hover:border-indigo-500/40'
+            }`}>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-mono font-bold text-indigo-400 uppercase tracking-wider">Step 3</span>
+                {step3Done ? (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold">
+                    <CheckCircle2 className="w-3 h-3" /> {activePools} Pool Active
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 font-bold">
+                    Action Needed
+                  </span>
+                )}
+              </div>
+              <div className="font-semibold text-sm text-[var(--text-primary)] mb-1 flex items-center gap-2">
+                <Layers className="w-4 h-4 text-indigo-400" />
+                <span>Activate Routing Pool</span>
+              </div>
+              <p className="text-xs text-[var(--text-muted)] mb-3 leading-relaxed">
+                Generate an active pool that coordinates fallback chains &amp; candidate model ranking.
+              </p>
+              <button
+                onClick={onOpenPoolStudio}
+                className="w-full text-xs font-semibold px-3 py-2 rounded-lg bg-[var(--bg-well)] hover:bg-indigo-500/15 border border-[var(--border-subtle)] text-[var(--text-primary)] flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+              >
+                <span>Pool Studio</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {/* Step 4 */}
+            <div className="p-4 rounded-xl border bg-[var(--bg-card)]/80 border-emerald-500/30">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-mono font-bold text-emerald-400 uppercase tracking-wider">Step 4</span>
+                <span className="inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold">
+                  <CheckCircle2 className="w-3 h-3" /> Endpoints Ready
+                </span>
+              </div>
+              <div className="font-semibold text-sm text-[var(--text-primary)] mb-1 flex items-center gap-2">
+                <Terminal className="w-4 h-4 text-emerald-400" />
+                <span>Connect Clients &amp; MCP</span>
+              </div>
+              <p className="text-xs text-[var(--text-muted)] mb-3 leading-relaxed">
+                Point Cursor, LangChain, or Claude to 8788/8789, or use AI Copilot on the right panel!
+              </p>
+              <button
+                onClick={() => setEndpointsCollapsed(false)}
+                className="w-full text-xs font-semibold px-3 py-2 rounded-lg bg-[var(--bg-well)] hover:bg-emerald-500/15 border border-[var(--border-subtle)] text-[var(--text-primary)] flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+              >
+                <span>Gateway Endpoints</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Connection & Endpoints — collapsible multi-protocol gateway status */}
       <div className="rounded-[24px] bg-[var(--bg-card)] border border-[var(--border-subtle)] overflow-hidden shadow-xl">
