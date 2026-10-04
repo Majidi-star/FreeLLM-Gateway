@@ -434,6 +434,7 @@ export const CredentialVault: React.FC = () => {
       setInputApiKey('');
       setIsConnectModalOpen(false);
       await fetchProviders();
+      window.dispatchEvent(new Event('goalroute_data_changed'));
 
       // Fire-and-forget background model sync for the newly verified provider.
       const adminTokenBg = getAdminToken();

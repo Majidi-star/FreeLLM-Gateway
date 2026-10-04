@@ -107,19 +107,8 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
   const [endpointUrls, setEndpointUrls] = useState<string[]>([]);
   const [copiedHeaderUrl, setCopiedHeaderUrl] = useState<string | null>(null);
 
-  React.useEffect(() => {
+  const refreshCounts = () => {
     const adminToken = getAdminToken();
-    fetch('/api/v1/catalog/models', {
-      headers: adminToken ? { authorization: `Bearer ${adminToken}` } : {},
-    })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (Array.isArray(data) && data.length > 0) {
-          setCatalogModels(data);
-        }
-      })
-      .catch(() => {});
-
     fetch('/api/v1/providers', {
       headers: adminToken ? { authorization: `Bearer ${adminToken}` } : {},
     })
@@ -141,10 +130,7 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
         }
       })
       .catch(() => {});
-  }, []);
 
-  React.useEffect(() => {
-    const adminToken = getAdminToken();
     fetch('/api/v1/pools', {
       headers: adminToken ? { authorization: `Bearer ${adminToken}` } : {},
     })
@@ -155,6 +141,29 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
         }
       })
       .catch(() => {});
+  };
+
+  React.useEffect(() => {
+    const adminToken = getAdminToken();
+    fetch('/api/v1/catalog/models', {
+      headers: adminToken ? { authorization: `Bearer ${adminToken}` } : {},
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setCatalogModels(data);
+        }
+      })
+      .catch(() => {});
+
+    refreshCounts();
+    const interval = setInterval(refreshCounts, 3000);
+    window.addEventListener('goalroute_data_changed', refreshCounts);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('goalroute_data_changed', refreshCounts);
+    };
   }, []);
 
   const step1Done = configuredKeysCount > 0;

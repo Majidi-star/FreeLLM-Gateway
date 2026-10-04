@@ -248,6 +248,7 @@ export const PoolStudioModal: React.FC<PoolStudioModalProps> = ({ isOpen, onClos
       }
 
       await fetchPools();
+      window.dispatchEvent(new Event('goalroute_data_changed'));
       if (onPoolsUpdated) onPoolsUpdated();
     } catch (e: any) {
       setError(e.message || 'Error saving pool options');

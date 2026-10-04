@@ -293,6 +293,7 @@ export const GoalStudioModal: React.FC<GoalStudioModalProps> = ({ isOpen, onClos
       }).catch(() => {});
 
       setApplied(true);
+      window.dispatchEvent(new Event('goalroute_data_changed'));
       if (onApplyGoal) {
         onApplyGoal({ intent: selectedIntent, maxLatency, targetQuality, minAvailability });
       }
