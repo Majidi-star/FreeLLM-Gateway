@@ -39,6 +39,7 @@ jobs:
         run: npm run build:electron
 
       - name: Package Release Artifacts
+        shell: bash
         env:
           APPIMAGE_EXTRACT_AND_RUN: 1
         run: |
