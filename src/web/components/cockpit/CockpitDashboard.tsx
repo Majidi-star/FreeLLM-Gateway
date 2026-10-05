@@ -241,8 +241,9 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
         return res.json();
       })
       .then((logs) => {
-        if (Array.isArray(logs) && logs.length > 0) {
-          const mapped = logs.map((l: any) => {
+        const list = Array.isArray(logs) ? logs : (logs?.rows || []);
+        if (Array.isArray(list) && list.length > 0) {
+          const mapped = list.map((l: any) => {
             let traceList = [];
             try { traceList = JSON.parse(l.decision_trace || '[]'); } catch {}
             return convertSseEventToDecisionTrace({
