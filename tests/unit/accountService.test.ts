@@ -1,4 +1,4 @@
-﻿import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { AccountRepository } from "../../src/infra/db/repositories/accountRepo.js";
 import { ApiKeyRepository } from "../../src/infra/db/repositories/apiKeyRepo.js";
 import { PoolRepository } from "../../src/infra/db/repositories/poolRepo.js";
@@ -17,14 +17,15 @@ import { getDatabase } from "../../src/infra/db/client.js";
 const db = getDatabase();
 
 function truncateTables() {
-  db.transaction(() => {
-    db.prepare("DELETE FROM accounts").run();
-    db.prepare("DELETE FROM api_keys").run();
-    db.prepare("DELETE FROM pools").run();
-    db.prepare("DELETE FROM goals").run();
-    db.prepare("DELETE FROM request_logs").run();
-    db.prepare("DELETE FROM usage_rollups").run();
-  })();
+  db.pragma("foreign_keys = OFF");
+  db.prepare("DELETE FROM request_logs").run();
+  db.prepare("DELETE FROM usage_rollups").run();
+  db.prepare("DELETE FROM goals").run();
+  db.prepare("DELETE FROM api_keys").run();
+  db.prepare("DELETE FROM accounts").run();
+  db.prepare("DELETE FROM pools").run();
+  db.prepare("DELETE FROM provider_connections").run();
+  db.pragma("foreign_keys = ON");
 }
 
 describe("AccountService", () => {

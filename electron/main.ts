@@ -1,8 +1,7 @@
 import { app, BrowserWindow, ipcMain, shell } from 'electron';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import electronUpdater from 'electron-updater';
-const { autoUpdater } = electronUpdater;
+import { autoUpdater } from 'electron-updater';
 
 // Disable hardware acceleration issues if needed for headless/remote scenarios
 // app.disableHardwareAcceleration();
