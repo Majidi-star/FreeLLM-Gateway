@@ -2,6 +2,7 @@
 
 <div align="center">
 
+[![Release](https://img.shields.io/badge/release-v1.0.1-blue.svg?style=for-the-badge&logo=github)](https://github.com/Majidi-star/FreeLLM-Gateway/releases/tag/v1.0.1)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg?style=for-the-badge)](LICENSE)
 [![Node.js Version](https://img.shields.io/badge/node-%3E%3D22.0.0-brightgreen.svg?style=for-the-badge&logo=node.js)](https://nodejs.org)
 [![TypeScript](https://img.shields.io/badge/typescript-5.7+-3178C6.svg?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org)
@@ -241,6 +242,22 @@ FreeLLM-Gateway packages as a native desktop application with an embedded zero-c
 - **Persistent Storage**: Database (`goalroute.db`) and encryption keys live in user data, surviving app updates and re-installs.
 - **Embedded Multi-Protocol Listeners**: Launches `127.0.0.1:8787` (Cockpit UI & Admin API), `8788` (OpenAI), `8789` (Anthropic), and `8790` (MCP bridge) automatically.
 - **In-App Auto-Updates**: Silent background download and one-click restart on Windows via NSIS updater. (On macOS, manual downloads from GitHub releases are recommended until Apple Developer ID signing credentials are provisioned).
+
+#### Pre-built Desktop Binaries (v1.0.1)
+
+| Platform | Package | Download Link |
+| :--- | :--- | :--- |
+| **Windows** (x64) | NSIS Setup (`.exe`) | [GoalRoute-Setup-1.0.1-x64.exe](https://github.com/Majidi-star/FreeLLM-Gateway/releases/download/v1.0.1/GoalRoute-Setup-1.0.1-x64.exe) |
+| | Portable (`.zip`) | [GoalRoute-Setup-1.0.1-x64.zip](https://github.com/Majidi-star/FreeLLM-Gateway/releases/download/v1.0.1/GoalRoute-Setup-1.0.1-x64.zip) |
+| **macOS** (Apple Silicon) | Installer (`.dmg`) | [GoalRoute-1.0.1-arm64.dmg](https://github.com/Majidi-star/FreeLLM-Gateway/releases/download/v1.0.1/GoalRoute-1.0.1-arm64.dmg) |
+| | Portable (`.zip`) | [GoalRoute-1.0.1-arm64.zip](https://github.com/Majidi-star/FreeLLM-Gateway/releases/download/v1.0.1/GoalRoute-1.0.1-arm64.zip) |
+| **Linux** (x64) | AppImage | [GoalRoute-1.0.1-x86_64.AppImage](https://github.com/Majidi-star/FreeLLM-Gateway/releases/download/v1.0.1/GoalRoute-1.0.1-x86_64.AppImage) |
+| | Debian / Ubuntu (`.deb`) | [GoalRoute-1.0.1-amd64.deb](https://github.com/Majidi-star/FreeLLM-Gateway/releases/download/v1.0.1/GoalRoute-1.0.1-amd64.deb) |
+| | Tarball (`.tar.gz`) | [GoalRoute-1.0.1-x64.tar.gz](https://github.com/Majidi-star/FreeLLM-Gateway/releases/download/v1.0.1/GoalRoute-1.0.1-x64.tar.gz) |
+
+> Check sha256 checksums and source archives on the [GitHub Release v1.0.1](https://github.com/Majidi-star/FreeLLM-Gateway/releases/tag/v1.0.1).
+
+#### Build from Source:
 
 ```bash
 # Run Electron in development mode
@@ -511,6 +528,6 @@ This project is licensed under the **Apache-2.0 License** — see the [LICENSE](
 
 **Star ⭐ this repo if FreeLLM-Gateway saved you tokens, time, or headaches!**
 
-[Report Bug](https://github.com/Majidi-star/FreeLLM-Gateway/issues) • [Request Feature](https://github.com/Majidi-star/FreeLLM-Gateway/issues) • [Discussions](https://github.com/Majidi-star/FreeLLM-Gateway/discussions)
+[Report Bug](https://github.com/Majidi-star/FreeLLM-Gateway/issues) • [Request Feature](https://github.com/Majidi-star/FreeLLM-Gateway/issues) • [Releases](https://github.com/Majidi-star/FreeLLM-Gateway/releases)
 
 </div>
