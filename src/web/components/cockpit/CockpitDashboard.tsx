@@ -3,6 +3,7 @@ import { Activity, Zap, Cpu, ArrowUpRight, CheckCircle2, AlertTriangle, Sparkles
 import { DecisionTrace } from '../drawers/DecisionInspectorDrawer.js';
 import { GlossaryTerm } from '../common/GlossaryTerm.js';
 import { EndpointsManager } from '../settings/EndpointsManager.js';
+import { apiFetch, getAdminToken } from '../../lib/api.js';
 
 interface CockpitDashboardProps {
   onOpenGoalStudio: () => void;
@@ -48,11 +49,6 @@ function convertSseEventToDecisionTrace(evt: any): DecisionTrace {
 
 type StreamStatus = 'connecting' | 'live' | 'unauthorized' | 'closed';
 
-const getAdminToken = () =>
-  sessionStorage.getItem('goalroute_admin_token') ||
-  localStorage.getItem('goalroute_admin_token') ||
-  (import.meta as any).env?.VITE_ADMIN_API_TOKEN ||
-  '';
 
 interface CatalogModelItem {
   id: string;
@@ -109,11 +105,7 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
   const [copiedHeaderUrl, setCopiedHeaderUrl] = useState<string | null>(null);
 
   const refreshCounts = () => {
-    const adminToken = getAdminToken();
-    fetch('/api/v1/providers', {
-      headers: adminToken ? { authorization: `Bearer ${adminToken}` } : {},
-    })
-      .then((res) => (res.ok ? res.json() : []))
+    apiFetch<any[]>('/api/v1/providers')
       .then((providers) => {
         if (Array.isArray(providers)) {
           setConfiguredKeysCount(providers.filter((p: any) => p.hasKey).length);
@@ -121,10 +113,7 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
       })
       .catch(() => {});
 
-    fetch('/api/v1/goals', {
-      headers: adminToken ? { authorization: `Bearer ${adminToken}` } : {},
-    })
-      .then((res) => (res.ok ? res.json() : []))
+    apiFetch<any[]>('/api/v1/goals')
       .then((goals) => {
         if (Array.isArray(goals)) {
           setGoalsCount(goals.length);
@@ -132,10 +121,7 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
       })
       .catch(() => {});
 
-    fetch('/api/v1/pools', {
-      headers: adminToken ? { authorization: `Bearer ${adminToken}` } : {},
-    })
-      .then((res) => (res.ok ? res.json() : []))
+    apiFetch<any[]>('/api/v1/pools')
       .then((pools) => {
         if (Array.isArray(pools)) {
           setActivePools(pools.filter((p: any) => p && (p.is_active === undefined || p.is_active === 1 || p.is_active === true)).length);
@@ -145,11 +131,7 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
   };
 
   React.useEffect(() => {
-    const adminToken = getAdminToken();
-    fetch('/api/v1/catalog/models', {
-      headers: adminToken ? { authorization: `Bearer ${adminToken}` } : {},
-    })
-      .then((res) => (res.ok ? res.json() : null))
+    apiFetch<any[]>('/api/v1/catalog/models')
       .then((data) => {
         if (Array.isArray(data) && data.length > 0) {
           setCatalogModels(data);
@@ -195,13 +177,8 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
     setSavingPreset(true);
     setPresetError(null);
     try {
-      const adminToken = getAdminToken();
-      const res = await fetch('/api/v1/goals', {
+      await apiFetch('/api/v1/goals', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(adminToken ? { authorization: `Bearer ${adminToken}` } : {}),
-        },
         body: JSON.stringify({
           name: `Goal - ${params.label}`,
           task_type: params.taskType,
@@ -211,12 +188,8 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
           exhaustion_pref: preset === 'cost_saver' ? 'fill_first' : 'preserve_backup',
         }),
       });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.message || `Failed to persist goal (HTTP ${res.status})`);
-      }
     } catch (e: any) {
-      setPresetError(e.message || 'Failed to persist goal');
+      setPresetError(e?.error?.message || e?.message || 'Failed to persist goal');
     } finally {
       setSavingPreset(false);
     }
@@ -227,20 +200,11 @@ export const CockpitDashboard: React.FC<CockpitDashboardProps> = ({ onOpenGoalSt
     const controller = new AbortController();
 
     // Preload recent logs from API
-    fetch('/api/v1/request-logs', {
-      headers: adminToken ? { authorization: `Bearer ${adminToken}` } : {},
+    apiFetch<any[]>('/api/v1/request-logs', {
       signal: controller.signal,
     })
-      .then((res) => {
-        if (res.status === 401) {
-          setStreamStatus('unauthorized');
-          throw new Error('Unauthorized');
-        }
-        if (!res.ok) throw new Error(`HTTP error ${res.status}`);
-        setStreamStatus('live');
-        return res.json();
-      })
       .then((logs) => {
+        setStreamStatus('live');
         const list = Array.isArray(logs) ? logs : (logs?.rows || []);
         if (Array.isArray(list) && list.length > 0) {
           const mapped = list.map((l: any) => {

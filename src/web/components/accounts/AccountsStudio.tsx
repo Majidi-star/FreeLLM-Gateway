@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Users, Key, Plus, Trash2, RotateCw, Copy, Check, Shield, AlertTriangle, CheckCircle2, ChevronRight, Terminal, Cpu, Code } from 'lucide-react';
-import { getAdminToken } from '../settings/EndpointsManager.js';
+import { apiFetch } from '../../lib/api.js';
 import { sanitizeForClipboard } from '../../utils/clipboardSanitizer.js';
 
 export interface AccountItem {
@@ -68,23 +68,11 @@ export const AccountsStudio: React.FC = () => {
   const [copiedKey, setCopiedKey] = useState(false);
   const [copiedSnippet, setCopiedSnippet] = useState<string | null>(null);
 
-  const adminToken = getAdminToken();
-
-  const getAuthHeaders = () => {
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    if (adminToken) {
-      headers['authorization'] = `Bearer ${adminToken}`;
-    }
-    return headers;
-  };
-
   const fetchAccounts = async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/v1/accounts', { headers: getAuthHeaders() });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      const data = await apiFetch<AccountItem[]>('/api/v1/accounts');
       setAccounts(data);
       if (data.length > 0 && !selectedAccount) {
         setSelectedAccount(data[0]);
@@ -98,19 +86,14 @@ export const AccountsStudio: React.FC = () => {
 
   const fetchPools = async () => {
     try {
-      const res = await fetch('/api/v1/pools', { headers: getAuthHeaders() });
-      if (res.ok) {
-        const data = await res.json();
-        setPools(data);
-      }
+      const data = await apiFetch<any[]>('/api/v1/pools');
+      setPools(data);
     } catch {}
   };
 
   const fetchKeys = async (accountId: string) => {
     try {
-      const res = await fetch(`/api/v1/accounts/${accountId}/keys`, { headers: getAuthHeaders() });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      const data = await apiFetch<ApiKeyItem[]>(`/api/v1/accounts/${accountId}/keys`);
       setKeys(data);
     } catch (err: any) {
       setError(`Failed to load API keys: ${err.message}`);
@@ -132,16 +115,13 @@ export const AccountsStudio: React.FC = () => {
     e.preventDefault();
     if (!newAccountName.trim()) return;
     try {
-      const res = await fetch('/api/v1/accounts', {
+      const created = await apiFetch<AccountItem>('/api/v1/accounts', {
         method: 'POST',
-        headers: getAuthHeaders(),
         body: JSON.stringify({
           name: newAccountName.trim(),
           description: newAccountDesc.trim() || undefined,
         }),
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const created = await res.json();
       setNewAccountName('');
       setNewAccountDesc('');
       setIsCreateAccountOpen(false);
@@ -155,11 +135,9 @@ export const AccountsStudio: React.FC = () => {
   const handleDeleteAccount = async (id: string) => {
     if (!confirm('Are you sure you want to delete this account?')) return;
     try {
-      const res = await fetch(`/api/v1/accounts/${id}`, {
+      await apiFetch(`/api/v1/accounts/${id}`, {
         method: 'DELETE',
-        headers: getAuthHeaders(),
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       setSelectedAccount(null);
       fetchAccounts();
     } catch (err: any) {
@@ -172,17 +150,14 @@ export const AccountsStudio: React.FC = () => {
     if (!selectedAccount || !newKeyName.trim()) return;
     try {
       const selectedPool = newKeyPinnedPoolId || undefined;
-      const res = await fetch(`/api/v1/accounts/${selectedAccount.id}/keys`, {
+      const created = await apiFetch<CreatedKeyResult>(`/api/v1/accounts/${selectedAccount.id}/keys`, {
         method: 'POST',
-        headers: getAuthHeaders(),
         body: JSON.stringify({
           name: newKeyName.trim(),
           poolId: selectedPool,
           pinnedPoolId: selectedPool,
         }),
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const created: CreatedKeyResult = await res.json();
       setNewKeyName('');
       setNewKeyPinnedPoolId('');
       setIsCreateKeyOpen(false);
@@ -197,11 +172,9 @@ export const AccountsStudio: React.FC = () => {
   const handleRevokeKey = async (keyId: string) => {
     if (!selectedAccount || !confirm('Are you sure you want to revoke this API key?')) return;
     try {
-      const res = await fetch(`/api/v1/accounts/${selectedAccount.id}/keys/${keyId}`, {
+      await apiFetch(`/api/v1/accounts/${selectedAccount.id}/keys/${keyId}`, {
         method: 'DELETE',
-        headers: getAuthHeaders(),
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       fetchKeys(selectedAccount.id);
       fetchAccounts();
     } catch (err: any) {

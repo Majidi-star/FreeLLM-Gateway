@@ -4,7 +4,7 @@ import { ProviderRepository } from '../infra/db/repositories/providerRepo.js';
 import { ConnectionRepository } from '../infra/db/repositories/connectionRepo.js';
 import { GoalService } from './goalService.js';
 import { RoutingPolicyName, StepRole } from '../shared/types.js';
-import { NotFoundError } from '../shared/errors.js';
+import { NotFoundError, ValidationError } from '../shared/errors.js';
 
 export interface DetailedPoolStep extends PoolStepRecord {
   modelName?: string;
@@ -19,6 +19,7 @@ export interface PoolDTO {
   name: string;
   policy: RoutingPolicyName;
   isActive: boolean;
+  isDefault?: boolean;
   steps: DetailedPoolStep[];
   createdAt: number;
   updatedAt?: number;
@@ -36,10 +37,13 @@ export class PoolService {
 
   public createPoolFromGoal(goalId: string, poolName?: string, accountId?: string | null): PoolDTO {
     const goal = this.goalService.getGoal(goalId);
+    if (!goal) {
+      throw new NotFoundError(`Goal with ID '${goalId}' not found`);
+    }
     const plan = this.goalService.solveGoalById(goalId);
 
     if (plan.steps.length === 0) {
-      throw new Error(`Cannot create pool from goal '${goalId}': GoalSolver produced 0 steps.`);
+      throw new ValidationError(`Cannot create pool from goal '${goal.name}': GoalSolver produced 0 steps. Please add a provider key and sync models first.`);
     }
 
     const name = poolName || `Pool for ${goal.name}`;
@@ -79,6 +83,39 @@ export class PoolService {
       orderIndex?: number;
     }>;
   }): PoolDTO {
+    if (!input.name || typeof input.name !== 'string' || !input.name.trim()) {
+      throw new ValidationError('Pool name is required');
+    }
+    if (!input.steps || !Array.isArray(input.steps) || input.steps.length === 0) {
+      throw new ValidationError('Pool must contain at least one step');
+    }
+
+    for (const step of input.steps) {
+      if (!step.connectionId) {
+        throw new ValidationError('Step connectionId is required');
+      }
+      if (!step.modelId) {
+        throw new ValidationError('Step modelId is required');
+      }
+      if (this.connectionRepo) {
+        const conn = this.connectionRepo.findById(step.connectionId);
+        if (!conn) {
+          throw new ValidationError(`Connection '${step.connectionId}' does not exist`);
+        }
+        if (this.modelRepo) {
+          const model = this.modelRepo.findById(step.modelId);
+          if (!model) {
+            throw new ValidationError(`Model '${step.modelId}' does not exist`);
+          }
+          if (conn.provider_id !== model.provider_id) {
+            throw new ValidationError(
+              `Model '${model.model_name}' belongs to provider '${model.provider_id}', but connection '${conn.id}' belongs to provider '${conn.provider_id}'`
+            );
+          }
+        }
+      }
+    }
+
     const stepInputs = input.steps.map((step, idx) => ({
       order_index: step.orderIndex ?? idx,
       connection_id: step.connectionId,
@@ -160,6 +197,40 @@ export class PoolService {
     const pool = this.poolRepo.findPoolById(id);
     if (!pool) throw new NotFoundError(`Pool with ID '${id}' not found`);
 
+    if (updates.name !== undefined && (!updates.name || !updates.name.trim())) {
+      throw new ValidationError('Pool name cannot be empty');
+    }
+
+    if (updates.steps !== undefined) {
+      if (!Array.isArray(updates.steps) || updates.steps.length === 0) {
+        throw new ValidationError('Pool must contain at least one step');
+      }
+      for (const step of updates.steps) {
+        if (!step.connectionId) throw new ValidationError('Step connectionId is required');
+        if (!step.modelId) throw new ValidationError('Step modelId is required');
+        if (this.connectionRepo) {
+          const conn = this.connectionRepo.findById(step.connectionId);
+          if (!conn) throw new ValidationError(`Connection '${step.connectionId}' does not exist`);
+          if (this.modelRepo) {
+            const model = this.modelRepo.findById(step.modelId);
+            if (!model) throw new ValidationError(`Model '${step.modelId}' does not exist`);
+            if (conn.provider_id !== model.provider_id) {
+              throw new ValidationError(
+                `Model '${model.model_name}' belongs to provider '${model.provider_id}', but connection '${conn.id}' belongs to provider '${conn.provider_id}'`
+              );
+            }
+          }
+        }
+      }
+    }
+
+    if (updates.isActive) {
+      const existingSteps = updates.steps !== undefined ? updates.steps : this.poolRepo.getPoolSteps(id);
+      if (!existingSteps || existingSteps.length === 0) {
+        throw new ValidationError('Cannot activate a pool with no steps configured');
+      }
+    }
+
     const poolUpdates: Partial<Pick<PoolRecord, 'name' | 'policy' | 'is_active' | 'goal_id'>> = {};
     if (updates.name !== undefined) poolUpdates.name = updates.name;
     if (updates.policy !== undefined) poolUpdates.policy = updates.policy;
@@ -196,6 +267,15 @@ export class PoolService {
     const pool = this.poolRepo.findPoolById(id);
     if (!pool) throw new NotFoundError(`Pool with ID '${id}' not found`);
     this.poolRepo.deletePool(id);
+  }
+
+  public setDefaultPool(id: string): PoolDTO {
+    const pool = this.poolRepo.findPoolById(id);
+    if (!pool) throw new NotFoundError(`Pool with ID '${id}' not found`);
+    this.poolRepo.setDefaultPool(id, pool.account_id);
+    const updated = this.poolRepo.findPoolById(id)!;
+    const steps = this.poolRepo.getPoolSteps(id);
+    return this.toDTO(updated, steps);
   }
 
   private toDTO(pool: PoolRecord, steps: PoolStepRecord[]): PoolDTO {
@@ -235,6 +315,7 @@ export class PoolService {
       name: pool.name,
       policy: pool.policy,
       isActive: Boolean(pool.is_active),
+      isDefault: Boolean(pool.is_default),
       steps: detailedSteps,
       createdAt: pool.created_at,
       updatedAt: pool.updated_at,

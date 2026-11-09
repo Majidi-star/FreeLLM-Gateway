@@ -87,6 +87,29 @@ export async function readBoundedBody(response: Response, maxBytes: number = 15 
   return new TextDecoder().decode(totalBuffer);
 }
 
+export function assertSafeProviderUrl(url: string): void {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    throw new AppError(`Invalid provider URL: ${url}`, 'INVALID_URL', 400);
+  }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    throw new AppError(`Unsupported provider protocol "${parsed.protocol}". Only HTTP and HTTPS are allowed.`, 'INVALID_URL', 400);
+  }
+  const hostLower = parsed.hostname.toLowerCase();
+  if (
+    hostLower === '169.254.169.254' ||
+    hostLower === '[::ffff:169.254.169.254]' ||
+    hostLower === '[::ffff:a9fe:a9fe]' ||
+    hostLower === 'metadata.google.internal' ||
+    hostLower.endsWith('.metadata.google.internal') ||
+    hostLower === '100.100.100.200'
+  ) {
+    throw new AppError('Access to cloud instance metadata service is blocked to prevent SSRF', 'SSRF_BLOCKED', 403);
+  }
+}
+
 export async function callProviderEndpoint<T = unknown>(options: ProviderRequestOptions): Promise<ProviderResponse<T>> {
   const timeoutMs = options.timeoutMs || getConfig().DEFAULT_PROVIDER_TIMEOUT_MS;
   let baseUrl = options.baseUrl.replace(/\/+$/, '');
@@ -95,6 +118,7 @@ export async function callProviderEndpoint<T = unknown>(options: ProviderRequest
     endpoint = endpoint.slice(3);
   }
   const url = `${baseUrl}/${endpoint}`;
+  assertSafeProviderUrl(url);
   const method = options.method || 'GET';
 
   const headers: Record<string, string> = {
@@ -230,6 +254,7 @@ export async function callProviderEndpointStream(options: ProviderRequestOptions
     endpoint = endpoint.slice(3);
   }
   const url = `${baseUrl}/${endpoint}`;
+  assertSafeProviderUrl(url);
   const method = options.method || 'POST';
 
   const headers: Record<string, string> = {

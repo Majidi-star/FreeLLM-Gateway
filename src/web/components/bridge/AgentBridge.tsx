@@ -18,7 +18,7 @@ import {
   Power,
 } from 'lucide-react';
 import { sanitizeForClipboard } from '../../utils/clipboardSanitizer.js';
-import { getAdminToken } from '../settings/EndpointsManager.js';
+import { apiFetch, getAdminToken } from '../../lib/api.js';
 
 /** Local fallback used only during the brief window before the
  *  /api/v1/system/endpoints fetch resolves or if it fails.
@@ -128,11 +128,7 @@ export const AgentBridge: React.FC = () => {
       }
     }
 
-    const adminToken = getAdminToken();
-    const authHeaders: Record<string, string> = adminToken ? { authorization: `Bearer ${adminToken}` } : {};
-
-    fetch('/api/v1/mcp/settings', { headers: authHeaders })
-      .then((res) => (res.ok ? res.json() : null))
+    apiFetch<any>('/api/v1/mcp/settings')
       .then((data) => {
         if (data && typeof data.isSafeMode === 'boolean') {
           setSecurityMode(data.isSafeMode ? 'safe' : 'full');
@@ -145,13 +141,7 @@ export const AgentBridge: React.FC = () => {
   // the MCP SSE URL from the user-configured port/host rather than
   // hardcoding it. See EndpointsManager.tsx for the canonical pattern.
   useEffect(() => {
-    const adminToken = getAdminToken();
-    const headers: Record<string, string> = {};
-    if (adminToken) {
-      headers['authorization'] = `Bearer ${adminToken}`;
-    }
-    fetch('/api/v1/system/endpoints', { headers })
-      .then((res) => (res.ok ? res.json() : null))
+    apiFetch<McpEndpointStatus>('/api/v1/system/endpoints')
       .then((data) => {
         if (data && data.endpoints) {
           setEndpointsStatus(data);
@@ -234,14 +224,8 @@ export const AgentBridge: React.FC = () => {
     setSecurityMode(mode);
     const isSafe = mode === 'safe';
     try {
-      const adminToken = getAdminToken();
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (adminToken) {
-        headers['authorization'] = `Bearer ${adminToken}`;
-      }
-      await fetch('/api/v1/mcp/settings', {
+      await apiFetch('/api/v1/mcp/settings', {
         method: 'POST',
-        headers,
         body: JSON.stringify({ isSafeMode: isSafe }),
       });
     } catch (e) {
@@ -262,25 +246,14 @@ export const AgentBridge: React.FC = () => {
     setMcpBusy(true);
     setMcpError(null);
     try {
-      const res = await fetch('/api/v1/system/endpoints', {
+      const next = await apiFetch<McpEndpointStatus>('/api/v1/system/endpoints', {
         method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          authorization: `Bearer ${getAdminToken()}`,
-        },
         body: JSON.stringify(body),
       });
-      const data = (await res.json()) as McpEndpointStatus | { error?: { message?: string } };
-      if (!res.ok) {
-        const message =
-          'error' in data && data.error?.message ? data.error.message : `Update failed (HTTP ${res.status})`;
-        throw new Error(message);
-      }
-      const next = data as McpEndpointStatus;
       setEndpointsStatus(next);
       setMcpPortDraft(String(next.endpoints.mcp.port));
-    } catch (err) {
-      setMcpError((err as Error).message);
+    } catch (err: any) {
+      setMcpError(err?.error?.message || err?.message || 'Update failed');
     } finally {
       setMcpBusy(false);
     }

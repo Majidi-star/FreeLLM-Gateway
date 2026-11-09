@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Cpu, Server, Globe, Check, Sliders, Shield, Zap, Sparkles, Activity, CheckCircle, XCircle, Loader2 } from 'lucide-react';
-import { getAdminToken } from '../settings/EndpointsManager.js';
+import { apiFetch } from '../../lib/api.js';
 
 export type AgentEngineMode = 'pool' | 'model' | 'external';
 export type ExternalProtocol = 'auto' | 'openai' | 'anthropic' | 'gemini' | 'custom';
@@ -76,13 +76,8 @@ export const AgentEngineModal: React.FC<AgentEngineModalProps> = ({
   const handleTestConnection = async () => {
     setTestState({ status: 'testing' });
     try {
-      const token = getAdminToken();
-      const res = await fetch('/api/v1/agent-engine/test-external', {
+      const data = await apiFetch<any>('/api/v1/agent-engine/test-external', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
         body: JSON.stringify({
           externalBaseUrl: draftConfig.externalBaseUrl,
           externalApiKey: draftConfig.externalApiKey,
@@ -90,14 +85,13 @@ export const AgentEngineModal: React.FC<AgentEngineModalProps> = ({
           externalProtocol: draftConfig.externalProtocol || 'auto',
         }),
       });
-      const data = await res.json().catch(() => null);
-      if (res.ok && data?.ok) {
+      if (data?.ok) {
         setTestState({
           status: 'success',
           message: typeof data.message === 'string' ? data.message : `Connected cleanly (${data.latencyMs}ms, ${data.resolvedProtocol?.toUpperCase()})`,
         });
       } else {
-        const errorMsg = extractStringError(data, `Connection failed (HTTP ${res.status})`);
+        const errorMsg = extractStringError(data, 'Connection failed');
         setTestState({
           status: 'error',
           message: errorMsg,
@@ -114,12 +108,8 @@ export const AgentEngineModal: React.FC<AgentEngineModalProps> = ({
   useEffect(() => {
     if (!isOpen) return;
 
-    const token = getAdminToken();
-    const authHeaders: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
-
     // Fetch pools
-    fetch('/api/v1/pools', { headers: authHeaders })
-      .then((res) => (res.ok ? res.json() : []))
+    apiFetch<any[]>('/api/v1/pools')
       .then((data) => {
         if (Array.isArray(data)) {
           setAvailablePools(data.map((p) => ({ id: p.id, name: p.name })));
@@ -128,8 +118,7 @@ export const AgentEngineModal: React.FC<AgentEngineModalProps> = ({
       .catch(() => {});
 
     // Fetch models
-    fetch('/api/v1/catalog/models', { headers: authHeaders })
-      .then((res) => (res.ok ? res.json() : []))
+    apiFetch<any[]>('/api/v1/catalog/models')
       .then((data) => {
         if (Array.isArray(data)) {
           setAvailableModels(

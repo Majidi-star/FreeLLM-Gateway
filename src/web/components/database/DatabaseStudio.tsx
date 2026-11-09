@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { Database, Search, ShieldCheck, Zap, Server, Cpu, ExternalLink, Filter, BarChart2, Layers, Check, Sparkles, RefreshCw, Award } from 'lucide-react';
 import { ModelDetail, ModelCompareModal } from './ModelCompareModal.js';
 import { BenchmarkMatrixChart } from './BenchmarkMatrixChart.js';
-import { getAdminToken } from '../settings/EndpointsManager.js';
+import { apiFetch } from '../../lib/api.js';
 
 export interface ProviderDetail {
   id: string;
@@ -40,18 +40,11 @@ export const DatabaseStudio: React.FC = () => {
 
   const fetchData = async () => {
     setLoading(true);
-    const token = getAdminToken();
-    const headers: Record<string, string> = {};
-    if (token) headers['authorization'] = `Bearer ${token}`;
-
     try {
-      const [resProviders, resModels] = await Promise.all([
-        fetch('/api/v1/providers', { headers }),
-        fetch('/api/v1/catalog/models', { headers }),
+      const [dataProviders, dataModels] = await Promise.all([
+        apiFetch<any[]>('/api/v1/providers'),
+        apiFetch<any[]>('/api/v1/catalog/models'),
       ]);
-
-      const dataProviders = resProviders.ok ? await resProviders.json() : [];
-      const dataModels = resModels.ok ? await resModels.json() : [];
 
       setProviders(Array.isArray(dataProviders) ? dataProviders : []);
       setModels(Array.isArray(dataModels) ? dataModels : []);

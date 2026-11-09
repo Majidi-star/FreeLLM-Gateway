@@ -14,6 +14,7 @@ export interface UpdateStatusPayload {
 
 export interface ElectronAPI {
   getVersion: () => Promise<string>;
+  getAdminToken: () => Promise<string>;
   checkForUpdates: () => Promise<{ success: boolean; updateInfo?: any; error?: string }>;
   downloadUpdate: () => Promise<{ success: boolean; error?: string }>;
   quitAndInstall: () => void;
@@ -22,6 +23,7 @@ export interface ElectronAPI {
 
 const electronAPI: ElectronAPI = {
   getVersion: () => ipcRenderer.invoke('get-app-version'),
+  getAdminToken: () => ipcRenderer.invoke('get-admin-token'),
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
   downloadUpdate: () => ipcRenderer.invoke('download-update'),
   quitAndInstall: () => ipcRenderer.invoke('quit-and-install'),

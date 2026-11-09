@@ -44,50 +44,44 @@ describe('EndpointsManager Token Resolution', () => {
     }
   });
 
-  it('returns sessionStorage token when available', () => {
-    (globalThis.sessionStorage.getItem as any).mockReturnValue('session-token');
-    expect(getAdminToken()).toBe('session-token');
-  });
-
-  it('falls back to localStorage when sessionStorage is empty', () => {
-    (globalThis.sessionStorage.getItem as any).mockReturnValue(null);
+  it('returns localStorage token when available', () => {
     (globalThis.localStorage.getItem as any).mockReturnValue('local-token');
     expect(getAdminToken()).toBe('local-token');
+  });
+
+  it('falls back to sessionStorage when localStorage is empty', () => {
+    (globalThis.localStorage.getItem as any).mockReturnValue(null);
+    (globalThis.sessionStorage.getItem as any).mockReturnValue('session-token');
+    expect(getAdminToken()).toBe('session-token');
   });
 
   it('falls back to import.meta.env.VITE_ADMIN_API_TOKEN when storages are empty', () => {
     (globalThis.sessionStorage.getItem as any).mockReturnValue(null);
     (globalThis.localStorage.getItem as any).mockReturnValue(null);
-    // import.meta.env is resolved at transform time in vitest; verify it resolves
-    // to whatever is defined in import.meta.env (may be set via vitest config or .env)
     const envToken = (import.meta as any).env?.VITE_ADMIN_API_TOKEN;
     if (envToken) {
       expect(getAdminToken()).toBe(envToken);
     } else {
-      // If no env token is configured, falls through to default
-      expect(getAdminToken()).toBe('dev-admin-secret-token');
+      expect(getAdminToken()).toBe('');
     }
   });
 
-  it('falls back to dev-admin-secret-token when all sources are empty', () => {
+  it('returns empty string when all sources are empty without hardcoded insecure token', () => {
     (globalThis.sessionStorage.getItem as any).mockReturnValue(null);
     (globalThis.localStorage.getItem as any).mockReturnValue(null);
-    // When sessionStorage and localStorage both return null, and env is not set,
-    // the function falls through to the hardcoded default
     const envToken = (import.meta as any).env?.VITE_ADMIN_API_TOKEN;
     if (!envToken) {
-      expect(getAdminToken()).toBe('dev-admin-secret-token');
+      expect(getAdminToken()).toBe('');
     } else {
-      // If env is set at transform time, it resolves to that
       expect(getAdminToken()).toBe(envToken);
     }
   });
 
-  it('resolution order: sessionStorage > localStorage > env > default', () => {
-    (globalThis.sessionStorage.getItem as any).mockReturnValue('session-token');
+  it('resolution order: localStorage > sessionStorage > env', () => {
     (globalThis.localStorage.getItem as any).mockReturnValue('local-token');
-    // sessionStorage takes highest priority regardless of env
-    expect(getAdminToken()).toBe('session-token');
+    (globalThis.sessionStorage.getItem as any).mockReturnValue('session-token');
+    // localStorage takes priority over sessionStorage to prevent stale session lockout
+    expect(getAdminToken()).toBe('local-token');
   });
 });
 

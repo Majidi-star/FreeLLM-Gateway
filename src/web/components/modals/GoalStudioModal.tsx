@@ -17,8 +17,10 @@ import {
   ChevronDown,
   ChevronUp,
   RefreshCw,
+  AlertCircle,
 } from 'lucide-react';
 import { GlossaryTerm } from '../common/GlossaryTerm.js';
+import { apiFetch, getAdminToken } from '../../lib/api.js';
 
 interface GoalStudioModalProps {
   isOpen: boolean;
@@ -78,11 +80,6 @@ export interface PoolPlan {
   warnings: string[];
 }
 
-const getAdminToken = () =>
-  sessionStorage.getItem('goalroute_admin_token') ||
-  localStorage.getItem('goalroute_admin_token') ||
-  (import.meta as any).env?.VITE_ADMIN_API_TOKEN ||
-  '';
 
 export const GoalStudioModal: React.FC<GoalStudioModalProps> = ({ isOpen, onClose, onApplyGoal }) => {
   // Preset Intent
@@ -138,12 +135,8 @@ export const GoalStudioModal: React.FC<GoalStudioModalProps> = ({ isOpen, onClos
   const fetchLiveSolvePreview = async () => {
     setIsSolving(true);
     try {
-      const res = await fetch('/api/v1/goals/preview-solve', {
+      const plan = await apiFetch<PoolPlan>('/api/v1/goals/preview-solve', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(getAdminToken() ? { authorization: `Bearer ${getAdminToken()}` } : {}),
-        },
         body: JSON.stringify({
           taskType,
           targetRequestsPerDay,
@@ -159,11 +152,7 @@ export const GoalStudioModal: React.FC<GoalStudioModalProps> = ({ isOpen, onClos
           minAvailability,
         }),
       });
-
-      if (res.ok) {
-        const plan: PoolPlan = await res.json();
-        setSolvePlan(plan);
-      }
+      setSolvePlan(plan);
     } catch {
       // Fall back silently
     } finally {
@@ -249,12 +238,12 @@ export const GoalStudioModal: React.FC<GoalStudioModalProps> = ({ isOpen, onClos
         custom: 'Custom Constraint Optimization',
       };
 
-      const res = await fetch('/api/v1/goals', {
+      if (!solvePlan || !solvePlan.steps || solvePlan.steps.length === 0) {
+        throw new Error('Add a provider key and sync models first before applying a goal.');
+      }
+
+      const createdGoal = await apiFetch('/api/v1/goals', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(getAdminToken() ? { authorization: `Bearer ${getAdminToken()}` } : {}),
-        },
         body: JSON.stringify({
           name: `Goal - ${intentLabels[selectedIntent] || 'Custom'}`,
           task_type: taskType,
@@ -272,25 +261,14 @@ export const GoalStudioModal: React.FC<GoalStudioModalProps> = ({ isOpen, onClos
         }),
       });
 
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.message || `Failed to persist goal (HTTP ${res.status})`);
-      }
-
-      const createdGoal = await res.json();
-
       // Solve goal and materialize routing pool immediately
-      await fetch('/api/v1/pools', {
+      await apiFetch('/api/v1/pools', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(getAdminToken() ? { authorization: `Bearer ${getAdminToken()}` } : {}),
-        },
         body: JSON.stringify({
           goalId: createdGoal.id,
           name: `Pool for ${createdGoal.name}`,
         }),
-      }).catch(() => {});
+      });
 
       setApplied(true);
       window.dispatchEvent(new Event('goalroute_data_changed'));
@@ -859,6 +837,21 @@ export const GoalStudioModal: React.FC<GoalStudioModalProps> = ({ isOpen, onClos
               </div>
             )}
 
+            {(!solvePlan || !solvePlan.steps || solvePlan.steps.length === 0) && (
+              <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs flex flex-col gap-2">
+                <div className="font-semibold flex items-center gap-1.5">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-amber-400" />
+                  <span>Onboarding Step Required</span>
+                </div>
+                <p className="text-[11px] text-amber-200/80 leading-relaxed">
+                  No candidate models are available to satisfy this goal because no verified provider keys were found. Add a provider key and sync models first.
+                </p>
+                <div className="font-mono text-[10px] text-amber-300 pt-0.5">
+                  Onboarding order: 1. Add key &rarr; 2. Sync models &rarr; 3. Goal &rarr; 4. Pool
+                </div>
+              </div>
+            )}
+
           </div>
 
         </div>
@@ -878,7 +871,8 @@ export const GoalStudioModal: React.FC<GoalStudioModalProps> = ({ isOpen, onClos
           <button
             type="button"
             onClick={handleSave}
-            disabled={isSaving}
+            disabled={isSaving || !solvePlan || !solvePlan.steps || solvePlan.steps.length === 0}
+            title={!solvePlan || !solvePlan.steps || solvePlan.steps.length === 0 ? 'Add a provider key and sync models first' : undefined}
             className="px-6 py-2.5 rounded-xl text-xs font-semibold bg-[var(--accent-primary)] hover:bg-[var(--accent-primary-hover)] text-white flex items-center space-x-2 transition-all shadow-lg shadow-[var(--accent-primary)]/20 active:scale-95 disabled:opacity-50"
           >
             {applied ? (

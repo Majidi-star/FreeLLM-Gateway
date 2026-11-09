@@ -15,8 +15,11 @@ import {
   ShieldAlert,
   Server,
   Activity,
+  Star,
+  AlertTriangle,
 } from 'lucide-react';
 import { RoutingPolicyName, StepRole } from '../../../shared/types.js';
+import { apiFetch, getAdminToken } from '../../lib/api.js';
 
 export interface DetailedPoolStep {
   id?: string;
@@ -38,6 +41,7 @@ export interface PoolDTO {
   name: string;
   policy: RoutingPolicyName;
   isActive: boolean;
+  isDefault?: boolean;
   steps: DetailedPoolStep[];
   createdAt: number;
   updatedAt?: number;
@@ -73,11 +77,6 @@ interface PoolStudioModalProps {
   onPoolsUpdated?: () => void;
 }
 
-const getAdminToken = () =>
-  sessionStorage.getItem('goalroute_admin_token') ||
-  localStorage.getItem('goalroute_admin_token') ||
-  (import.meta as any).env?.VITE_ADMIN_API_TOKEN ||
-  '';
 
 export const PoolStudioModal: React.FC<PoolStudioModalProps> = ({ isOpen, onClose, onPoolsUpdated }) => {
   const [pools, setPools] = useState<PoolDTO[]>([]);
@@ -104,51 +103,37 @@ export const PoolStudioModal: React.FC<PoolStudioModalProps> = ({ isOpen, onClos
 
   useEffect(() => {
     if (!isOpen) return;
-    fetchPools();
+    fetchPools(true);
     fetchProvidersAndModels();
   }, [isOpen]);
 
-  const fetchPools = async () => {
+  const fetchPools = async (autoSelectFirst = false) => {
     setLoading(true);
-    setError(null);
     try {
-      const adminToken = getAdminToken();
-      const res = await fetch('/api/v1/pools', {
-        headers: adminToken ? { authorization: `Bearer ${adminToken}` } : {},
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setPools(data);
-        if (data.length > 0 && !selectedPoolId) {
-          selectPool(data[0]);
-        } else if (selectedPoolId) {
-          const current = data.find((p: PoolDTO) => p.id === selectedPoolId);
-          if (current) selectPool(current);
-        }
+      const data = await apiFetch<PoolDTO[]>('/api/v1/pools');
+      setPools(data);
+      if (autoSelectFirst && data.length > 0 && !selectedPoolId) {
+        selectPool(data[0]);
       }
     } catch (e: any) {
-      setError(e.message || 'Failed to load routing pools');
+      setError(e?.error?.message || e?.message || 'Failed to load routing pools');
     } finally {
       setLoading(false);
     }
   };
 
   const fetchProvidersAndModels = async () => {
-    const adminToken = getAdminToken();
-    const headers: Record<string, string> = adminToken ? { authorization: `Bearer ${adminToken}` } : {};
-
     try {
-      const [provRes, catRes] = await Promise.all([
-        fetch('/api/v1/providers', { headers }),
-        fetch('/api/v1/catalog/models', { headers }),
+      const [provData, catData] = await Promise.all([
+        apiFetch<ProviderWithConnections[]>('/api/v1/providers'),
+        apiFetch<CatalogModel[]>('/api/v1/catalog/models'),
       ]);
-
-      if (provRes.ok) setProviders(await provRes.json());
-      if (catRes.ok) setCatalogModels(await catRes.json());
+      setProviders(provData);
+      setCatalogModels(catData);
     } catch {}
   };
 
-  const selectPool = (pool: PoolDTO) => {
+  const selectPool = (pool: PoolDTO, keepSuccessMsg = false) => {
     setSelectedPoolId(pool.id);
     setPoolName(pool.name);
     setPolicy(pool.policy);
@@ -158,7 +143,7 @@ export const PoolStudioModal: React.FC<PoolStudioModalProps> = ({ isOpen, onClos
     setLinkedGoalName(pool.goalName || null);
     setIsAddingStep(false);
     setError(null);
-    setSuccessMsg(null);
+    if (!keepSuccessMsg) setSuccessMsg(null);
   };
 
   const handleCreateNewPool = () => {
@@ -193,13 +178,6 @@ export const PoolStudioModal: React.FC<PoolStudioModalProps> = ({ isOpen, onClos
 
     setSaving(true);
     setError(null);
-    setSuccessMsg(null);
-
-    const adminToken = getAdminToken();
-    const headers = {
-      'Content-Type': 'application/json',
-      ...(adminToken ? { authorization: `Bearer ${adminToken}` } : {}),
-    };
 
     const formattedSteps = steps.map((s, index) => ({
       connectionId: s.connection_id,
@@ -212,9 +190,8 @@ export const PoolStudioModal: React.FC<PoolStudioModalProps> = ({ isOpen, onClos
     try {
       if (selectedPoolId && !selectedPoolId.startsWith('new-')) {
         // Update existing pool
-        const res = await fetch(`/api/v1/pools/${selectedPoolId}`, {
+        const updated = await apiFetch<PoolDTO>(`/api/v1/pools/${selectedPoolId}`, {
           method: 'PUT',
-          headers,
           body: JSON.stringify({
             name: poolName,
             policy,
@@ -223,16 +200,12 @@ export const PoolStudioModal: React.FC<PoolStudioModalProps> = ({ isOpen, onClos
             steps: formattedSteps,
           }),
         });
-
-        if (!res.ok) throw new Error(`Failed to update pool (HTTP ${res.status})`);
-        const updated = await res.json();
+        selectPool(updated, true);
         setSuccessMsg('Pool options saved successfully');
-        selectPool(updated);
       } else {
         // Create custom pool
-        const res = await fetch('/api/v1/pools', {
+        const created = await apiFetch<PoolDTO>('/api/v1/pools', {
           method: 'POST',
-          headers,
           body: JSON.stringify({
             name: poolName,
             policy,
@@ -240,18 +213,34 @@ export const PoolStudioModal: React.FC<PoolStudioModalProps> = ({ isOpen, onClos
             steps: formattedSteps,
           }),
         });
-
-        if (!res.ok) throw new Error(`Failed to create pool (HTTP ${res.status})`);
-        const created = await res.json();
+        selectPool(created, true);
         setSuccessMsg('New pool created successfully');
-        selectPool(created);
       }
 
-      await fetchPools();
+      await fetchPools(false);
       window.dispatchEvent(new Event('goalroute_data_changed'));
       if (onPoolsUpdated) onPoolsUpdated();
     } catch (e: any) {
-      setError(e.message || 'Error saving pool options');
+      setError(e?.error?.message || e?.message || 'Error saving pool options');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSetDefault = async () => {
+    if (!selectedPoolId || selectedPoolId.startsWith('new-')) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const updated = await apiFetch<PoolDTO>(`/api/v1/pools/${selectedPoolId}/default`, {
+        method: 'POST',
+      });
+      selectPool(updated, true);
+      setSuccessMsg('Pool marked as default routing target!');
+      await fetchPools(false);
+      if (onPoolsUpdated) onPoolsUpdated();
+    } catch (e: any) {
+      setError(e?.error?.message || e?.message || 'Failed to set pool as default');
     } finally {
       setSaving(false);
     }
@@ -262,18 +251,15 @@ export const PoolStudioModal: React.FC<PoolStudioModalProps> = ({ isOpen, onClos
     if (!confirm(`Are you sure you want to delete "${poolName}"?`)) return;
 
     setSaving(true);
-    const adminToken = getAdminToken();
     try {
-      const res = await fetch(`/api/v1/pools/${selectedPoolId}`, {
+      await apiFetch(`/api/v1/pools/${selectedPoolId}`, {
         method: 'DELETE',
-        headers: adminToken ? { authorization: `Bearer ${adminToken}` } : {},
       });
-      if (!res.ok) throw new Error('Failed to delete pool');
       setSelectedPoolId(null);
-      await fetchPools();
+      await fetchPools(true);
       if (onPoolsUpdated) onPoolsUpdated();
     } catch (e: any) {
-      setError(e.message || 'Failed to delete pool');
+      setError(e?.error?.message || e?.message || 'Failed to delete pool');
     } finally {
       setSaving(false);
     }
@@ -284,23 +270,16 @@ export const PoolStudioModal: React.FC<PoolStudioModalProps> = ({ isOpen, onClos
 
     setSaving(true);
     setError(null);
-    const adminToken = getAdminToken();
     try {
-      const res = await fetch(`/api/v1/pools/${selectedPoolId}/regenerate`, {
+      const regenerated = await apiFetch<PoolDTO>(`/api/v1/pools/${selectedPoolId}/regenerate`, {
         method: 'POST',
-        headers: adminToken ? { authorization: `Bearer ${adminToken}` } : {},
       });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.message || 'Failed to regenerate pool steps from Goal');
-      }
-      const regenerated = await res.json();
-      selectPool(regenerated);
+      selectPool(regenerated, true);
       setSuccessMsg('Pool steps regenerated from Goal Solver!');
-      await fetchPools();
+      await fetchPools(false);
       if (onPoolsUpdated) onPoolsUpdated();
     } catch (e: any) {
-      setError(e.message || 'Regeneration failed');
+      setError(e?.error?.message || e?.message || 'Regeneration failed');
     } finally {
       setSaving(false);
     }
@@ -308,27 +287,16 @@ export const PoolStudioModal: React.FC<PoolStudioModalProps> = ({ isOpen, onClos
 
   const handleAddStepFromModel = (model: CatalogModel) => {
     // Find active connection for this provider
-    let connectionId = '';
     const prov = providers.find((p) => p.slug === model.providerSlug);
-    if (prov && prov.connections && prov.connections.length > 0) {
-      connectionId = prov.connections[0].id;
-    } else {
-      // Find any connection with matching provider
-      for (const p of providers) {
-        if (p.connections && p.connections.length > 0) {
-          connectionId = p.connections[0].id;
-          break;
-        }
-      }
-    }
+    const matchingConn = prov?.connections?.find((c) => c.status === 'verified' || c.status === 'active') || prov?.connections?.[0];
 
-    if (!connectionId) {
-      setError(`No active provider connection found for model "${model.displayName}". Please add provider key first.`);
+    if (!matchingConn) {
+      setError(`Add a connection for provider "${model.providerDisplayName || model.providerSlug}" in Credential Vault first.`);
       return;
     }
 
     const newStep: DetailedPoolStep = {
-      connection_id: connectionId,
+      connection_id: matchingConn.id,
       model_id: model.id,
       role: 'primary',
       weight: 1.0,
@@ -340,6 +308,7 @@ export const PoolStudioModal: React.FC<PoolStudioModalProps> = ({ isOpen, onClos
 
     setSteps([...steps, newStep]);
     setIsAddingStep(false);
+    setError(null);
   };
 
   const handleRemoveStep = (index: number) => {
@@ -446,16 +415,26 @@ export const PoolStudioModal: React.FC<PoolStudioModalProps> = ({ isOpen, onClos
                       }`}
                     >
                       <div className="flex items-center justify-between font-medium">
-                        <span className="truncate max-w-[140px]">{p.name}</span>
-                        <span
-                          className={`px-1.5 py-0.5 rounded text-[10px] uppercase font-mono ${
-                            p.isActive
-                              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                              : 'bg-slate-800 text-slate-500 border border-slate-700'
-                          }`}
-                        >
-                          {p.isActive ? 'Active' : 'Inactive'}
+                        <span className="truncate max-w-[140px] flex items-center gap-1">
+                          {p.isDefault && <Star className="w-3 h-3 fill-amber-400 text-amber-400 shrink-0" />}
+                          {p.name}
                         </span>
+                        <div className="flex items-center gap-1">
+                          {p.isDefault && (
+                            <span className="px-1 py-0.5 rounded text-[9px] uppercase font-mono bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                              Default
+                            </span>
+                          )}
+                          <span
+                            className={`px-1.5 py-0.5 rounded text-[10px] uppercase font-mono ${
+                              p.isActive
+                                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                                : 'bg-slate-800 text-slate-500 border border-slate-700'
+                            }`}
+                          >
+                            {p.isActive ? 'Active' : 'Inactive'}
+                          </span>
+                        </div>
                       </div>
                       <div className="flex items-center justify-between text-[11px] text-slate-400">
                         <span className="capitalize font-mono text-purple-400">{p.policy.replace('_', ' ')}</span>
@@ -505,12 +484,32 @@ export const PoolStudioModal: React.FC<PoolStudioModalProps> = ({ isOpen, onClos
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0 pt-4 sm:pt-0">
+                    {selectedPoolId && !selectedPoolId.startsWith('new-') && (
+                      pools.find((p) => p.id === selectedPoolId)?.isDefault ? (
+                        <span className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/30 font-semibold">
+                          <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                          Default Route
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={handleSetDefault}
+                          disabled={saving}
+                          className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg bg-amber-500/10 text-amber-300 border border-amber-500/20 hover:bg-amber-500/20 transition-all font-medium disabled:opacity-50 cursor-pointer"
+                          title="Set this pool as default route for unassigned traffic"
+                        >
+                          <Star className="w-3.5 h-3.5 text-amber-400" />
+                          Make Default
+                        </button>
+                      )
+                    )}
+
                     {linkedGoalId && (
                       <button
                         type="button"
                         onClick={handleRegenerateFromGoal}
                         disabled={saving}
-                        className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 hover:bg-indigo-500/20 transition-all font-medium disabled:opacity-50"
+                        className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 hover:bg-indigo-500/20 transition-all font-medium disabled:opacity-50 cursor-pointer"
                         title="Re-run GoalSolver on linked goal to regenerate candidate steps"
                       >
                         <RefreshCw className={`w-3.5 h-3.5 ${saving ? 'animate-spin' : ''}`} />
@@ -523,7 +522,7 @@ export const PoolStudioModal: React.FC<PoolStudioModalProps> = ({ isOpen, onClos
                         type="button"
                         onClick={handleDelete}
                         disabled={saving}
-                        className="p-2 rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/20 transition-all"
+                        className="p-2 rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/20 transition-all cursor-pointer"
                         title="Delete Pool"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -531,6 +530,17 @@ export const PoolStudioModal: React.FC<PoolStudioModalProps> = ({ isOpen, onClos
                     )}
                   </div>
                 </div>
+
+                {steps.length > 0 && !steps.some((s) => {
+                  const prov = providers.find((p) => p.slug === s.providerSlug);
+                  const conn = prov?.connections?.find((c) => c.id === s.connection_id);
+                  return conn && (conn.status === 'verified' || conn.status === 'active');
+                }) && (
+                  <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 shrink-0 text-amber-400" />
+                    <span>Warning: None of the steps in this pool currently have a verified provider connection. Requests routed to this pool will fail until keys are added.</span>
+                  </div>
+                )}
 
                 {/* Settings Row */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

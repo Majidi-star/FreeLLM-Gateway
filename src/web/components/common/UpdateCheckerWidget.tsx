@@ -3,10 +3,11 @@ import { Download, RefreshCw, CheckCircle, AlertCircle, ArrowUpCircle } from 'lu
 import type { UpdateStatusPayload } from '../../electron.d';
 
 export const UpdateCheckerWidget: React.FC = () => {
-  const [appVersion, setAppVersion] = useState<string>('0.1.0');
+  const [appVersion, setAppVersion] = useState<string>('1.0.0');
   const [isElectron, setIsElectron] = useState<boolean>(false);
   const [status, setStatus] = useState<UpdateStatusPayload>({ stage: 'not-available' });
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [hasChecked, setHasChecked] = useState<boolean>(false);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && window.electronAPI) {
@@ -19,6 +20,7 @@ export const UpdateCheckerWidget: React.FC = () => {
           setIsLoading(true);
         } else {
           setIsLoading(false);
+          setHasChecked(true);
         }
       });
 
@@ -32,6 +34,7 @@ export const UpdateCheckerWidget: React.FC = () => {
     if (!window.electronAPI) return;
     setIsLoading(true);
     setStatus({ stage: 'checking' });
+    setHasChecked(true);
     const res = await window.electronAPI.checkForUpdates();
     setIsLoading(false);
     if (!res.success && res.error) {
@@ -61,7 +64,7 @@ export const UpdateCheckerWidget: React.FC = () => {
       <div className="flex items-center justify-between p-3 rounded-xl bg-[var(--bg-well)] border border-[var(--border-subtle)] text-xs text-[var(--text-secondary)]">
         <div className="flex items-center space-x-2">
           <CheckCircle className="w-4 h-4 text-[var(--signal-mint)]" />
-          <span>GoalRoute Version {appVersion} (Web Mode)</span>
+          <span>GoalRoute Version {appVersion} (Web / Docker Mode)</span>
         </div>
       </div>
     );
@@ -80,14 +83,14 @@ export const UpdateCheckerWidget: React.FC = () => {
           </span>
         </div>
 
-        {status.stage === 'not-available' && (
+        {status.stage !== 'downloading' && (
           <button
             onClick={handleCheckForUpdates}
             disabled={isLoading}
-            className="px-3 py-1.5 rounded-lg bg-[var(--accent-primary)] text-white font-medium flex items-center space-x-1.5 hover:opacity-90 transition-all cursor-pointer disabled:opacity-50"
+            className="px-3 py-1.5 rounded-lg bg-[var(--accent-primary)] text-slate-950 font-bold flex items-center space-x-1.5 hover:opacity-90 transition-all cursor-pointer disabled:opacity-50"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-            <span>Check for Updates</span>
+            <span>{status.stage === 'error' ? 'Retry Check' : 'Check for Updates'}</span>
           </button>
         )}
       </div>
@@ -96,6 +99,13 @@ export const UpdateCheckerWidget: React.FC = () => {
         <div className="flex items-center space-x-2 text-[var(--text-muted)] animate-pulse">
           <RefreshCw className="w-3.5 h-3.5 animate-spin" />
           <span>Checking update servers...</span>
+        </div>
+      )}
+
+      {status.stage === 'not-available' && hasChecked && (
+        <div className="flex items-center space-x-2 text-emerald-400 p-2 rounded-lg bg-emerald-950/20 border border-emerald-500/20">
+          <CheckCircle className="w-4 h-4 shrink-0 text-[var(--signal-mint)]" />
+          <span>You are on the latest version ({appVersion}).</span>
         </div>
       )}
 
@@ -128,7 +138,7 @@ export const UpdateCheckerWidget: React.FC = () => {
       )}
 
       {status.stage === 'downloaded' && (
-        <div className="flex items-center justify-between p-3 rounded-lg bg-mint-950/30 border border-[var(--signal-mint)]/40 text-[var(--signal-mint)]">
+        <div className="flex items-center justify-between p-3 rounded-lg bg-emerald-950/40 border border-emerald-500/40 text-[var(--signal-mint)]">
           <div>
             <p className="font-bold">Update Downloaded & Ready!</p>
             <p className="text-[11px] text-[var(--text-muted)]">Restart GoalRoute now to apply the new version.</p>

@@ -12,7 +12,7 @@ import { ProductGuideModal } from '../modals/ProductGuideModal.js';
 import { DecisionInspectorDrawer, DecisionTrace } from '../drawers/DecisionInspectorDrawer.js';
 import { GlossaryTerm } from '../common/GlossaryTerm.js';
 import { AgenticChat } from '../chat/AgenticChat.js';
-import { getAdminToken } from '../settings/EndpointsManager.js';
+import { getAdminToken, setAdminToken, apiFetch } from '../../lib/api.js';
 
 export const AppShell: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'cockpit' | 'accounts' | 'bridge' | 'vault' | 'database' | 'settings'>('cockpit');
@@ -118,52 +118,24 @@ export const AppShell: React.FC = () => {
   const [isAuthRequired, setIsAuthRequired] = useState(false);
   const [authInputToken, setAuthInputToken] = useState('');
   const [authError, setAuthError] = useState<string | null>(null);
-  const [isAutoDetecting, setIsAutoDetecting] = useState(false);
-
-  const attemptAutoLoginFromSystem = async (): Promise<string | null> => {
-    try {
-      const res = await fetch('/api/v1/system/token');
-      if (res.ok) {
-        const data = await res.json();
-        if (data?.token) {
-          localStorage.setItem('goalroute_admin_token', data.token);
-          sessionStorage.setItem('goalroute_admin_token', data.token);
-          return data.token;
-        }
-      }
-    } catch {}
-    return null;
-  };
 
   const checkInitialAuth = async () => {
     let adminToken = getAdminToken();
-    if (!adminToken) {
-      adminToken = await attemptAutoLoginFromSystem() || '';
+
+    // Check desktop IPC bridge if running inside Electron and no token stored yet
+    if (!adminToken && typeof window !== 'undefined' && (window as any).electronAPI?.getAdminToken) {
+      try {
+        const desktopToken = await (window as any).electronAPI.getAdminToken();
+        if (desktopToken && desktopToken.trim()) {
+          setAdminToken(desktopToken.trim());
+          adminToken = desktopToken.trim();
+        }
+      } catch {}
     }
 
     try {
-      let res = await fetch('/api/v1/providers', {
-        headers: adminToken ? { authorization: `Bearer ${adminToken}` } : {},
-      });
-
-      if (res.status === 401) {
-        // Attempt localhost auto-token discovery if initial token was missing or stale
-        const discovered = await attemptAutoLoginFromSystem();
-        if (discovered) {
-          adminToken = discovered;
-          res = await fetch('/api/v1/providers', {
-            headers: { authorization: `Bearer ${adminToken}` },
-          });
-        }
-      }
-
-      if (res.status === 401) {
-        setIsAuthRequired(true);
-        return;
-      }
-
+      const providers = await apiFetch('/api/v1/providers');
       setIsAuthRequired(false);
-      const providers = res.ok ? await res.json() : [];
       if (Array.isArray(providers)) {
         const active = providers.filter((p: any) => p && p.hasKey && p.status !== 'unconfigured').length;
         setActiveKeys(active);
@@ -173,13 +145,23 @@ export const AppShell: React.FC = () => {
           setConciergeMsg(`GoalRoute Copilot active. Monitoring ${active} active provider key${active > 1 ? 's' : ''} with zero-latency failover.`);
         }
       }
-    } catch {
-      // If network fails, don't force auth modal unless explicitly unauthorized
+    } catch (err: any) {
+      if (err?.status === 401) {
+        setIsAuthRequired(true);
+      }
     }
   };
 
   useEffect(() => {
     checkInitialAuth();
+
+    const handleUnauthorized = () => {
+      setIsAuthRequired(true);
+    };
+    window.addEventListener('auth:unauthorized', handleUnauthorized);
+    return () => {
+      window.removeEventListener('auth:unauthorized', handleUnauthorized);
+    };
   }, []);
 
   const handleSaveAuthToken = async (e: React.FormEvent) => {
@@ -188,36 +170,18 @@ export const AppShell: React.FC = () => {
     const clean = authInputToken.trim();
     if (!clean) return;
 
+    setAdminToken(clean);
     try {
-      const res = await fetch('/api/v1/providers', {
-        headers: { authorization: `Bearer ${clean}` },
-      });
-
-      if (!res.ok && res.status === 401) {
-        setAuthError('Incorrect Admin Password or Access Key. Please check your config.');
-        return;
+      const providers = await apiFetch('/api/v1/providers');
+      setIsAuthRequired(false);
+      setAuthInputToken('');
+      if (Array.isArray(providers)) {
+        const active = providers.filter((p: any) => p && p.hasKey && p.status !== 'unconfigured').length;
+        setActiveKeys(active);
       }
-
-      localStorage.setItem('goalroute_admin_token', clean);
-      sessionStorage.setItem('goalroute_admin_token', clean);
-      setIsAuthRequired(false);
-      checkInitialAuth();
-    } catch {
-      setAuthError('Unable to connect to gateway server.');
-    }
-  };
-
-  const handleAutoDetectKey = async () => {
-    setIsAutoDetecting(true);
-    setAuthError(null);
-    const token = await attemptAutoLoginFromSystem();
-    setIsAutoDetecting(false);
-
-    if (token) {
-      setIsAuthRequired(false);
-      checkInitialAuth();
-    } else {
-      setAuthError('Could not auto-detect local key. Please enter your Admin Password manually.');
+    } catch (err: any) {
+      setAdminToken(null);
+      setAuthError(err?.message || 'Incorrect Admin Token or Access Secret. Please check your config.');
     }
   };
 
@@ -539,24 +503,14 @@ export const AppShell: React.FC = () => {
               </div>
 
               <div className="p-3 rounded-xl bg-[var(--bg-well)] border border-[var(--border-subtle)] text-[11px] text-[var(--text-muted)] space-y-1 leading-relaxed">
-                <div className="font-semibold text-[var(--text-secondary)]">Running locally?</div>
-                <div>Your gateway access token is auto-configured in your <code className="font-mono text-[var(--signal-mint)]">.env</code> file as <code className="font-mono text-[var(--text-primary)]">ADMIN_API_TOKEN</code>.</div>
+                <div className="font-semibold text-[var(--text-secondary)]">Gateway Authentication</div>
+                <div>Enter the admin security token configured for your gateway server to manage routing pools and API credentials.</div>
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={handleAutoDetectKey}
-                  disabled={isAutoDetecting}
-                  className="py-2.5 px-4 rounded-xl bg-[var(--bg-well)] hover:bg-[var(--bg-card-active)] border border-[var(--border-subtle)] hover:border-[var(--accent-primary)] text-xs font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)] flex items-center justify-center space-x-1.5 transition-all cursor-pointer disabled:opacity-50"
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 ${isAutoDetecting ? 'animate-spin text-[var(--accent-primary)]' : ''}`} />
-                  <span>{isAutoDetecting ? 'Detecting…' : 'Auto-Detect Session'}</span>
-                </button>
-
+              <div className="pt-1">
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 rounded-xl bg-[var(--accent-primary)] text-white text-xs font-bold hover:opacity-90 transition-all cursor-pointer shadow-lg shadow-[var(--accent-primary)]/20 text-center"
+                  className="w-full py-2.5 rounded-xl bg-[var(--accent-primary)] text-white text-xs font-bold hover:opacity-90 transition-all cursor-pointer shadow-lg shadow-[var(--accent-primary)]/20 text-center"
                 >
                   Log In &amp; Continue
                 </button>

@@ -46,7 +46,8 @@ import { transformOpenAIToAnthropicSSEStream } from '../domain/translation/sseSt
 import { AnthropicMessagesRequest } from '../domain/translation/anthropicTypes.js';
 import { OpenAIChatRequest } from '../domain/translation/types.js';
 import { generateId } from '../shared/ids.js';
-import { AppError } from '../shared/errors.js';
+import { AppError, ValidationError, NotFoundError } from '../shared/errors.js';
+import { SystemSettingsRepository } from '../infra/db/repositories/systemSettingsRepo.js';
 
 import { safeCompareTokens } from '../infra/security/constantTime.js';
 
@@ -101,7 +102,7 @@ function corsOriginValidator(origin: string | undefined, cb: (err: Error | null,
   if (!origin) return cb(null, true);
   try {
     const { hostname } = new URL(origin);
-    if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.endsWith('.localhost')) {
+    if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]' || hostname.endsWith('.localhost')) {
       return cb(null, true);
     }
   } catch {}
@@ -111,6 +112,14 @@ export async function buildApp() {
   const config = getConfig();
   const db = getDatabase();
   runMigrations(db);
+
+  const systemSettingsRepo = new SystemSettingsRepository(db);
+  const savedDbToken = systemSettingsRepo.get('admin_api_token');
+  if (savedDbToken && savedDbToken.trim().length >= 8) {
+    config.ADMIN_API_TOKEN = savedDbToken.trim();
+  } else if (config.ADMIN_API_TOKEN && config.ADMIN_API_TOKEN !== 'dev-admin-secret-token') {
+    systemSettingsRepo.set('admin_api_token', config.ADMIN_API_TOKEN);
+  }
 
   // Initialize Repositories
   const providerRepo = new ProviderRepository(db);
@@ -171,7 +180,8 @@ export async function buildApp() {
     const pools = poolRepo.listPools().filter(p => p.is_active &&
       (auth?.kind !== 'account' || !p.account_id || p.account_id === auth.accountId));
     if (pools.length === 0) throw new AppError('No active pools available for this account.', 'NO_ACTIVE_POOLS', 400);
-    return pools[0].id;
+    const explicitDefault = pools.find(p => (p as any).is_default === 1);
+    return explicitDefault ? explicitDefault.id : pools[0].id;
   };
 
   // Auto-sync catalog on server boot
@@ -184,7 +194,7 @@ export async function buildApp() {
     connectionTimeout: 30000,
     keepAliveTimeout: 65000,
     bodyLimit: 25 * 1024 * 1024, // 25MB payload limit for multimodal images
-    trustProxy: process.env.TRUST_PROXY === 'true' || process.env.TRUST_PROXY === '1' || true,
+    trustProxy: Boolean(config.REMOTE_ACCESS_ENABLED || process.env.TRUST_PROXY === 'true' || process.env.TRUST_PROXY === '1'),
   });
 
   await fastify.register(cors, {
@@ -223,16 +233,16 @@ export async function buildApp() {
   fastify.addHook('onRequest', async (req, reply) => {
     logger.info({ reqId: req.id, method: req.method, url: req.url }, 'Incoming HTTP request');
 
-    const url = req.url;
+    const pathname = new URL(req.url, 'http://localhost').pathname;
 
     // Admin routes: /api/v1/* and /mcp/*
-    if (url.startsWith('/api/v1/') || url.startsWith('/mcp/')) {
+    if (pathname.startsWith('/api/v1') || pathname.startsWith('/mcp')) {
       await buildAdminAuthHook({ config }).call(fastify, req, reply, () => {});
       return;
     }
 
-    // Traffic route: /v1/chat/completions (OpenAI-compatible)
-    if (url.startsWith('/v1/chat/completions')) {
+    // Traffic routes: /v1/* (OpenAI-compatible /v1/chat/completions, /v1/models)
+    if (pathname.startsWith('/v1/')) {
       await buildTrafficAuthHook({ authService, config, rateLimiter }).call(fastify, req, reply, () => {});
       return;
     }
@@ -257,6 +267,30 @@ export async function buildApp() {
           type: appErr.name || 'AppError',
           code: appErr.code || 'APP_ERROR',
           details: appErr.details,
+        },
+      });
+    }
+
+    const errCode = (error as any)?.code;
+    const errMsg = (error as any)?.message || '';
+    if (typeof errCode === 'string' && errCode.startsWith('SQLITE_CONSTRAINT')) {
+      let clientMsg = 'Database constraint violation';
+      let status = 400;
+      if (errCode.includes('NOTNULL')) {
+        clientMsg = `Missing required database field: ${errMsg.replace(/^.*: /, '')}`;
+      } else if (errCode.includes('FOREIGNKEY')) {
+        clientMsg = `Referenced item does not exist: ${errMsg.replace(/^.*: /, '')}`;
+      } else if (errCode.includes('CHECK')) {
+        clientMsg = `Invalid field value failed constraint check: ${errMsg.replace(/^.*: /, '')}`;
+      } else if (errCode.includes('UNIQUE')) {
+        clientMsg = `Duplicate entry: ${errMsg.replace(/^.*: /, '')}`;
+        status = 409;
+      }
+      return reply.status(status).send({
+        error: {
+          message: clientMsg,
+          type: 'ValidationError',
+          code: errCode,
         },
       });
     }
@@ -410,9 +444,10 @@ export async function buildApp() {
     }
   };
 
-  const getOpenAiModelsList = () => {
+  const getOpenAiModelsList = (auth?: AuthContext) => {
     const modelsMap = new Map<string, { id: string; object: string; owned_by: string }>();
-    const activePools = poolRepo.listPools().filter(p => p.is_active);
+    const activePools = poolRepo.listPools().filter(p => p.is_active &&
+      (!auth || auth.kind !== 'account' || !p.account_id || p.account_id === auth.accountId));
     for (const p of activePools) {
       modelsMap.set(p.id, { id: p.id, object: 'model', owned_by: 'goalroute-pool' });
       modelsMap.set(p.name, { id: p.name, object: 'model', owned_by: 'goalroute-pool' });
@@ -427,7 +462,7 @@ export async function buildApp() {
 
   // Gateway Endpoint: /v1/chat/completions (main port)
   fastify.post('/v1/chat/completions', chatCompletionsHandler);
-  fastify.get('/v1/models', async () => getOpenAiModelsList());
+  fastify.get('/v1/models', async (req) => getOpenAiModelsList(req.auth));
 
   // Management Routes
   fastify.get('/api/v1/providers', async () => providerService.getProvidersWithConnections());
@@ -472,12 +507,28 @@ export async function buildApp() {
   fastify.get('/api/v1/pools/:id', async (req) => poolService.getPool((req.params as any).id));
   fastify.post('/api/v1/pools', async (req) => {
     const body = req.body as any;
+    if (!body || typeof body !== 'object') {
+      throw new ValidationError('Request body is required');
+    }
     if (body.steps && Array.isArray(body.steps)) {
       return poolService.createCustomPool(body);
     }
-    return poolService.createPoolFromGoal(body.goalId || body.goal_id, body.name, body.accountId || body.account_id);
+    const goalId = body.goalId || body.goal_id;
+    if (!goalId) {
+      throw new ValidationError('Either steps or goalId must be provided to create a pool');
+    }
+    return poolService.createPoolFromGoal(goalId, body.name, body.accountId || body.account_id);
   });
-  fastify.put('/api/v1/pools/:id', async (req) => poolService.updatePool((req.params as any).id, req.body as any));
+  fastify.put('/api/v1/pools/:id', async (req) => {
+    const body = req.body as any;
+    if (!body || typeof body !== 'object') {
+      throw new ValidationError('Request body is required');
+    }
+    return poolService.updatePool((req.params as any).id, body);
+  });
+  fastify.post('/api/v1/pools/:id/default', async (req) => {
+    return poolService.setDefaultPool((req.params as any).id);
+  });
   fastify.delete('/api/v1/pools/:id', async (req) => {
     poolService.deletePool((req.params as any).id);
     return { success: true };
@@ -656,7 +707,7 @@ reply.raw.on('error', () => {});
     switch (protocol) {
       case 'openai':
         app.post('/v1/chat/completions', chatCompletionsHandler);
-        app.get('/v1/models', async () => getOpenAiModelsList());
+        app.get('/v1/models', async (req) => getOpenAiModelsList(req.auth));
         break;
       case 'anthropic':
         app.post('/v1/messages', anthropicMessagesHandler);
@@ -734,9 +785,24 @@ reply.raw.on('error', () => {});
     }
     const newToken = body.token.trim();
     config.ADMIN_API_TOKEN = newToken;
+    systemSettingsRepo.set('admin_api_token', newToken);
     if (activeEndpointsService) {
       (activeEndpointsService as any).deps.isDefaultAdminToken =
         newToken === 'dev-admin-secret-token' || newToken === 'dev-admin-secret-token-change-in-prod';
+    }
+    try {
+      const userDataDir = process.env.GOALROUTE_USER_DATA;
+      if (userDataDir) {
+        const cfgPath = path.join(userDataDir, 'goalroute-config.json');
+        let currentCfg: any = {};
+        if (fs.existsSync(cfgPath)) {
+          try { currentCfg = JSON.parse(fs.readFileSync(cfgPath, 'utf8')); } catch {}
+        }
+        currentCfg.adminApiToken = newToken;
+        fs.writeFileSync(cfgPath, JSON.stringify(currentCfg, null, 2), 'utf8');
+      }
+    } catch (e) {
+      logger.warn({ err: e }, 'Could not persist admin token to userData config');
     }
     try {
       const envPath = path.resolve(process.cwd(), '.env');
@@ -767,13 +833,20 @@ export function getRequestLogRepoForMaintenance(): RequestLogRepository {
 export async function startServer(port?: number) {
   const config = getConfig();
   const listenPort = port || config.PORT;
+  const listenHost = config.REMOTE_ACCESS_ENABLED ? '0.0.0.0' : config.HOST;
 
   try {
     const app = await buildApp();
-    const address = await app.listen({ port: listenPort, host: '0.0.0.0' });
-    logger.info({ address, port: listenPort }, 'GoalRoute HTTP server listening');
+    const address = await app.listen({ port: listenPort, host: listenHost });
+    logger.info({ address, port: listenPort, host: listenHost }, 'GoalRoute HTTP server listening');
 
     await getActiveEndpointsService().startAll();
+
+    if (config.ADMIN_API_TOKEN === 'dev-admin-secret-token') {
+      logger.warn('GoalRoute running with default dev-admin-secret-token');
+    } else {
+      console.log(`\n==================================================\nGoalRoute Admin Token: ${config.ADMIN_API_TOKEN}\nUse this token to log in to the Cockpit.\n==================================================\n`);
+    }
 
     const retentionMs = config.LOG_RETENTION_DAYS * 24 * 60 * 60 * 1000;
     const purgeInterval = setInterval(() => {

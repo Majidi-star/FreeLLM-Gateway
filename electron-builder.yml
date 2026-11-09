@@ -1,7 +1,7 @@
 appId: com.freellm.goalroute
 productName: GoalRoute
 copyright: "Copyright © 2026 FreeLLM-Gateway"
-npmRebuild: false
+npmRebuild: true
 
 directories:
   output: dist-electron
@@ -12,6 +12,10 @@ files:
   - "dist-web/**/*"
   - "electron/dist/**/*"
   - "package.json"
+
+asarUnpack:
+  - "**/*.node"
+  - "node_modules/better-sqlite3/**/*"
 
 extraMetadata:
   main: electron/dist/main.js
@@ -33,8 +37,9 @@ win:
   artifactName: "${productName}-Setup-${version}-${arch}.${ext}"
 
 nsis:
-  oneClick: false
-  allowToChangeInstallationDirectory: true
+  oneClick: true
+  perMachine: false
+  allowToChangeInstallationDirectory: false
   createDesktopShortcut: true
   createStartMenuShortcut: true
   shortcutName: GoalRoute
@@ -44,7 +49,13 @@ mac:
   identity: null
   target:
     - target: dmg
+      arch:
+        - x64
+        - arm64
     - target: zip
+      arch:
+        - x64
+        - arm64
   artifactName: "${productName}-${version}-${arch}.${ext}"
 
 linux:

@@ -235,15 +235,20 @@ docker run -d \
 
 ### Option D: Desktop App (Electron)
 
-FreeLLM-Gateway packages as a native desktop application with a bundled database and background daemon:
+FreeLLM-Gateway packages as a native desktop application with an embedded zero-config server, bundled SQLite database, and automatic multi-port listeners:
+
+- **Zero-Config First Run**: Automatically generates and persists high-entropy `ENCRYPTION_MASTER_KEY` and `ADMIN_API_TOKEN` in the OS user data directory (`%APPDATA%\GoalRoute` on Windows, `~/Library/Application Support/GoalRoute` on macOS, `~/.config/GoalRoute` on Linux). No manual `.env` editing required.
+- **Persistent Storage**: Database (`goalroute.db`) and encryption keys live in user data, surviving app updates and re-installs.
+- **Embedded Multi-Protocol Listeners**: Launches `127.0.0.1:8787` (Cockpit UI & Admin API), `8788` (OpenAI), `8789` (Anthropic), and `8790` (MCP bridge) automatically.
+- **In-App Auto-Updates**: Silent background download and one-click restart on Windows via NSIS updater. (On macOS, manual downloads from GitHub releases are recommended until Apple Developer ID signing credentials are provisioned).
 
 ```bash
 # Run Electron in development mode
 npm run electron:start
 
 # Build platform-specific distribution installer
-npm run dist:win      # Windows (.exe installer)
-npm run dist:mac      # macOS (.dmg)
+npm run dist:win      # Windows (.exe NSIS installer)
+npm run dist:mac      # macOS (.dmg x64 & arm64)
 npm run dist:linux    # Linux (.AppImage / .deb)
 ```
 

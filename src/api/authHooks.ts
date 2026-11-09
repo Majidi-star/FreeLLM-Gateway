@@ -64,24 +64,23 @@ export function buildTrafficAuthHook(deps: {
 
 export function buildAdminAuthHook(deps: { config: Config }): onRequestHookHandler {
   return async (req: FastifyRequest, reply: FastifyReply) => {
-    const url = req.url;
+    const parsedUrl = new URL(req.url, 'http://localhost');
+    const pathname = parsedUrl.pathname.replace(/\/+$/, '') || '/';
     const isGetEndpoints =
-      req.method === 'GET' &&
-      (url.startsWith('/api/v1/system/endpoints') || url.includes('/system/endpoints'));
+      req.method === 'GET' && pathname === '/api/v1/system/endpoints';
     const isLocalhost =
       req.ip === '127.0.0.1' || req.ip === '::1' || req.ip === '::ffff:127.0.0.1';
     if (
-      (isGetEndpoints && !deps.config.REMOTE_ACCESS_ENABLED) ||
-      url.startsWith('/api/v1/health')
+      (isGetEndpoints && isLocalhost && !deps.config.REMOTE_ACCESS_ENABLED) ||
+      pathname === '/api/v1/health'
     ) {
       return;
     }
 
-    if (url.startsWith('/api/v1/') || url.startsWith('/mcp/')) {
-      const parsedUrl = new URL(req.url, 'http://localhost');
+    if (pathname.startsWith('/api/v1') || pathname.startsWith('/mcp')) {
       const queryToken = parsedUrl.searchParams.get('token');
 
-      if (url.startsWith('/api/v1/request-logs/stream')) {
+      if (pathname === '/api/v1/request-logs/stream') {
         const isStreamTokenValid = safeCompareTokens(queryToken || '', deps.config.ADMIN_API_TOKEN);
         if (isStreamTokenValid) {
           return;
@@ -94,7 +93,13 @@ export function buildAdminAuthHook(deps: { config: Config }): onRequestHookHandl
       const isTokenValid = safeCompareTokens(token, deps.config.ADMIN_API_TOKEN);
 
       if (!isTokenValid) {
-        return reply.status(401).send({ error: { message: 'Unauthorized', type: 'authentication_error' } });
+        return reply.status(401).send({
+          error: {
+            message: 'Unauthorized',
+            type: 'authentication_error',
+            code: 'AUTHENTICATION_ERROR',
+          },
+        });
       }
     }
   };

@@ -1,6 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Network, ToggleLeft, ToggleRight, Copy, Check, RefreshCw, Globe, Lock, AlertCircle } from 'lucide-react';
 import { sanitizeForClipboard } from '../../utils/clipboardSanitizer.js';
+import { getAdminToken, setAdminToken, apiFetch } from '../../lib/api.js';
+
+export { getAdminToken, setAdminToken };
 import { UpdateCheckerWidget } from '../common/UpdateCheckerWidget.js';
 
 interface ProtocolEndpointConfig {
@@ -64,14 +67,6 @@ export const COPY_TARGETS = (status: SystemEndpointsStatus, hideMcp = false): Sn
   ];
 };
 
-export function getAdminToken(): string {
-  return (
-    sessionStorage.getItem('goalroute_admin_token') ||
-    localStorage.getItem('goalroute_admin_token') ||
-    (import.meta as any).env?.VITE_ADMIN_API_TOKEN ||
-    'dev-admin-secret-token'
-  );
-}
 
 export const DEFAULT_FALLBACK_STATUS: SystemEndpointsStatus = {
   host: typeof window !== 'undefined' ? window.location.hostname || '127.0.0.1' : '127.0.0.1',
@@ -94,24 +89,15 @@ export const EndpointsManager: React.FC<EndpointsManagerProps> = ({ hideMcp = fa
 
   const load = useCallback(async () => {
     try {
-      const adminToken = getAdminToken();
-      const headers: Record<string, string> = {};
-      if (adminToken) {
-        headers['authorization'] = `Bearer ${adminToken}`;
-      }
-      const res = await fetch('/api/v1/system/endpoints', { headers });
-      if (!res.ok) {
-        // Fallback gracefully without locking the UI in an error state
-        setStatus(DEFAULT_FALLBACK_STATUS);
-        return;
-      }
-      const data = (await res.json()) as SystemEndpointsStatus;
+      const data = await apiFetch<SystemEndpointsStatus>('/api/v1/system/endpoints');
       setStatus(data);
       onStatusChange?.(data);
       setPortDrafts(Object.fromEntries(Object.values(data.endpoints).map((e) => [e.protocol, String(e.port)])));
       setError(null);
-    } catch (err) {
-      setStatus(DEFAULT_FALLBACK_STATUS);
+    } catch (err: any) {
+      if (err?.status !== 401) {
+        setStatus(DEFAULT_FALLBACK_STATUS);
+      }
       setError(null);
     }
   }, []);
@@ -123,31 +109,20 @@ export const EndpointsManager: React.FC<EndpointsManagerProps> = ({ hideMcp = fa
   const applyUpdate = useCallback(async (body: Record<string, unknown>) => {
     setBusy(true);
     try {
-      const res = await fetch('/api/v1/system/endpoints', {
+      const next = await apiFetch<SystemEndpointsStatus>('/api/v1/system/endpoints', {
         method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          authorization: `Bearer ${getAdminToken()}`,
-        },
         body: JSON.stringify(body),
       });
-      const data = (await res.json()) as SystemEndpointsStatus | { error?: { message?: string } };
-      if (!res.ok) {
-        const message =
-          'error' in data && data.error?.message ? data.error.message : `Update failed (HTTP ${res.status})`;
-        throw new Error(message);
-      }
-      const next = data as SystemEndpointsStatus;
       setStatus(next);
       onStatusChange?.(next);
       setPortDrafts(Object.fromEntries(Object.values(next.endpoints).map((e) => [e.protocol, String(e.port)])));
       setError(null);
-    } catch (err) {
-      setError((err as Error).message);
+    } catch (err: any) {
+      setError(err?.error?.message || err?.message || 'Update failed');
     } finally {
       setBusy(false);
     }
-  }, []);
+  }, [onStatusChange]);
 
   const copy = useCallback(async (id: string, text: string) => {
     try {
@@ -460,43 +435,39 @@ export const EndpointsManager: React.FC<EndpointsManagerProps> = ({ hideMcp = fa
 
 export const AdminTokenSection: React.FC = () => {
   const [token, setToken] = useState(() => getAdminToken());
+  const [tokenInput, setTokenInput] = useState(() => getAdminToken());
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    setTokenInput(token);
+  }, [token]);
 
   const saveTokenValue = async (val: string) => {
     const cleanToken = val.trim();
-    setToken(cleanToken);
+    if (!cleanToken || cleanToken.length < 8) {
+      setError('Token must be at least 8 characters long');
+      return;
+    }
+    setBusy(true);
+    setError(null);
     try {
-      localStorage.setItem('goalroute_admin_token', cleanToken);
-      sessionStorage.setItem('goalroute_admin_token', cleanToken);
-    } catch {}
-    try {
-      await fetch('/api/v1/system/token', {
+      await apiFetch('/api/v1/system/token', {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ token: cleanToken }),
       });
-    } catch {}
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
-  };
-
-  const clearTokenValue = async () => {
-    const defaultToken = 'sk-admin-3e4f498ecf31e1e2b87082d649b8f9db';
-    try {
-      localStorage.setItem('goalroute_admin_token', defaultToken);
-      sessionStorage.setItem('goalroute_admin_token', defaultToken);
-    } catch {}
-    setToken(defaultToken);
-    try {
-      await fetch('/api/v1/system/token', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ token: defaultToken }),
-      });
-    } catch {}
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+      setAdminToken(cleanToken);
+      setToken(cleanToken);
+      setTokenInput(cleanToken);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    } catch (err: any) {
+      setError(err?.error?.message || err?.message || 'Failed to update admin token');
+    } finally {
+      setBusy(false);
+    }
   };
 
   const generateRandomToken = () => {
@@ -510,13 +481,14 @@ export const AdminTokenSection: React.FC = () => {
       .map((b) => b.toString(16).padStart(2, '0'))
       .join('');
     const newToken = `sk-admin-${hex}`;
-    saveTokenValue(newToken);
+    setTokenInput(newToken);
+    void saveTokenValue(newToken);
   };
 
   const copyToken = async () => {
     try {
       if (navigator.clipboard) {
-        await navigator.clipboard.writeText(sanitizeForClipboard(token));
+        await navigator.clipboard.writeText(sanitizeForClipboard(tokenInput));
         setCopied(true);
         setTimeout(() => setCopied(false), 1800);
       }
@@ -546,6 +518,13 @@ export const AdminTokenSection: React.FC = () => {
         )}
       </div>
 
+      {error && (
+        <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+          <span>{error}</span>
+        </div>
+      )}
+
       {/* Explanatory Banner */}
       <div className="p-3.5 rounded-xl bg-[var(--bg-well)] border border-[var(--border-subtle)] text-xs text-[var(--text-secondary)] space-y-1.5 leading-relaxed">
         <div className="font-semibold text-[var(--text-bright)] flex items-center gap-1.5">
@@ -565,9 +544,9 @@ export const AdminTokenSection: React.FC = () => {
         <div className="relative flex-1">
           <input
             type="text"
-            value={token}
-            onChange={(e) => saveTokenValue(e.target.value)}
-            placeholder="e.g. dev-admin-secret-token"
+            value={tokenInput}
+            onChange={(e) => setTokenInput(e.target.value)}
+            placeholder="e.g. sk-admin-..."
             className="w-full p-2.5 pr-10 bg-[var(--bg-well)] border border-[var(--border-subtle)] focus:border-[var(--accent-primary)] rounded-xl font-mono text-xs text-[var(--text-bright)] focus:outline-none"
             dir="ltr"
           />
@@ -583,7 +562,8 @@ export const AdminTokenSection: React.FC = () => {
         <button
           type="button"
           onClick={generateRandomToken}
-          className="py-2.5 px-3.5 rounded-xl bg-[var(--bg-well)] hover:bg-[var(--bg-card-active)] border border-[var(--border-subtle)] hover:border-[var(--accent-primary)] text-xs font-semibold text-[var(--text-bright)] flex items-center justify-center space-x-1.5 transition-all shrink-0 cursor-pointer active:scale-95"
+          disabled={busy}
+          className="py-2.5 px-3.5 rounded-xl bg-[var(--bg-well)] hover:bg-[var(--bg-card-active)] border border-[var(--border-subtle)] hover:border-[var(--accent-primary)] text-xs font-semibold text-[var(--text-bright)] flex items-center justify-center space-x-1.5 transition-all shrink-0 cursor-pointer active:scale-95 disabled:opacity-50"
           title="Generate a high-entropy random token"
         >
           <RefreshCw className="w-3.5 h-3.5 text-[var(--signal-mint)]" />
@@ -592,19 +572,21 @@ export const AdminTokenSection: React.FC = () => {
 
         <button
           type="button"
-          onClick={clearTokenValue}
-          className="py-2.5 px-3.5 rounded-xl bg-[var(--bg-well)] hover:bg-[var(--bg-card-active)] border border-[var(--border-subtle)] hover:border-red-500/50 text-xs font-semibold text-[var(--text-secondary)] hover:text-red-400 flex items-center justify-center space-x-1.5 transition-all shrink-0 cursor-pointer active:scale-95"
-          title="Clear saved browser token"
+          onClick={generateRandomToken}
+          disabled={busy}
+          className="py-2.5 px-3.5 rounded-xl bg-[var(--bg-well)] hover:bg-[var(--bg-card-active)] border border-[var(--border-subtle)] hover:border-red-500/50 text-xs font-semibold text-[var(--text-secondary)] hover:text-red-400 flex items-center justify-center space-x-1.5 transition-all shrink-0 cursor-pointer active:scale-95 disabled:opacity-50"
+          title="Reset to a new secure random token"
         >
           <span>Reset Token</span>
         </button>
 
         <button
           type="button"
-          onClick={() => saveTokenValue(token)}
-          className="py-2.5 px-4 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-primary-hover)] text-slate-950 font-bold text-xs shrink-0 transition-all shadow-sm active:scale-95 cursor-pointer"
+          onClick={() => saveTokenValue(tokenInput)}
+          disabled={busy}
+          className="py-2.5 px-4 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-primary-hover)] text-slate-950 font-bold text-xs shrink-0 transition-all shadow-sm active:scale-95 cursor-pointer disabled:opacity-50"
         >
-          Save Token
+          {busy ? 'Saving...' : 'Save Token'}
         </button>
       </div>
     </div>

@@ -8,6 +8,7 @@ export interface PoolRecord {
   name: string;
   policy: RoutingPolicyName;
   is_active: number;
+  is_default?: number;
   account_id: string | null;
   created_at: number;
   updated_at: number;
@@ -81,6 +82,17 @@ export class PoolRepository {
   public setPoolActive(poolId: string, isActive: boolean): void {
     const stmt = this.db.prepare('UPDATE pools SET is_active = ?, updated_at = ? WHERE id = ?');
     stmt.run(isActive ? 1 : 0, Date.now(), poolId);
+  }
+
+  public setDefaultPool(poolId: string, accountId?: string | null): void {
+    this.db.transaction(() => {
+      if (accountId) {
+        this.db.prepare('UPDATE pools SET is_default = 0 WHERE account_id = ?').run(accountId);
+      } else {
+        this.db.prepare('UPDATE pools SET is_default = 0').run();
+      }
+      this.db.prepare('UPDATE pools SET is_default = 1, updated_at = ? WHERE id = ?').run(Date.now(), poolId);
+    })();
   }
 
   public updatePool(id: string, updates: Partial<Pick<PoolRecord, 'name' | 'policy' | 'is_active' | 'goal_id'>>): PoolRecord | null {

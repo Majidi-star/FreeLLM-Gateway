@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Key, ShieldCheck, RefreshCw, CheckCircle2, AlertTriangle, Cpu, Lock, Terminal, Activity, Zap, Check, ChevronDown, Plus, X, ExternalLink, Search, SlidersHorizontal, ArrowUpDown, Filter, RotateCcw } from 'lucide-react';
 import { GlossaryTerm } from '../common/GlossaryTerm.js';
-import { getAdminToken } from '../settings/EndpointsManager.js';
+import { apiFetch, getAdminToken } from '../../lib/api.js';
 
 
 export function formatCleanError(rawErr: string | null | undefined): string {
@@ -302,15 +302,10 @@ export const CredentialVault: React.FC = () => {
     setIsSyncing(true);
     setSyncFeedback(null);
     try {
-      const res = await fetch('/api/v1/catalog/sync', {
+      const data = await apiFetch<any>('/api/v1/catalog/sync', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(adminToken ? { authorization: `Bearer ${adminToken}` } : {}),
-        },
         body: JSON.stringify({}),
       });
-      const data = await res.json();
       if (data.success) {
         const syncedCount = data.syncedProviders?.length || 0;
         const failedList = data.failedProviders || [];
@@ -346,24 +341,18 @@ export const CredentialVault: React.FC = () => {
     setIsDropdownOpen(false);
   };
 
-  const adminToken = getAdminToken();
   const activeTimers = React.useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
 
   const fetchProviders = React.useCallback(async () => {
     try {
-      const res = await fetch('/api/v1/providers', {
-        headers: adminToken ? { authorization: `Bearer ${adminToken}` } : {},
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (Array.isArray(data)) {
-          setKeys(data);
-        }
+      const data = await apiFetch<any[]>('/api/v1/providers');
+      if (Array.isArray(data)) {
+        setKeys(data);
       }
     } catch (e) {
       console.error('Failed to fetch providers', e);
     }
-  }, [adminToken]);
+  }, []);
 
   React.useEffect(() => {
     fetchProviders();
@@ -391,40 +380,32 @@ export const CredentialVault: React.FC = () => {
     setIsSavingKey(true);
     setConnectError(null);
     try {
-      const res = await fetch('/api/v1/providers/keys', {
+      const connData = await apiFetch<any>('/api/v1/providers/keys', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(adminToken ? { authorization: `Bearer ${adminToken}` } : {}),
-        },
         body: JSON.stringify({
           providerSlug: selectedProviderSlug,
           apiKey: inputApiKey.trim(),
           baseUrl: customBaseUrl.trim(),
         }),
       });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ message: 'Failed to save key' }));
-        throw new Error(err.message || 'Failed to save key');
-      }
-
-      const connData = await res.json();
 
       // Immediately run handshake verification before committing connection to vault grid
-      const testRes = await fetch(`/api/v1/providers/${connData.id}/test`, {
-        method: 'POST',
-        headers: adminToken ? { authorization: `Bearer ${adminToken}` } : {},
-      });
-      const testData = await testRes.json().catch(() => ({}));
+      let testData: any = {};
+      try {
+        testData = await apiFetch<any>(`/api/v1/providers/${connData.id}/test`, {
+          method: 'POST',
+        });
+      } catch (err: any) {
+        testData = { success: false, error: err?.message || 'Handshake failed' };
+      }
 
-      if (!testRes.ok || (testData as any).success === false) {
-        const rawErr = (testData as any).error || 'Handshake verification failed';
+      if (testData.success === false) {
+        const rawErr = testData.error || 'Handshake verification failed';
         const cleanErr = formatCleanError(rawErr);
 
         // Rollback unverified connection from SQLite to prevent vault grid pollution
-        await fetch(`/api/v1/providers/${connData.id}`, {
+        await apiFetch(`/api/v1/providers/${connData.id}`, {
           method: 'DELETE',
-          headers: adminToken ? { authorization: `Bearer ${adminToken}` } : {},
         }).catch(() => {});
 
         setConnectError(`Verification failed: ${cleanErr}`);
@@ -437,17 +418,12 @@ export const CredentialVault: React.FC = () => {
       window.dispatchEvent(new Event('goalroute_data_changed'));
 
       // Fire-and-forget background model sync for the newly verified provider.
-      const adminTokenBg = getAdminToken();
-      fetch('/api/v1/catalog/sync', {
+      apiFetch('/api/v1/catalog/sync', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(adminTokenBg ? { authorization: `Bearer ${adminTokenBg}` } : {}),
-        },
         body: JSON.stringify({}),
       }).catch(() => {});
     } catch (e: any) {
-      setConnectError(e.message || 'Failed to save key');
+      setConnectError(e?.error?.message || e?.message || 'Failed to save key');
     } finally {
       setIsSavingKey(false);
     }
@@ -461,17 +437,15 @@ export const CredentialVault: React.FC = () => {
     }
     const startTime = Date.now();
     try {
-      const res = await fetch(`/api/v1/providers/${id}/test`, {
+      const data = await apiFetch<any>(`/api/v1/providers/${id}/test`, {
         method: 'POST',
-        headers: adminToken ? { authorization: `Bearer ${adminToken}` } : {},
       });
-      const data = await res.json().catch(() => ({}));
       const elapsed = Date.now() - startTime;
       if (elapsed < 400) {
         await new Promise<void>((resolve) => safeTimeout(resolve, 400 - elapsed));
       }
       const latencyMs = typeof data.latencyMs === 'number' ? data.latencyMs : 0;
-      const success = res.ok && data.success !== false;
+      const success = data.success !== false;
       setKeys((prev) =>
         prev.map((k) => (k.id === id ? { ...k, status: success ? 'active' : 'degraded', lastPingMs: latencyMs, lastVerified: success ? 'Just now' : 'Failed' } : k))
       );
@@ -502,13 +476,9 @@ export const CredentialVault: React.FC = () => {
       prev.map((k) => (k.id === id ? { ...k, status: 'unconfigured', maskedKey: 'Not Configured', hasKey: false } : k))
     );
     try {
-      const res = await fetch(`/api/v1/providers/${id}`, {
+      await apiFetch(`/api/v1/providers/${id}`, {
         method: 'DELETE',
-        headers: adminToken ? { authorization: `Bearer ${adminToken}` } : {},
       });
-      if (!res.ok) {
-        console.error(`Failed to revoke provider key: HTTP ${res.status}`);
-      }
       await fetchProviders();
     } catch (e) {
       console.error('Failed to revoke provider key', e);
@@ -525,16 +495,14 @@ export const CredentialVault: React.FC = () => {
     setTestingKeyIds((prev) => ({ ...prev, [id]: true }));
     const startTime = Date.now();
     try {
-      const res = await fetch(`/api/v1/providers/${id}/test`, {
+      const data = await apiFetch<any>(`/api/v1/providers/${id}/test`, {
         method: 'POST',
-        headers: adminToken ? { authorization: `Bearer ${adminToken}` } : {},
       });
-      const data = await res.json().catch(() => ({}));
       const elapsed = Date.now() - startTime;
       if (elapsed < 400) {
         await new Promise<void>((resolve) => safeTimeout(resolve, 400 - elapsed));
       }
-      const success = res.ok && data.success !== false;
+      const success = data.success !== false;
       const latencyMs = typeof data.latencyMs === 'number' ? data.latencyMs : 0;
       setKeys((prev) =>
         prev.map((k) => {

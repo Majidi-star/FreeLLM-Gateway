@@ -9,8 +9,38 @@ permissions:
   contents: write
 
 jobs:
+  prepare:
+    name: Verify Version & Run Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Verify Version Consistency
+        shell: bash
+        run: |
+          TAG_VERSION="${GITHUB_REF#refs/tags/v}"
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          echo "Tag version: $TAG_VERSION, package.json version: $PKG_VERSION"
+          if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
+            echo "ERROR: Git tag ($TAG_VERSION) does not match package.json ($PKG_VERSION)!"
+            exit 1
+          fi
+
+      - name: Run Test Suite
+        run: npm test
+
   release:
     name: Build & Upload Assets (${{ matrix.os }})
+    needs: prepare
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -62,6 +92,7 @@ jobs:
             dist-electron/*.deb
             dist-electron/*.tar.gz
             dist-electron/*.zip
+            dist-electron/*.blockmap
             dist-electron/latest*.yml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -24,6 +24,7 @@ import {
   Globe,
 } from 'lucide-react';
 import { sanitizeForClipboard } from '../../utils/clipboardSanitizer.js';
+import { apiFetch, getAdminToken } from '../../lib/api.js';
 import { ChatHistoryDrawer, ChatSession } from './ChatHistoryDrawer.js';
 import { AgentEngineModal, AgentEngineConfig, DEFAULT_ENGINE_CONFIG } from './AgentEngineModal.js';
 
@@ -101,18 +102,9 @@ export const AgenticChat: React.FC = () => {
 
   // Load available MCP tools on mount
   useEffect(() => {
-    const adminToken =
-      sessionStorage.getItem('goalroute_admin_token') ||
-      localStorage.getItem('goalroute_admin_token') ||
-      (import.meta as any).env?.VITE_ADMIN_API_TOKEN ||
-      '';
-
-    fetch('/api/v1/mcp/tools', {
-      headers: adminToken ? { authorization: `Bearer ${adminToken}` } : {},
-    })
-      .then((res) => (res.ok ? res.json() : { tools: [] }))
+    apiFetch<any>('/api/v1/mcp/tools')
       .then((data) => {
-        if (Array.isArray(data.tools)) {
+        if (Array.isArray(data?.tools)) {
           setAvailableTools(data.tools);
         }
       })
@@ -234,26 +226,10 @@ export const AgenticChat: React.FC = () => {
 
   // Execute MCP Tool call
   const executeMcpTool = async (toolName: string, args: Record<string, any>): Promise<any> => {
-    const adminToken =
-      sessionStorage.getItem('goalroute_admin_token') ||
-      localStorage.getItem('goalroute_admin_token') ||
-      '';
-
-    const res = await fetch('/api/v1/mcp/call', {
+    return await apiFetch('/api/v1/mcp/call', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${adminToken}`,
-      },
       body: JSON.stringify({ name: toolName, arguments: args }),
     });
-
-    if (!res.ok) {
-      const errData = await res.json().catch(() => ({ error: { message: `HTTP ${res.status}` } }));
-      throw new Error(errData?.error?.message || errData?.message || `Tool call failed (${res.status})`);
-    }
-
-    return await res.json();
   };
 
   // Helper to parse <think> tags from text content
@@ -424,18 +400,11 @@ export const AgenticChat: React.FC = () => {
         };
       }
 
-      const res = await fetch(fetchUrl, {
+      const data = await apiFetch<any>(fetchUrl, {
         method: 'POST',
         headers: fetchHeaders,
         body: JSON.stringify(requestBody),
       });
-
-      if (!res.ok) {
-        const errorText = await res.text();
-        throw new Error(`Engine (${engineConfig.mode.toUpperCase()}) returned error HTTP ${res.status}: ${errorText.slice(0, 100)}`);
-      }
-
-      const data = await res.json();
       const rawResponseText = data.choices?.[0]?.message?.content || 'Task processed successfully.';
 
       const parsed = parseThinkingContent(rawResponseText);
