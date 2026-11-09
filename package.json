@@ -26,8 +26,7 @@
     "cli": "tsx src/cli/index.ts",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
-    "postinstall": "electron-builder install-app-deps"
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@fastify/cors": "^10.0.2",
