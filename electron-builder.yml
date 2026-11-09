@@ -37,9 +37,8 @@ win:
   artifactName: "${productName}-Setup-${version}-${arch}.${ext}"
 
 nsis:
-  oneClick: true
-  perMachine: false
-  allowToChangeInstallationDirectory: false
+  oneClick: false
+  allowToChangeInstallationDirectory: true
   createDesktopShortcut: true
   createStartMenuShortcut: true
   shortcutName: GoalRoute
@@ -49,13 +48,7 @@ mac:
   identity: null
   target:
     - target: dmg
-      arch:
-        - x64
-        - arm64
     - target: zip
-      arch:
-        - x64
-        - arm64
   artifactName: "${productName}-${version}-${arch}.${ext}"
 
 linux:
