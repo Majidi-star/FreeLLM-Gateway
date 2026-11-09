@@ -1,6 +1,6 @@
 {
   "name": "goalroute",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Multi-provider LLM gateway with goal-based self-healing routing",
   "author": "FreeLLM-Gateway Team <dev@freellm.gateway>",
   "license": "Apache-2.0",
