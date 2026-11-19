@@ -1,5 +1,18 @@
 # FreeLLM-Gateway (GoalRoute) ⚡
 
+
+<div align="center">
+
+[![Official Project & Case Study](https://img.shields.io/badge/%F0%9F%8C%90_Live_Project-binakod.ir-6366f1?style=for-the-badge&logo=google-chrome&logoColor=white)](https://binakod.ir/r/freellm-gateway)
+
+**[🇬🇧 English Version](https://binakod.ir/en/portfolio/goalroute-2/)** &nbsp;•&nbsp; **[🇮🇷 نسخه فارسی](https://binakod.ir/portfolio/goalroute/)**
+
+<sub>*(Automatic language redirection based on visitor preference / هدایت خودکار بر اساس زبان مرورگر)*</sub>
+
+</div>
+
+---
+
 <div align="center">
 
 [![Release](https://img.shields.io/badge/release-v1.0.1-blue.svg?style=for-the-badge&logo=github)](https://github.com/Majidi-star/FreeLLM-Gateway/releases/tag/v1.0.1)
